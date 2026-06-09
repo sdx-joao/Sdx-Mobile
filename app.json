@@ -3,6 +3,7 @@
     "name": "SDX Mobile",
     "slug": "sdx-mobile",
     "version": "1.0.0",
+    "scheme": "sdxmobile",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,6 +21,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }
