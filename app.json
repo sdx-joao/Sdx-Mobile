@@ -25,7 +25,19 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O ScandexPRO usa a câmera para ler o QR Code das etiquetas de patrimônio."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "62ce89bc-bb9b-42f7-9770-8f44d79fae09"
+      }
+    },
+    "owner": "sdx-joao"
   }
 }

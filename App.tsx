@@ -1,69 +1,41 @@
+import { useEffect, useMemo, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AuthProvider, useAuth } from './src/auth/auth-context';
+import { SplashScreen } from './src/components/Brand';
 import { LoginScreen } from './src/screens/LoginScreen';
-import { WorkOrdersScreen } from './src/screens/WorkOrdersScreen';
-import { colors } from './src/theme/colors';
-
-const Stack = createNativeStackNavigator();
-
-function RootNavigator() {
-  const { status } = useAuth();
-
-  if (status === 'loading') {
-    return (
-      <View style={styles.splash}>
-        <ActivityIndicator size="large" color={colors.primaryForeground} />
-      </View>
-    );
-  }
-
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.primary },
-        headerTintColor: colors.primaryForeground,
-        headerTitleStyle: { fontWeight: '700' },
-      }}
-    >
-      {status === 'authenticated' ? (
-        <Stack.Screen
-          name="WorkOrders"
-          component={WorkOrdersScreen}
-          options={{ title: 'Ordens de Serviço' }}
-        />
-      ) : (
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ headerShown: false }}
-        />
-      )}
-    </Stack.Navigator>
-  );
-}
+import { RootNavigator } from './src/navigation/RootNavigator';
+import { SessionContext, type SessionValue } from './src/state/session';
+import { MOCK_USER } from './src/data/mock';
 
 export default function App() {
+  const [booting, setBooting] = useState(true);
+  const [authed, setAuthed] = useState(false);
+
+  useEffect(() => {
+    const id = setTimeout(() => setBooting(false), 2200);
+    return () => clearTimeout(id);
+  }, []);
+
+  const session = useMemo<SessionValue>(
+    () => ({ user: MOCK_USER, signOut: () => setAuthed(false) }),
+    [],
+  );
+
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <NavigationContainer>
-          <RootNavigator />
-        </NavigationContainer>
-        <StatusBar style="light" />
-      </AuthProvider>
+      <StatusBar style="light" />
+      {booting ? (
+        <SplashScreen label="Iniciando sessão…" />
+      ) : !authed ? (
+        <LoginScreen onLogin={() => setAuthed(true)} />
+      ) : (
+        <SessionContext.Provider value={session}>
+          <NavigationContainer>
+            <RootNavigator />
+          </NavigationContainer>
+        </SessionContext.Provider>
+      )}
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  splash: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

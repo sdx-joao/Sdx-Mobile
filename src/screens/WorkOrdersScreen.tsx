@@ -1,160 +1,59 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { apiFetch } from '../api/client';
-import { useAuth } from '../auth/auth-context';
-import type { WorkOrderSummary } from '../features/work-orders/types';
-import { colors, statusColors } from '../theme/colors';
-
-const STATUS_LABEL: Record<string, string> = {
-  open: 'Aberta',
-  in_progress: 'Em andamento',
-  waiting: 'Aguardando',
-  delivered: 'Entregue',
-  completed: 'Concluída',
-  cancelled: 'Cancelada',
-};
+import { useMemo, useState } from 'react';
+import { View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ModuleScreen, SearchField, ChipRow, EmptyState, type Chip } from '../components/ui';
+import { WOCard } from '../components/cards';
+import { T } from '../theme/theme';
+import { WORK_ORDERS, WO_STATS, type WorkOrder } from '../data/mock';
+import type { RootStackParamList } from '../navigation/types';
 
 export function WorkOrdersScreen() {
-  const { token, user, signOut } = useAuth();
-  const [orders, setOrders] = useState<WorkOrderSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [q, setQ] = useState('');
+  const [filter, setFilter] = useState('all');
 
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const data = await apiFetch<{ orders: WorkOrderSummary[] }>(
-        '/api/mobile/work-orders',
-        { token },
-      );
-      setOrders(data.orders ?? []);
-    } catch {
-      setError('Não foi possível carregar as ordens de serviço.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: WORK_ORDERS.length };
+    WORK_ORDERS.forEach((w) => { c[w.status] = (c[w.status] || 0) + 1; });
+    return c;
+  }, []);
+
+  const chips: Chip[] = [
+    { key: 'all', label: 'Todas', count: counts.all },
+    { key: 'open', label: 'Abertas', count: counts.open },
+    { key: 'in_progress', label: 'Em andamento', count: counts.in_progress },
+    { key: 'waiting', label: 'Aguardando', count: counts.waiting },
+    { key: 'completed', label: 'Concluídas', count: counts.completed },
+  ];
+
+  const list = WORK_ORDERS.filter((w) => {
+    if (filter !== 'all' && w.status !== filter) return false;
+    if (q) {
+      const t = (w.code + w.serviceType + w.department + (w.responsibleTechnicianName || '') + w.requestedByName).toLowerCase();
+      if (!t.includes(q.toLowerCase())) return false;
     }
-  }, [token]);
+    return true;
+  });
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  function onRefresh() {
-    setRefreshing(true);
-    load();
-  }
+  const openWO = (wo: WorkOrder) => nav.navigate('WorkOrderDetail', { id: wo.id });
 
   return (
-    <View style={styles.container}>
-      <View style={styles.topBar}>
-        <View>
-          <Text style={styles.hello}>Olá, {user?.fullName ?? user?.username}</Text>
-          {user?.department && <Text style={styles.dept}>{user.department}</Text>}
-        </View>
-        <TouchableOpacity onPress={signOut} style={styles.signOut}>
-          <Text style={styles.signOutText}>Sair</Text>
-        </TouchableOpacity>
+    <ModuleScreen
+      title="Ordens de Serviço"
+      subtitle={`${WO_STATS.activeNow} ativas · ${WO_STATS.openedToday} abertas hoje`}
+      onNew={() => nav.navigate('NewWorkOrder')}
+      newLabel="Nova OS"
+    >
+      <View style={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12 }}>
+        <SearchField value={q} onChange={setQ} placeholder="Buscar por código, setor, técnico…" />
       </View>
-
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={orders}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-          }
-          ListEmptyComponent={
-            <View style={styles.center}>
-              <Text style={styles.empty}>
-                {error ?? 'Nenhuma ordem de serviço encontrada.'}
-              </Text>
-            </View>
-          }
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <View style={styles.rowHeader}>
-                <Text style={styles.code}>{item.code}</Text>
-                <View
-                  style={[
-                    styles.badge,
-                    { backgroundColor: statusColors[item.status] ?? colors.muted },
-                  ]}
-                >
-                  <Text style={styles.badgeText}>
-                    {STATUS_LABEL[item.status] ?? item.status}
-                  </Text>
-                </View>
-              </View>
-              {!!item.department && <Text style={styles.meta}>{item.department}</Text>}
-              {!!item.requester && (
-                <Text style={styles.meta}>Solicitante: {item.requester}</Text>
-              )}
-              {!!item.technician && (
-                <Text style={styles.meta}>Técnico: {item.technician}</Text>
-              )}
-            </View>
-          )}
-        />
-      )}
-    </View>
+      <ChipRow chips={chips} active={filter} onPick={setFilter} accent={T.primary} />
+      <View style={{ padding: 16, paddingBottom: 24 }}>
+        {list.length === 0
+          ? <EmptyState icon="clipboard" text="Nenhuma ordem encontrada." />
+          : list.map((wo) => <WOCard key={wo.id} wo={wo} onOpen={openWO} />)}
+      </View>
+    </ModuleScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  hello: { fontSize: 15, fontWeight: '700', color: colors.text },
-  dept: { fontSize: 12, color: colors.muted, marginTop: 2 },
-  signOut: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: colors.dangerSoft,
-  },
-  signOutText: { color: colors.danger, fontWeight: '700', fontSize: 13 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  empty: { color: colors.muted, fontSize: 15, textAlign: 'center' },
-  listContent: { padding: 12, flexGrow: 1 },
-  row: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 14,
-    marginBottom: 10,
-  },
-  rowHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  code: { fontSize: 16, fontWeight: '800', color: colors.primary },
-  badge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999 },
-  badgeText: { color: '#0F172A', fontSize: 11, fontWeight: '700' },
-  meta: { fontSize: 13, color: colors.muted, marginTop: 2 },
-});
