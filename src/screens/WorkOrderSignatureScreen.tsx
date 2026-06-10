@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, PanResponder, Pressable, Text, TextInput, View } from 'react-native';
-import * as ScreenOrientation from 'expo-screen-orientation';
 import Svg, { Path } from 'react-native-svg';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -56,19 +55,6 @@ export function WorkOrderSignatureScreen() {
   const [padSize, setPadSize] = useState({ width: PAD_WIDTH, height: PAD_HEIGHT });
   const current = useRef<Point[]>([]);
 
-  useEffect(() => {
-    const lock = async () => {
-      try {
-        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-      } catch {
-        // Alguns ambientes do Expo Go podem ignorar o lock; a tela segue utilizável.
-      }
-    };
-    void lock();
-    return () => {
-      void ScreenOrientation.unlockAsync().catch(() => undefined);
-    };
-  }, []);
   const scalePoint = (x: number, y: number): Point => ({
     x: Math.max(0, Math.min(PAD_WIDTH, (x / Math.max(1, padSize.width)) * PAD_WIDTH)),
     y: Math.max(0, Math.min(PAD_HEIGHT, (y / Math.max(1, padSize.height)) * PAD_HEIGHT)),
