@@ -12,9 +12,28 @@ import type { LoginResponse, MobileUser } from './types';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
+// Shape consumido pelas telas (Home/Perfil)
+export type SessionUser = {
+  name: string;
+  dept: string;
+  unit: string;
+  role: string;
+  username: string;
+};
+
+function toSessionUser(u: MobileUser): SessionUser {
+  return {
+    name: u.fullName || u.username,
+    dept: u.department || u.role,
+    unit: '',
+    role: u.role,
+    username: u.username,
+  };
+}
+
 type AuthContextValue = {
   status: AuthStatus;
-  user: MobileUser | null;
+  user: SessionUser | null;
   token: string | null;
   signIn: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -24,10 +43,10 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
-  const [user, setUser] = useState<MobileUser | null>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
-  // Bootstrap: tenta reusar o token salvo e validar contra /api/mobile/me
+  // Bootstrap: reusa o token salvo e revalida em /api/mobile/me
   useEffect(() => {
     (async () => {
       try {
@@ -38,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         const me = await apiFetch<MobileUser>('/api/mobile/me', { token: stored });
         setToken(stored);
-        setUser(me);
+        setUser(toSessionUser(me));
         setStatus('authenticated');
       } catch {
         await clearToken();
@@ -54,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     await saveToken(res.token);
     setToken(res.token);
-    setUser(res.user);
+    setUser(toSessionUser(res.user));
     setStatus('authenticated');
   }
 

@@ -1,10 +1,12 @@
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   Text,
   TextInput,
   View,
+  type RefreshControlProps,
   type ViewStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -252,7 +254,7 @@ function HeaderBell() {
 
 // Tela de módulo (lista): header azul + CTA + corpo rolável
 export function ModuleScreen({
-  title, subtitle, onNew, newLabel, newIcon = 'plus', accent = T.primary, children, contentStyle,
+  title, subtitle, onNew, newLabel, newIcon = 'plus', accent = T.primary, children, contentStyle, refreshControl,
 }: {
   title: string;
   subtitle?: string;
@@ -262,6 +264,7 @@ export function ModuleScreen({
   accent?: string;
   children: ReactNode;
   contentStyle?: ViewStyle;
+  refreshControl?: ReactElement<RefreshControlProps>;
 }) {
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
@@ -290,6 +293,7 @@ export function ModuleScreen({
         style={{ flex: 1 }}
         contentContainerStyle={[{ paddingTop: onNew ? 10 : 12 }, contentStyle]}
         keyboardShouldPersistTaps="handled"
+        refreshControl={refreshControl}
       >
         {children}
       </ScrollView>
@@ -299,7 +303,7 @@ export function ModuleScreen({
 
 // Tela de detalhe: header azul com "Voltar" + corpo rolável
 export function DetailScaffold({
-  onBack, eyebrow, title, badge, headerExtra, compact, children,
+  onBack, eyebrow, title, badge, headerExtra, compact, children, refreshControl,
 }: {
   onBack: () => void;
   eyebrow?: string;
@@ -308,6 +312,7 @@ export function DetailScaffold({
   headerExtra?: ReactNode;
   compact?: boolean;
   children: ReactNode;
+  refreshControl?: ReactElement<RefreshControlProps>;
 }) {
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
@@ -329,9 +334,18 @@ export function DetailScaffold({
         </View>
         {headerExtra}
       </BlueHeader>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
         {children}
       </ScrollView>
+    </View>
+  );
+}
+
+// Estado de carregando (spinner centralizado)
+export function LoadingState() {
+  return (
+    <View style={{ paddingVertical: 64, alignItems: 'center' }}>
+      <ActivityIndicator size="large" color={T.primary} />
     </View>
   );
 }

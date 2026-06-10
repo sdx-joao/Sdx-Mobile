@@ -1,10 +1,15 @@
-import { Pressable, Text, View } from 'react-native';
+import { useCallback } from 'react';
+import { Image, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { Icon } from '../components/Icon';
-import { Badge, DetailScaffold, SectionCard, StatItem } from '../components/ui';
+import { Badge, DetailScaffold, EmptyState, LoadingState, SectionCard, StatItem } from '../components/ui';
 import { MovementRow } from '../components/cards';
 import { T, INV_TYPE } from '../theme/theme';
-import { INVENTORY, MOVEMENTS, stockStatusOf } from '../data/mock';
+import { stockStatusOf } from '../data/mock';
+import { useAuth } from '../auth/auth-context';
+import { getInventoryItem } from '../api/mobile';
+import { API_BASE_URL } from '../api/client';
+import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
 
 function Half({ label, value }: { label: string; value?: string | null }) {
@@ -18,12 +23,23 @@ function Half({ label, value }: { label: string; value?: string | null }) {
 export function InventoryDetailScreen() {
   const nav = useNavigation();
   const route = useRoute<RouteProp<RootStackParamList, 'InventoryDetail'>>();
-  const item = INVENTORY.find((i) => i.id === route.params.id);
+  const { token } = useAuth();
+  const loader = useCallback(() => getInventoryItem(token, route.params.id), [token, route.params.id]);
+  const { data, loading, refreshing, error, reload } = useResource(loader);
+  const item = data?.item;
 
-  if (!item) {
+  if (loading) {
+    return (
+      <DetailScaffold onBack={() => nav.goBack()} title="Carregando item">
+        <LoadingState />
+      </DetailScaffold>
+    );
+  }
+
+  if (error || !item) {
     return (
       <DetailScaffold onBack={() => nav.goBack()} title="Item não encontrado">
-        <Text style={{ color: T.muted }}>Este item não existe no inventário.</Text>
+        <EmptyState icon="package" text={error || 'Este item não existe no inventário.'} />
       </DetailScaffold>
     );
   }
@@ -31,8 +47,9 @@ export function InventoryDetailScreen() {
   const tone = stockStatusOf(item);
   const ty = INV_TYPE[item.primaryType];
   const isEquip = item.itemType === 'equipment';
-  const moves = MOVEMENTS.filter((m) => m.itemName === item.name);
+  const moves = data?.movements ?? [];
   const pct = item.maxQty ? Math.min(100, (item.currentQty / item.maxQty) * 100) : 100;
+  const photoUrl = item.mainPhotoUrl ? `${API_BASE_URL}${item.mainPhotoUrl}` : null;
 
   return (
     <DetailScaffold
@@ -40,6 +57,7 @@ export function InventoryDetailScreen() {
       eyebrow={item.sku || item.assetTag || ty.label}
       title={item.name}
       badge={<Badge tone={tone} badgeStyle="solid" />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={T.primary} colors={[T.primary]} />}
       headerExtra={
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10, flexWrap: 'wrap' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
@@ -53,7 +71,6 @@ export function InventoryDetailScreen() {
         </View>
       }
     >
-      {/* foto / patrimônio placeholder */}
       <View
         style={{
           height: 150, borderRadius: 14, marginBottom: 12, overflow: 'hidden',
@@ -61,8 +78,14 @@ export function InventoryDetailScreen() {
           alignItems: 'center', justifyContent: 'center',
         }}
       >
-        <Icon name="camera" size={24} color={T.faint} />
-        <Text style={{ fontSize: 11.5, color: T.faint, marginTop: 7 }}>foto do item / patrimônio</Text>
+        {photoUrl ? (
+          <Image source={{ uri: photoUrl }} resizeMode="cover" style={{ width: '100%', height: '100%' }} />
+        ) : (
+          <>
+            <Icon name="camera" size={24} color={T.faint} />
+            <Text style={{ fontSize: 11.5, color: T.faint, marginTop: 7 }}>Sem foto cadastrada</Text>
+          </>
+        )}
         <View style={{ position: 'absolute', bottom: 10, right: 10, flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 11, borderRadius: 9, backgroundColor: 'rgba(15,23,42,.78)' }}>
           <Icon name="qr" size={13} color="#fff" />
           <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>QR</Text>

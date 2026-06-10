@@ -1,12 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { T, INV_TYPE } from '../theme/theme';
-import { INVENTORY, type InventoryItem } from '../data/mock';
+import type { InventoryItem } from '../data/mock';
+import { useAuth } from '../auth/auth-context';
+import { getInventory, resolveAsset } from '../api/mobile';
+import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
 
 // Extrai o código patrimonial dos formatos suportados pela etiqueta de estoque:
@@ -23,11 +26,6 @@ function parseAssetCode(raw: string): string | null {
   return null;
 }
 
-function findByCode(code: string): InventoryItem | undefined {
-  const c = code.toUpperCase();
-  return INVENTORY.find((i) => (i.assetTag || '').toUpperCase() === c || (i.sku || '').toUpperCase() === c);
-}
-
 function Corner({ pos, color }: { pos: 'tl' | 'tr' | 'bl' | 'br'; color: string }) {
   const base = { position: 'absolute' as const, width: 30, height: 30, borderColor: color, borderWidth: 3 };
   const map = {
@@ -42,10 +40,14 @@ function Corner({ pos, color }: { pos: 'tl' | 'tr' | 'bl' | 'br'; color: string 
 export function ScanScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
+  const { token } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const [detecting, setDetecting] = useState<InventoryItem | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
   const locked = useRef(false);
   const accent = T.primary;
+  const loader = useCallback(() => getInventory(token), [token]);
+  const { data: inventory, loading: loadingInventory } = useResource(loader);
 
   const line = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -66,11 +68,23 @@ export function ScanScreen() {
     setTimeout(() => nav.replace('InventoryDetail', { id: item.id }), 700);
   };
 
-  const onScanned = (code: string) => {
+  const onScanned = async (code: string) => {
     if (locked.current) return;
+    setScanError(null);
     const asset = parseAssetCode(code);
-    const item = asset ? findByCode(asset) : undefined;
-    if (item) open(item);
+    if (!asset) {
+      setScanError('QR Code não reconhecido como etiqueta SDX.');
+      return;
+    }
+    locked.current = true;
+    try {
+      const res = await resolveAsset(token, asset);
+      setDetecting(res.item);
+      setTimeout(() => nav.replace('InventoryDetail', { id: res.item.id }), 700);
+    } catch {
+      setScanError('Nenhum item encontrado para esta etiqueta.');
+      locked.current = false;
+    }
   };
 
   return (
@@ -121,6 +135,7 @@ export function ScanScreen() {
               ? 'Aponte a câmera para o QR Code da etiqueta do item para abrir os detalhes.'
               : 'Permita o acesso à câmera para escanear etiquetas.'}
         </Text>
+        {!!scanError && <Text style={{ color: '#FECACA', fontSize: 12.5, textAlign: 'center', maxWidth: 260 }}>{scanError}</Text>}
         {permission && !permission.granted && (
           <Pressable onPress={requestPermission} style={{ paddingVertical: 10, paddingHorizontal: 18, borderRadius: 12, backgroundColor: accent }}>
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Permitir câmera</Text>
@@ -128,14 +143,19 @@ export function ScanScreen() {
         )}
       </View>
 
-      {/* bottom sheet — simular leitura (protótipo) */}
+      {/* bottom sheet — leitura manual para suporte e teste */}
       <View style={{ backgroundColor: T.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingTop: 16, paddingBottom: insets.bottom + 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingBottom: 11 }}>
           <Icon name="qr" size={14} color={T.faint} />
-          <Text style={{ fontSize: 11.5, color: T.faint, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase' }}>Simular leitura (protótipo)</Text>
+          <Text style={{ fontSize: 11.5, color: T.faint, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase' }}>Itens recentes</Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}>
-          {INVENTORY.map((it) => {
+        {loadingInventory ? (
+          <View style={{ height: 82, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator color={T.primary} />
+          </View>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}>
+          {(inventory ?? []).slice(0, 20).map((it) => {
             const ty = INV_TYPE[it.primaryType];
             return (
               <Pressable
@@ -151,7 +171,8 @@ export function ScanScreen() {
               </Pressable>
             );
           })}
-        </ScrollView>
+          </ScrollView>
+        )}
       </View>
     </View>
   );

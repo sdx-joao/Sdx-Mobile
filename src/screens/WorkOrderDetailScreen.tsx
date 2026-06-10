@@ -1,32 +1,71 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
-import { Badge, DetailScaffold, SectionCard, StatItem } from '../components/ui';
+import { Badge, DetailScaffold, EmptyState, LoadingState, SectionCard, StatItem } from '../components/ui';
 import { T, WO_STATUS, WO_PRIORITY } from '../theme/theme';
-import { WORK_ORDERS, WO_TIMELINE, fmtDate, fmtTime, type WorkOrderStatus } from '../data/mock';
+import { fmtDate, fmtTime, type WorkOrderStatus } from '../data/mock';
+import { useAuth } from '../auth/auth-context';
+import { getWorkOrder, updateWorkOrderStatus } from '../api/mobile';
+import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
 
-const FLOW: WorkOrderStatus[] = ['open', 'in_progress', 'waiting', 'completed'];
+const FLOW: WorkOrderStatus[] = ['open', 'in_progress', 'waiting', 'delivered', 'completed'];
 
 export function WorkOrderDetailScreen() {
-  const nav = useNavigation();
+  const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'WorkOrderDetail'>>();
-  const wo = WORK_ORDERS.find((w) => w.id === route.params.id);
+  const { token } = useAuth();
+  const loader = useCallback(() => getWorkOrder(token, route.params.id), [token, route.params.id]);
+  const { data, loading, refreshing, error, reload } = useResource(loader);
+  const wo = data?.workOrder;
+  const timeline = data?.timeline;
   const [status, setStatus] = useState<WorkOrderStatus>(wo?.status ?? 'open');
+  const [savingStatus, setSavingStatus] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
-  if (!wo) {
+  useEffect(() => {
+    if (wo) setStatus(wo.status);
+  }, [wo]);
+
+  if (loading) {
+    return (
+      <DetailScaffold onBack={() => nav.goBack()} title="Carregando OS">
+        <LoadingState />
+      </DetailScaffold>
+    );
+  }
+
+  if (error || !wo) {
     return (
       <DetailScaffold onBack={() => nav.goBack()} title="OS não encontrada">
-        <Text style={{ color: T.muted }}>Esta ordem de serviço não existe mais.</Text>
+        <EmptyState icon="clipboard" text={error || 'Esta ordem de serviço não existe mais.'} />
       </DetailScaffold>
     );
   }
 
   const st = WO_STATUS[status];
   const pr = WO_PRIORITY[wo.priority];
-  const timeline = WO_TIMELINE[wo.id];
   const accent = T.primary;
+  const persistStatus = async (next: WorkOrderStatus) => {
+    if (next === status || savingStatus) return;
+    if (next === 'completed' || next === 'delivered') {
+      nav.navigate('WorkOrderSignature', { id: wo.id, status: next, signerName: wo.requestedByName });
+      return;
+    }
+    setSavingStatus(true);
+    setStatusError(null);
+    try {
+      await updateWorkOrderStatus(token, wo.id, next, next === 'in_progress' ? { expectedCompletionHours: 4 } : {});
+      setStatus(next);
+      reload();
+    } catch (e) {
+      setStatusError(e instanceof Error ? e.message : 'Não foi possível atualizar o status.');
+    } finally {
+      setSavingStatus(false);
+    }
+  };
 
   return (
     <DetailScaffold
@@ -34,6 +73,7 @@ export function WorkOrderDetailScreen() {
       eyebrow={wo.code}
       title={wo.serviceType}
       badge={<Badge tone={st} badgeStyle="solid" />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={T.primary} colors={[T.primary]} />}
       headerExtra={
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,.16)', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999 }}>
@@ -53,7 +93,8 @@ export function WorkOrderDetailScreen() {
             return (
               <Pressable
                 key={s}
-                onPress={() => setStatus(s)}
+                onPress={() => persistStatus(s)}
+                disabled={savingStatus}
                 style={{
                   paddingVertical: 8, paddingHorizontal: 13, borderRadius: 10, borderWidth: 1,
                   borderColor: on ? tone.solid : T.border, backgroundColor: on ? tone.soft : T.surface,
@@ -64,10 +105,19 @@ export function WorkOrderDetailScreen() {
             );
           })}
         </ScrollView>
-        {status !== wo.status && (
+        {savingStatus && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 11 }}>
+            <ActivityIndicator color={accent} />
+            <Text style={{ fontSize: 12, color: T.muted }}>Salvando status...</Text>
+          </View>
+        )}
+        {!!statusError && (
+          <Text style={{ fontSize: 12, color: T.danger, marginTop: 11 }}>{statusError}</Text>
+        )}
+        {status !== wo.status && !savingStatus && !statusError && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 11 }}>
             <Icon name="check-circle" size={14} color={accent} />
-            <Text style={{ fontSize: 12, color: T.muted }}>Novo status pronto para registrar (demo).</Text>
+            <Text style={{ fontSize: 12, color: T.muted }}>Status atualizado no servidor.</Text>
           </View>
         )}
       </SectionCard>
@@ -129,7 +179,7 @@ export function WorkOrderDetailScreen() {
         </SectionCard>
       )}
 
-      {timeline && (
+      {timeline && timeline.length > 0 && (
         <SectionCard title="Histórico">
           {timeline.map((ev, i) => (
             <View key={i} style={{ flexDirection: 'row', gap: 11 }}>

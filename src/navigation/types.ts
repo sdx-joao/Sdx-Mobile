@@ -13,4 +13,5 @@ export type RootStackParamList = {
   NewWorkOrder: undefined;
   InventoryDetail: { id: string };
   Scan: undefined;
+  WorkOrderSignature: { id: string; status: 'completed' | 'delivered'; signerName?: string };
 };

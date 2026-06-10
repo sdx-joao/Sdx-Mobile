@@ -63,6 +63,8 @@ export type InventoryItem = {
   equipmentStatus: string | null;
   operatingSystem: string | null;
   technicalSpecs: TechnicalSpec[];
+  mainPhotoUrl?: string | null;
+  attachmentPhotos?: Array<{ name: string; url: string; createdAt: string }>;
   notes: string;
 };
 
@@ -71,7 +73,7 @@ export type Movement = {
   itemName: string;
   movementType: 'in' | 'out' | 'adjustment' | 'transfer';
   qty: number;
-  sourceKind: string;
+  sourceKind?: string;
   sourceLabel: string;
   userName: string;
   createdAt: string;

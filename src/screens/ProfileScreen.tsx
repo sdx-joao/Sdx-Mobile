@@ -3,7 +3,7 @@ import { Icon } from '../components/Icon';
 import { BlueHeader } from '../components/ui';
 import { Wordmark } from '../components/Brand';
 import { T } from '../theme/theme';
-import { useSession } from '../state/session';
+import { useAuth } from '../auth/auth-context';
 
 const ROWS = [
   { icon: 'user', label: 'Meus dados' },
@@ -17,8 +17,10 @@ function initials(name: string) {
 }
 
 export function ProfileScreen() {
-  const { user, signOut } = useSession();
+  const { user, signOut } = useAuth();
   const accent = T.primary;
+
+  if (!user) return null;
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>

@@ -3,7 +3,7 @@ import { Icon } from './Icon';
 import { Badge, MetaRow } from './ui';
 import { T, WO_STATUS, WO_PRIORITY, INV_TYPE, MOVE_TONE } from '../theme/theme';
 import {
-  fmtDate, fmtTime, stockStatusOf, NOW_REF,
+  fmtDate, fmtTime, stockStatusOf,
   type WorkOrder, type InventoryItem, type Movement,
 } from '../data/mock';
 
@@ -23,7 +23,7 @@ export function WOCard({ wo, onOpen, accent = T.primary }: { wo: WorkOrder; onOp
   const st = WO_STATUS[wo.status];
   const pr = WO_PRIORITY[wo.priority];
   const finished = wo.status === 'completed' || wo.status === 'delivered' || wo.status === 'cancelled';
-  const overdue = !!wo.expectedCompletionAt && new Date(wo.expectedCompletionAt) < NOW_REF && !finished;
+  const overdue = !!wo.expectedCompletionAt && new Date(wo.expectedCompletionAt) < new Date() && !finished;
 
   return (
     <Pressable

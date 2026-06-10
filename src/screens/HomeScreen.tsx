@@ -1,16 +1,16 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback } from 'react';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
-import { BlueHeader, Badge, SectionTitle, TextLink } from '../components/ui';
+import { BlueHeader, Badge, EmptyState, LoadingState, SectionTitle, TextLink } from '../components/ui';
 import { BrandTile } from '../components/Brand';
 import { WOCard } from '../components/cards';
 import { T } from '../theme/theme';
-import {
-  WORK_ORDERS, INVENTORY, WO_STATS, INV_STATS, stockStatusOf,
-  type WorkOrder, type InventoryItem,
-} from '../data/mock';
-import { useSession } from '../state/session';
+import { stockStatusOf, type WorkOrder, type InventoryItem } from '../data/mock';
+import { useAuth } from '../auth/auth-context';
+import { getInventory, getSummary, getWorkOrders, type Summary } from '../api/mobile';
+import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
 
 function initials(name: string) {
@@ -43,11 +43,28 @@ function ModuleTile({ icon, label, sub, accent, onPress }: { icon: string; label
 
 export function HomeScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { user } = useSession();
+  const { token, user } = useAuth();
   const accent = T.primary;
+  const loader = useCallback(async () => {
+    const [summary, orders, inventory] = await Promise.all([
+      getSummary(token),
+      getWorkOrders(token),
+      getInventory(token),
+    ]);
+    return { summary, orders, inventory };
+  }, [token]);
+  const { data, loading, refreshing, error, reload } = useResource(loader);
 
-  const lowItems = INVENTORY.filter((i) => i.itemType !== 'equipment' && i.minQty > 0 && i.currentQty < i.minQty);
-  const recent = WORK_ORDERS.filter((w) => w.status === 'open' || w.status === 'in_progress' || w.status === 'waiting').slice(0, 3);
+  if (!user) return null;
+
+  const summary: Summary = data?.summary ?? {
+    workOrders: { activeNow: 0, openedToday: 0 },
+    inventory: { totalItems: 0, lowStock: 0, equipment: 0, inMaintenance: 0 },
+  };
+  const inventory = data?.inventory ?? [];
+  const orders = data?.orders ?? [];
+  const lowItems = inventory.filter((i) => i.itemType !== 'equipment' && i.minQty > 0 && i.currentQty < i.minQty).slice(0, 4);
+  const recent = orders.filter((w) => w.status === 'open' || w.status === 'in_progress' || w.status === 'waiting').slice(0, 3);
 
   const goOrders = () => nav.navigate('Tabs', { screen: 'Orders' });
   const goInventory = () => nav.navigate('Tabs', { screen: 'Inventory' });
@@ -69,7 +86,7 @@ export function HomeScreen() {
             <Text style={{ marginTop: 3, fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: -0.3 }}>{user.name}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
               <Icon name="building" size={13} color="rgba(255,255,255,.8)" />
-              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,.8)' }}>{user.unit} · {user.dept}</Text>
+              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,.8)' }}>{[user.unit, user.dept].filter(Boolean).join(' · ')}</Text>
             </View>
           </View>
           <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: 'rgba(255,255,255,.16)', alignItems: 'center', justifyContent: 'center' }}>
@@ -78,20 +95,26 @@ export function HomeScreen() {
         </View>
       </BlueHeader>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 24 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={T.primary} colors={[T.primary]} />}
+      >
+        {loading && <LoadingState />}
+        {!!error && <EmptyState icon="alert" text={error} />}
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-          <StatTile value={WO_STATS.activeNow} label="OS ativas" icon="clipboard" tone={accent} onPress={goOrders} />
-          <StatTile value={WO_STATS.openedToday} label="Abertas hoje" icon="zap" tone="#EA580C" onPress={goOrders} />
+          <StatTile value={summary.workOrders.activeNow} label="OS ativas" icon="clipboard" tone={accent} onPress={goOrders} />
+          <StatTile value={summary.workOrders.openedToday} label="Abertas hoje" icon="zap" tone="#EA580C" onPress={goOrders} />
         </View>
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 22 }}>
-          <StatTile value={INV_STATS.lowStock} label="Estoque baixo" icon="alert" tone="#DC2626" onPress={goInventory} />
-          <StatTile value={INV_STATS.inMaintenance} label="Em manutenção" icon="wrench" tone="#CA8A04" onPress={goInventory} />
+          <StatTile value={summary.inventory.lowStock} label="Estoque baixo" icon="alert" tone="#DC2626" onPress={goInventory} />
+          <StatTile value={summary.inventory.inMaintenance} label="Em manutenção" icon="wrench" tone="#CA8A04" onPress={goInventory} />
         </View>
 
         <SectionTitle>Módulos</SectionTitle>
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 22 }}>
-          <ModuleTile icon="clipboard" label="Ordens de Serviço" sub={`${WO_STATS.activeNow} ativas`} accent={accent} onPress={goOrders} />
-          <ModuleTile icon="package" label="Inventário" sub={`${INV_STATS.lowStock} alertas`} accent={accent} onPress={goInventory} />
+          <ModuleTile icon="clipboard" label="Ordens de Serviço" sub={`${summary.workOrders.activeNow} ativas`} accent={accent} onPress={goOrders} />
+          <ModuleTile icon="package" label="Inventário" sub={`${summary.inventory.lowStock} alertas`} accent={accent} onPress={goInventory} />
         </View>
 
         {lowItems.length > 0 && (
@@ -122,7 +145,9 @@ export function HomeScreen() {
         )}
 
         <SectionTitle action={<TextLink onPress={goOrders}>Ver tudo</TextLink>}>Ordens em aberto</SectionTitle>
-        {recent.map((wo) => <WOCard key={wo.id} wo={wo} onOpen={openWO} />)}
+        {recent.length === 0
+          ? <EmptyState icon="clipboard" text="Nenhuma ordem em aberto." />
+          : recent.map((wo) => <WOCard key={wo.id} wo={wo} onOpen={openWO} />)}
       </ScrollView>
     </View>
   );
