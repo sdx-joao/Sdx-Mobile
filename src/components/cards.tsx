@@ -19,7 +19,17 @@ function SourceMark({ source }: { source: WorkOrder['source'] }) {
 }
 
 // ── Cartão de OS ────────────────────────────────────────────────────────────
-export function WOCard({ wo, onOpen, accent = T.primary }: { wo: WorkOrder; onOpen: (wo: WorkOrder) => void; accent?: string }) {
+export function WOCard({
+  wo,
+  onOpen,
+  onEdit,
+  accent = T.primary,
+}: {
+  wo: WorkOrder;
+  onOpen: (wo: WorkOrder) => void;
+  onEdit?: (wo: WorkOrder) => void;
+  accent?: string;
+}) {
   const st = WO_STATUS[wo.status];
   const pr = WO_PRIORITY[wo.priority];
   const finished = wo.status === 'completed' || wo.status === 'delivered' || wo.status === 'cancelled';
@@ -60,11 +70,25 @@ export function WOCard({ wo, onOpen, accent = T.primary }: { wo: WorkOrder; onOp
             </View>
           )}
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Icon name="clock" size={12} color={overdue ? T.danger : T.faint} />
-          <Text style={{ fontSize: 11.5, color: overdue ? T.danger : T.faint, fontWeight: overdue ? '600' : '400' }}>
-            {overdue ? 'Atrasada' : finished ? fmtTime(wo.finishedAt) : `Prev. ${fmtTime(wo.expectedCompletionAt)}`}
-          </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {onEdit && !finished && (
+            <Pressable
+              onPress={(event) => {
+                event.stopPropagation();
+                onEdit(wo);
+              }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 7, borderRadius: 8, backgroundColor: `${accent}10` }}
+            >
+              <Icon name="sliders" size={12} color={accent} />
+              <Text style={{ fontSize: 11.5, color: accent, fontWeight: '800' }}>Editar</Text>
+            </Pressable>
+          )}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Icon name="clock" size={12} color={overdue ? T.danger : T.faint} />
+            <Text style={{ fontSize: 11.5, color: overdue ? T.danger : T.faint, fontWeight: overdue ? '600' : '400' }}>
+              {overdue ? 'Atrasada' : finished ? fmtTime(wo.finishedAt) : `Prev. ${fmtTime(wo.expectedCompletionAt)}`}
+            </Text>
+          </View>
         </View>
       </View>
     </Pressable>

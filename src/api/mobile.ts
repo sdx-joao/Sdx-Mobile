@@ -77,10 +77,14 @@ export type CreateWorkOrderInput = {
 };
 
 export type UpdateWorkOrderInput = Partial<CreateWorkOrderInput> & {
+  status?: WorkOrderStatus;
   attendanceNotes?: string | null;
+  attendanceNotesRequired?: boolean;
   resolutionStatus?: WorkOrder['resolutionStatus'];
   resolutionNotes?: string | null;
+  expectedCompletionAt?: string | null;
   expectedCompletionHours?: number;
+  finishedAt?: string | null;
   materials?: WorkOrder['materials'];
 };
 

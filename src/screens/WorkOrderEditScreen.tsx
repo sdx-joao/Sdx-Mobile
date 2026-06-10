@@ -4,13 +4,21 @@ import { useNavigation, useRoute, type RouteProp } from '@react-navigation/nativ
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
 import { DetailScaffold, EmptyState, FieldLabel, LoadingState, PrimaryButton, SectionCard } from '../components/ui';
-import { T, WO_PRIORITY, WO_RESOLUTION } from '../theme/theme';
+import { T, WO_PRIORITY, WO_RESOLUTION, WO_STATUS } from '../theme/theme';
 import { getOptions, getWorkOrder, updateWorkOrder, type SelectOption, type SelectOptionKind } from '../api/mobile';
 import { useResource } from '../api/use-resource';
 import { useAuth } from '../auth/auth-context';
-import type { WorkOrder, WorkOrderMaterial, WorkOrderPriority, WorkOrderResolution } from '../data/mock';
+import type { WorkOrder, WorkOrderMaterial, WorkOrderPriority, WorkOrderResolution, WorkOrderStatus } from '../data/mock';
 import type { RootStackParamList } from '../navigation/types';
 
+const EDITABLE_STATUS: WorkOrderStatus[] = ['open', 'in_progress', 'waiting'];
+const COMPLETION_PERIOD_OPTIONS = [
+  { hours: 1, label: '1h' },
+  { hours: 2, label: '2h' },
+  { hours: 4, label: '4h' },
+  { hours: 8, label: '8h' },
+  { hours: 24, label: '24h' },
+];
 const OPTION_KINDS: SelectOptionKind[] = [
   'work_order_service_type',
   'work_order_category',
@@ -122,6 +130,37 @@ function materialToDraft(material: WorkOrderMaterial): MaterialDraft {
   };
 }
 
+function addHours(hours: number) {
+  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+}
+
+function toDateTimeInput(value?: string | null) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function fromDateTimeInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const match = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
+  if (!match) return undefined;
+  const [, dd, mm, yyyy, hh, min] = match;
+  const date = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(min));
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+function isClosedStatus(status: WorkOrderStatus) {
+  return status === 'completed' || status === 'delivered' || status === 'cancelled';
+}
+
+function isDeliveryOrCollectionService(value: string) {
+  const normalized = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  return normalized.includes('ENTREGA') || normalized.includes('COLETA') || normalized.includes('TRANSPORTE');
+}
+
 export function WorkOrderEditScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'WorkOrderEdit'>>();
@@ -145,6 +184,10 @@ export function WorkOrderEditScreen() {
   const [requestedByName, setRequestedByName] = useState('');
   const [requesterContact, setRequesterContact] = useState('');
   const [technicianRequest, setTechnicianRequest] = useState('');
+  const [status, setStatus] = useState<WorkOrderStatus>('open');
+  const [expectedCompletionAt, setExpectedCompletionAt] = useState<string | null>(null);
+  const [finishedAtText, setFinishedAtText] = useState('');
+  const [attendanceNotesRequired, setAttendanceNotesRequired] = useState(true);
   const [attendanceNotes, setAttendanceNotes] = useState('');
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [resolutionStatus, setResolutionStatus] = useState<WorkOrderResolution | null>(null);
@@ -175,6 +218,10 @@ export function WorkOrderEditScreen() {
     setRequestedByName(order.requestedByName || '');
     setRequesterContact(order.requesterContact || '');
     setTechnicianRequest(order.technicianRequest || '');
+    setStatus(isClosedStatus(order.status) ? order.status : order.status || 'open');
+    setExpectedCompletionAt(order.expectedCompletionAt || null);
+    setFinishedAtText(toDateTimeInput(order.finishedAt));
+    setAttendanceNotesRequired(Boolean(order.attendanceNotes));
     setAttendanceNotes(order.attendanceNotes || '');
     setResolutionNotes(order.resolutionNotes || '');
     setResolutionStatus(order.resolutionStatus || null);
@@ -204,8 +251,15 @@ export function WorkOrderEditScreen() {
 
   const addMaterial = () => setMaterials(current => [...current, { description: '', quantity: '1', unit: 'UN' }]);
   const removeMaterial = (index: number) => setMaterials(current => current.filter((_, itemIndex) => itemIndex !== index));
+  const locked = isClosedStatus(order.status);
+  const canEditStatus = !locked;
 
   const save = async () => {
+    const parsedFinishedAt = fromDateTimeInput(finishedAtText);
+    if (finishedAtText.trim() && parsedFinishedAt === undefined) {
+      setFormError('Informe a hora final no formato DD/MM/AAAA HH:mm.');
+      return;
+    }
     const missing = [
       ['Tipo de serviço', serviceType],
       ['Categoria', category],
@@ -213,7 +267,22 @@ export function WorkOrderEditScreen() {
       ['Setor', department],
       ['Solicitante', requestedByName],
       ['Solicitação', technicianRequest],
+      ['Situação da OS', resolutionStatus],
     ].filter(([, value]) => !String(value).trim()).map(([label]) => label);
+    if (status === 'in_progress' && !expectedCompletionAt) {
+      missing.push('Prazo de conclusão');
+    }
+    if (resolutionStatus === 'resolved') {
+      [
+        ['Contato', requesterContact],
+        ['Equipe técnica', technicalTeam],
+        ['Técnico responsável', responsibleTechnicianName],
+        ...(attendanceNotesRequired ? [['Observação do atendimento', attendanceNotes] as [string, unknown]] : []),
+        ['Solução adotada', resolutionNotes],
+      ]
+        .filter(([, value]) => !String(value || '').trim())
+        .forEach(([label]) => missing.push(label));
+    }
     if (missing.length) {
       setFormError(`Preencha: ${missing.join(', ')}.`);
       return;
@@ -221,7 +290,10 @@ export function WorkOrderEditScreen() {
     setSaving(true);
     setFormError(null);
     try {
+      const shouldFinalizeWithSignature = resolutionStatus === 'resolved' && !isClosedStatus(order.status);
+      const finalStatus: WorkOrderStatus = isDeliveryOrCollectionService(serviceType) ? 'delivered' : 'completed';
       await updateWorkOrder(token, order.id, {
+        status: shouldFinalizeWithSignature ? order.status : status,
         serviceType,
         category,
         unitName,
@@ -231,10 +303,13 @@ export function WorkOrderEditScreen() {
         technicalTeam,
         responsibleTechnicianName,
         technicianRequest,
-        attendanceNotes,
+        attendanceNotes: attendanceNotesRequired ? attendanceNotes : '',
+        attendanceNotesRequired,
         resolutionStatus,
         resolutionNotes,
         priority,
+        expectedCompletionAt: status === 'in_progress' ? expectedCompletionAt : null,
+        finishedAt: parsedFinishedAt,
         materials: materials
           .filter(item => item.description.trim())
           .map(item => ({
@@ -243,6 +318,10 @@ export function WorkOrderEditScreen() {
             unit: item.unit || null,
           })),
       });
+      if (shouldFinalizeWithSignature) {
+        nav.replace('WorkOrderSignature', { id: order.id, status: finalStatus, signerName: requestedByName });
+        return;
+      }
       Alert.alert('OS atualizada', `${order.code} foi salva com sucesso.`);
       nav.goBack();
     } catch (e) {
@@ -254,6 +333,81 @@ export function WorkOrderEditScreen() {
 
   return (
     <DetailScaffold onBack={() => nav.goBack()} eyebrow={order.code} title="Editar OS" compact>
+      {locked && (
+        <SectionCard title="Somente leitura">
+          <View style={{ flexDirection: 'row', gap: 9, alignItems: 'flex-start' }}>
+            <Icon name="alert" size={17} color={T.danger} />
+            <Text style={{ flex: 1, color: T.textSoft, fontSize: 12.5, lineHeight: 18 }}>
+              Esta OS já foi fechada e não pode mais ser editada.
+            </Text>
+          </View>
+        </SectionCard>
+      )}
+
+      <SectionCard title="Fluxo">
+        <View style={{ gap: 13 }}>
+          <View>
+            <FieldLabel>Status</FieldLabel>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {(locked ? [order.status] : EDITABLE_STATUS).map(item => {
+                const meta = WO_STATUS[item];
+                const active = status === item;
+                return (
+                  <Pressable
+                    key={item}
+                    disabled={!canEditStatus}
+                    onPress={() => {
+                      setStatus(item);
+                      if (item === 'in_progress' && !expectedCompletionAt) setExpectedCompletionAt(addHours(4));
+                      if (item !== 'in_progress') setExpectedCompletionAt(null);
+                    }}
+                    style={{
+                      minHeight: 38,
+                      borderRadius: 11,
+                      borderWidth: 1.5,
+                      borderColor: active ? meta.solid : T.border,
+                      backgroundColor: active ? meta.soft : T.surface,
+                      justifyContent: 'center',
+                      paddingHorizontal: 12,
+                      opacity: canEditStatus ? 1 : 0.72,
+                    }}
+                  >
+                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: active ? meta.fg : T.muted }}>{meta.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {status === 'in_progress' && (
+            <View>
+              <FieldLabel required>Prazo de conclusão</FieldLabel>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
+                {COMPLETION_PERIOD_OPTIONS.map(option => (
+                  <Pressable
+                    key={option.hours}
+                    onPress={() => setExpectedCompletionAt(addHours(option.hours))}
+                    style={{
+                      paddingVertical: 7,
+                      paddingHorizontal: 12,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: T.border,
+                      backgroundColor: T.surfaceMuted,
+                    }}
+                  >
+                    <Text style={{ color: T.primary, fontSize: 12, fontWeight: '800' }}>+ {option.label}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+              <Text style={{ marginTop: 7, fontSize: 12, color: T.muted }}>
+                {expectedCompletionAt ? `Até ${toDateTimeInput(expectedCompletionAt)}` : 'Selecione um prazo.'}
+              </Text>
+            </View>
+          )}
+        </View>
+      </SectionCard>
+
       <SectionCard title="Identificação">
         <View style={{ gap: 14 }}>
           <SuggestedInput label="Tipo de serviço" required value={serviceType} onChangeText={setServiceType} placeholder="Tipo" options={optionsByKind.get('work_order_service_type') ?? []} />
@@ -324,8 +478,39 @@ export function WorkOrderEditScreen() {
           <View><FieldLabel required>Solicitante</FieldLabel><Input value={requestedByName} onChangeText={setRequestedByName} placeholder="Solicitante" /></View>
           <View><FieldLabel>Contato</FieldLabel><Input value={requesterContact} onChangeText={setRequesterContact} placeholder="Contato" /></View>
           <View><FieldLabel required>Solicitação</FieldLabel><Input value={technicianRequest} onChangeText={setTechnicianRequest} placeholder="Descrição da solicitação" multiline /></View>
-          <View><FieldLabel>Observação do atendimento</FieldLabel><Input value={attendanceNotes} onChangeText={setAttendanceNotes} placeholder="Anotações do atendimento" multiline /></View>
+          <Pressable
+            onPress={() => {
+              setAttendanceNotesRequired(current => !current);
+              if (attendanceNotesRequired) setAttendanceNotes('');
+            }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+          >
+            <View
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 7,
+                borderWidth: 1.5,
+                borderColor: attendanceNotesRequired ? T.primary : T.border,
+                backgroundColor: attendanceNotesRequired ? T.primary : T.surface,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {attendanceNotesRequired && <Icon name="check" size={14} color="#fff" />}
+            </View>
+            <Text style={{ color: T.textSoft, fontSize: 12.5, fontWeight: '600' }}>Informar observação do atendimento</Text>
+          </Pressable>
+          {attendanceNotesRequired ? (
+            <View><FieldLabel>Observação do atendimento</FieldLabel><Input value={attendanceNotes} onChangeText={setAttendanceNotes} placeholder="Anotações do atendimento" multiline /></View>
+          ) : (
+            <Text style={{ color: T.muted, fontSize: 12.5 }}>Sem observação registrada para esta OS.</Text>
+          )}
           <View><FieldLabel>Solução adotada</FieldLabel><Input value={resolutionNotes} onChangeText={setResolutionNotes} placeholder="Solução executada" multiline /></View>
+          <View>
+            <FieldLabel>Hora final</FieldLabel>
+            <Input value={finishedAtText} onChangeText={setFinishedAtText} placeholder="DD/MM/AAAA HH:mm" />
+          </View>
         </View>
       </SectionCard>
 
@@ -357,12 +542,12 @@ export function WorkOrderEditScreen() {
       </SectionCard>
 
       {!!formError && <Text style={{ color: T.danger, fontSize: 13, marginBottom: 12 }}>{formError}</Text>}
-      {saving ? (
+      {locked ? null : saving ? (
         <View style={{ height: 50, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color={T.primary} />
         </View>
       ) : (
-        <PrimaryButton label="Salvar alterações" icon="check" onPress={save} />
+        <PrimaryButton label={resolutionStatus === 'resolved' ? 'Salvar e assinar' : 'Salvar alterações'} icon="check" onPress={save} />
       )}
       <View style={{ height: 12 }} />
     </DetailScaffold>

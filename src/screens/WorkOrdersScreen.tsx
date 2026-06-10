@@ -44,6 +44,7 @@ export function WorkOrdersScreen() {
   });
 
   const openWO = (wo: WorkOrder) => nav.navigate('WorkOrderDetail', { id: wo.id });
+  const editWO = (wo: WorkOrder) => nav.navigate('WorkOrderEdit', { id: wo.id });
 
   return (
     <ModuleScreen
@@ -64,7 +65,7 @@ export function WorkOrdersScreen() {
             ? <EmptyState icon="alert" text={error} />
             : list.length === 0
           ? <EmptyState icon="clipboard" text="Nenhuma ordem encontrada." />
-          : list.map((wo) => <WOCard key={wo.id} wo={wo} onOpen={openWO} />)}
+          : list.map((wo) => <WOCard key={wo.id} wo={wo} onOpen={openWO} onEdit={editWO} />)}
       </View>
     </ModuleScreen>
   );
