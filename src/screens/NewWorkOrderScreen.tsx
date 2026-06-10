@@ -10,7 +10,14 @@ import { useResource } from '../api/use-resource';
 import type { WorkOrderPriority } from '../data/mock';
 import type { RootStackParamList } from '../navigation/types';
 
-const WORK_ORDER_OPTION_KINDS: SelectOptionKind[] = ['work_order_service_type', 'work_order_category', 'work_order_unit', 'work_order_department'];
+const WORK_ORDER_OPTION_KINDS: SelectOptionKind[] = [
+  'work_order_service_type',
+  'work_order_category',
+  'work_order_unit',
+  'work_order_department',
+  'work_order_technical_team',
+  'work_order_responsible_technician',
+];
 
 function Input({
   value,
@@ -102,6 +109,8 @@ export function NewWorkOrderScreen() {
   const [category, setCategory] = useState('');
   const [unitName, setUnitName] = useState('HO JCB');
   const [department, setDepartment] = useState('');
+  const [technicalTeam, setTechnicalTeam] = useState('');
+  const [responsibleTechnicianName, setResponsibleTechnicianName] = useState('');
   const [requestedByName, setRequestedByName] = useState(user?.name || '');
   const [requesterContact, setRequesterContact] = useState('');
   const [technicianRequest, setTechnicianRequest] = useState('');
@@ -142,6 +151,8 @@ export function NewWorkOrderScreen() {
         department,
         requestedByName,
         requesterContact,
+        technicalTeam,
+        responsibleTechnicianName,
         technicianRequest,
         priority,
       });
@@ -164,6 +175,8 @@ export function NewWorkOrderScreen() {
             <View style={{ flex: 1 }}><SuggestedInput label="Unidade" required value={unitName} onChangeText={setUnitName} placeholder="Unidade" options={optionsByKind.get('work_order_unit') ?? []} /></View>
             <View style={{ flex: 1 }}><SuggestedInput label="Setor" required value={department} onChangeText={setDepartment} placeholder="Setor" options={optionsByKind.get('work_order_department') ?? []} /></View>
           </View>
+          <SuggestedInput label="Equipe técnica" value={technicalTeam} onChangeText={setTechnicalTeam} placeholder="Ex.: TI INTERNO" options={optionsByKind.get('work_order_technical_team') ?? []} />
+          <SuggestedInput label="Técnico responsável" value={responsibleTechnicianName} onChangeText={setResponsibleTechnicianName} placeholder="Nome do técnico" options={optionsByKind.get('work_order_responsible_technician') ?? []} />
         </View>
       </SectionCard>
 

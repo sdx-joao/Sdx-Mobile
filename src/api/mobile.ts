@@ -12,6 +12,7 @@ export type SelectOptionKind =
   | 'work_order_unit'
   | 'work_order_department'
   | 'work_order_technical_team'
+  | 'work_order_responsible_technician'
   | 'work_order_material'
   | 'work_order_material_unit';
 
@@ -49,6 +50,8 @@ export type CreateWorkOrderInput = {
   department: string;
   requestedByName: string;
   requesterContact?: string;
+  technicalTeam?: string;
+  responsibleTechnicianName?: string;
   technicianRequest: string;
   priority: WorkOrderPriority;
 };
