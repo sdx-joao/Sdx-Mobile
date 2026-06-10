@@ -7,7 +7,13 @@ import { Badge, DetailScaffold, EmptyState, LoadingState, SectionCard, StatItem 
 import { T, WO_STATUS, WO_PRIORITY } from '../theme/theme';
 import { fmtDate, fmtTime, type WorkOrderStatus } from '../data/mock';
 import { useAuth } from '../auth/auth-context';
-import { getWorkOrder, updateWorkOrderStatus } from '../api/mobile';
+import {
+  getWorkOrder,
+  getWorkOrderAttachments,
+  updateWorkOrderStatus,
+  type WorkOrderAttachment,
+  type WorkOrderAttachmentCategory,
+} from '../api/mobile';
 import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -19,15 +25,35 @@ const COMPLETION_PERIOD_OPTIONS = [
   { hours: 8, label: '8h' },
   { hours: 24, label: '24h' },
 ];
+const ATTACHMENT_LABELS: Record<WorkOrderAttachmentCategory, string> = {
+  before: 'Antes',
+  after: 'Depois',
+  document: 'Documento',
+  general: 'Geral',
+};
+type PhotoAttachmentCategory = 'before' | 'after' | 'general';
+
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 KB';
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
 
 export function WorkOrderDetailScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'WorkOrderDetail'>>();
   const { token } = useAuth();
-  const loader = useCallback(() => getWorkOrder(token, route.params.id), [token, route.params.id]);
+  const loader = useCallback(async () => {
+    const [detail, attachments] = await Promise.all([
+      getWorkOrder(token, route.params.id),
+      getWorkOrderAttachments(token, route.params.id),
+    ]);
+    return { ...detail, attachments };
+  }, [token, route.params.id]);
   const { data, loading, refreshing, error, reload } = useResource(loader);
   const wo = data?.workOrder;
   const timeline = data?.timeline;
+  const attachments = data?.attachments ?? [];
   const [status, setStatus] = useState<WorkOrderStatus>(wo?.status ?? 'open');
   const [savingStatus, setSavingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -235,6 +261,69 @@ export function WorkOrderDetailScreen() {
           </View>
         </SectionCard>
       )}
+
+      <SectionCard title={`Anexos (${attachments.length})`}>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: attachments.length ? 12 : 0 }}>
+          {([
+            ['before', 'Foto antes'],
+            ['after', 'Foto depois'],
+            ['general', 'Foto geral'],
+          ] as Array<[PhotoAttachmentCategory, string]>).map(([category, label]) => (
+            <Pressable
+              key={category}
+              onPress={() => nav.navigate('WorkOrderAttachmentCapture', { id: wo.id, category })}
+              style={{
+                flex: 1,
+                minHeight: 40,
+                borderRadius: 11,
+                borderWidth: 1,
+                borderColor: T.border,
+                backgroundColor: T.surfaceMuted,
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingHorizontal: 8,
+              }}
+            >
+              <Text style={{ color: T.primary, fontSize: 11.5, fontWeight: '800', textAlign: 'center' }}>{label}</Text>
+            </Pressable>
+          ))}
+        </View>
+        {attachments.length === 0 ? (
+          <Text style={{ fontSize: 12.5, color: T.muted }}>Nenhum anexo registrado.</Text>
+        ) : (
+          <View style={{ gap: 9 }}>
+            {attachments.map((attachment: WorkOrderAttachment) => (
+              <View
+                key={attachment.id}
+                style={{
+                  flexDirection: 'row',
+                  gap: 10,
+                  borderWidth: 1,
+                  borderColor: T.border,
+                  borderRadius: 12,
+                  padding: 10,
+                  backgroundColor: T.surfaceMuted,
+                }}
+              >
+                <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name={attachment.mimeType.startsWith('image/') ? 'camera' : 'download'} size={16} color={T.primary} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '700', color: T.text }}>
+                    {attachment.originalFileName || `Anexo ${attachment.id}`}
+                  </Text>
+                  <Text style={{ marginTop: 2, fontSize: 11.5, color: T.muted }}>
+                    {ATTACHMENT_LABELS[attachment.category] || attachment.category} · {formatBytes(attachment.fileSize)}
+                  </Text>
+                  {!!attachment.comment && (
+                    <Text numberOfLines={2} style={{ marginTop: 4, fontSize: 12, color: T.textSoft }}>{attachment.comment}</Text>
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </SectionCard>
 
       {timeline && timeline.length > 0 && (
         <SectionCard title="Histórico">

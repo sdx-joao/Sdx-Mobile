@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { API_BASE_URL, ApiError, apiFetch } from './client';
 import type { WorkOrder, WorkOrderPriority, WorkOrderStatus, InventoryItem, Movement, TimelineEvent } from '../data/mock';
 
 export type Summary = {
@@ -23,6 +23,21 @@ export type SelectOption = {
   sortOrder?: number;
 };
 
+export type WorkOrderAttachmentCategory = 'before' | 'after' | 'document' | 'general';
+
+export type WorkOrderAttachment = {
+  id: string;
+  workOrderId: string;
+  category: WorkOrderAttachmentCategory;
+  comment: string | null;
+  originalFileName: string | null;
+  mimeType: string;
+  fileSize: number;
+  uploadedByName: string | null;
+  createdAt: string;
+  url: string;
+};
+
 export function getSummary(token: string | null) {
   return apiFetch<Summary>('/api/mobile/summary', { token });
 }
@@ -41,6 +56,11 @@ export async function getWorkOrders(
 
 export function getWorkOrder(token: string | null, id: string) {
   return apiFetch<{ workOrder: WorkOrder; timeline: TimelineEvent[] }>(`/api/mobile/work-orders/${id}`, { token });
+}
+
+export async function getWorkOrderAttachments(token: string | null, id: string): Promise<WorkOrderAttachment[]> {
+  const res = await apiFetch<{ attachments: WorkOrderAttachment[] }>(`/api/mobile/work-orders/${id}/attachments`, { token });
+  return res.attachments ?? [];
 }
 
 export type CreateWorkOrderInput = {
@@ -96,6 +116,41 @@ export function updateWorkOrderStatus(
     token,
     body: { status, ...opts },
   });
+}
+
+export async function uploadWorkOrderAttachment(
+  token: string | null,
+  id: string,
+  input: {
+    uri: string;
+    name: string;
+    type: string;
+    category: WorkOrderAttachmentCategory;
+    comment?: string;
+  },
+) {
+  const form = new FormData();
+  form.append('category', input.category);
+  if (input.comment) form.append('comment', input.comment);
+  form.append('file', {
+    uri: input.uri,
+    name: input.name,
+    type: input.type,
+  } as unknown as Blob);
+
+  const res = await fetch(`${API_BASE_URL}/api/mobile/work-orders/${id}/attachments`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: form,
+  });
+  const payload = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new ApiError((payload && (payload.message || payload.error)) || `Erro ${res.status}`, res.status, payload?.code);
+  }
+  return payload as { message: string; attachmentId: string };
 }
 
 export async function getOptions(token: string | null, kinds: SelectOptionKind[]) {

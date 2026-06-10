@@ -11,6 +11,7 @@ export type RootStackParamList = {
   Tabs: NavigatorScreenParams<TabParamList> | undefined;
   WorkOrderDetail: { id: string };
   WorkOrderEdit: { id: string };
+  WorkOrderAttachmentCapture: { id: string; category?: 'before' | 'after' | 'general' };
   NewWorkOrder: undefined;
   InventoryDetail: { id: string };
   Scan: undefined;
