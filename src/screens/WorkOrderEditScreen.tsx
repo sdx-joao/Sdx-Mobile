@@ -4,11 +4,11 @@ import { useNavigation, useRoute, type RouteProp } from '@react-navigation/nativ
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
 import { DetailScaffold, EmptyState, FieldLabel, LoadingState, PrimaryButton, SectionCard } from '../components/ui';
-import { T, WO_PRIORITY } from '../theme/theme';
+import { T, WO_PRIORITY, WO_RESOLUTION } from '../theme/theme';
 import { getOptions, getWorkOrder, updateWorkOrder, type SelectOption, type SelectOptionKind } from '../api/mobile';
 import { useResource } from '../api/use-resource';
 import { useAuth } from '../auth/auth-context';
-import type { WorkOrder, WorkOrderMaterial, WorkOrderPriority } from '../data/mock';
+import type { WorkOrder, WorkOrderMaterial, WorkOrderPriority, WorkOrderResolution } from '../data/mock';
 import type { RootStackParamList } from '../navigation/types';
 
 const OPTION_KINDS: SelectOptionKind[] = [
@@ -147,6 +147,7 @@ export function WorkOrderEditScreen() {
   const [technicianRequest, setTechnicianRequest] = useState('');
   const [attendanceNotes, setAttendanceNotes] = useState('');
   const [resolutionNotes, setResolutionNotes] = useState('');
+  const [resolutionStatus, setResolutionStatus] = useState<WorkOrderResolution | null>(null);
   const [priority, setPriority] = useState<WorkOrderPriority>('normal');
   const [materials, setMaterials] = useState<MaterialDraft[]>([]);
   const [saving, setSaving] = useState(false);
@@ -176,6 +177,7 @@ export function WorkOrderEditScreen() {
     setTechnicianRequest(order.technicianRequest || '');
     setAttendanceNotes(order.attendanceNotes || '');
     setResolutionNotes(order.resolutionNotes || '');
+    setResolutionStatus(order.resolutionStatus || null);
     setPriority(order.priority || 'normal');
     setMaterials((order.materials || []).map(materialToDraft));
   }, [hydratedId, order]);
@@ -230,6 +232,7 @@ export function WorkOrderEditScreen() {
         responsibleTechnicianName,
         technicianRequest,
         attendanceNotes,
+        resolutionStatus,
         resolutionNotes,
         priority,
         materials: materials
@@ -283,6 +286,33 @@ export function WorkOrderEditScreen() {
                 }}
               >
                 <Text style={{ fontSize: 12, fontWeight: '600', color: active ? meta.color : T.muted }}>{meta.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </SectionCard>
+
+      <SectionCard title="Situação da OS">
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {(Object.entries(WO_RESOLUTION) as Array<[WorkOrderResolution, { label: string; color: string; soft: string }]>).map(([key, meta]) => {
+            const active = resolutionStatus === key;
+            return (
+              <Pressable
+                key={key}
+                onPress={() => setResolutionStatus(active ? null : key)}
+                style={{
+                  flex: 1,
+                  minHeight: 42,
+                  borderRadius: 11,
+                  borderWidth: 1.5,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 8,
+                  borderColor: active ? meta.color : T.border,
+                  backgroundColor: active ? meta.soft : T.surface,
+                }}
+              >
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: active ? meta.color : T.muted, textAlign: 'center' }}>{meta.label}</Text>
               </Pressable>
             );
           })}

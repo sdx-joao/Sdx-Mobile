@@ -13,6 +13,7 @@ export type WorkOrderStatus =
   | 'completed'
   | 'cancelled';
 export type WorkOrderPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type WorkOrderResolution = 'resolved' | 'partial' | 'unresolved';
 
 export type WorkOrderMaterial = { description: string; quantity: number; unit: string | null };
 
@@ -36,7 +37,7 @@ export type WorkOrder = {
   finishedAt?: string | null;
   escalationCount: number;
   attendanceNotes: string | null;
-  resolutionStatus: 'resolved' | 'partial' | 'unresolved' | null;
+  resolutionStatus: WorkOrderResolution | null;
   resolutionNotes?: string | null;
   materials: WorkOrderMaterial[];
 };

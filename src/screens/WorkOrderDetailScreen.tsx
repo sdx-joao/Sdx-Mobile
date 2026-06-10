@@ -12,6 +12,13 @@ import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
 
 const FLOW: WorkOrderStatus[] = ['open', 'in_progress', 'waiting', 'delivered', 'completed'];
+const COMPLETION_PERIOD_OPTIONS = [
+  { hours: 1, label: '1h' },
+  { hours: 2, label: '2h' },
+  { hours: 4, label: '4h' },
+  { hours: 8, label: '8h' },
+  { hours: 24, label: '24h' },
+];
 
 export function WorkOrderDetailScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -24,6 +31,7 @@ export function WorkOrderDetailScreen() {
   const [status, setStatus] = useState<WorkOrderStatus>(wo?.status ?? 'open');
   const [savingStatus, setSavingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [expectedCompletionHours, setExpectedCompletionHours] = useState(4);
 
   useEffect(() => {
     if (wo) setStatus(wo.status);
@@ -63,7 +71,7 @@ export function WorkOrderDetailScreen() {
     setSavingStatus(true);
     setStatusError(null);
     try {
-      await updateWorkOrderStatus(token, wo.id, next, next === 'in_progress' ? { expectedCompletionHours: 4 } : {});
+      await updateWorkOrderStatus(token, wo.id, next, next === 'in_progress' ? { expectedCompletionHours } : {});
       setStatus(next);
       reload();
     } catch (e) {
@@ -107,6 +115,34 @@ export function WorkOrderDetailScreen() {
     >
       {/* Status changer */}
       <SectionCard title="Atualizar status">
+        {status !== 'in_progress' && (
+          <View style={{ marginBottom: 12 }}>
+            <Text style={{ fontSize: 11, color: T.faint, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 7 }}>
+              Prazo ao iniciar atendimento
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
+              {COMPLETION_PERIOD_OPTIONS.map(option => {
+                const active = expectedCompletionHours === option.hours;
+                return (
+                  <Pressable
+                    key={option.hours}
+                    onPress={() => setExpectedCompletionHours(option.hours)}
+                    style={{
+                      paddingVertical: 7,
+                      paddingHorizontal: 12,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: active ? T.primary : T.border,
+                      backgroundColor: active ? `${T.primary}12` : T.surfaceMuted,
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: active ? T.primary : T.muted }}>{option.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
           {FLOW.map((s) => {
             const on = status === s;

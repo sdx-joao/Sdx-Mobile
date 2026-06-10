@@ -40,6 +40,12 @@ export const WO_PRIORITY: Record<string, { label: string; color: string; soft: s
   urgent: { label: 'Urgente', color: '#DC2626', soft: '#FDECEC' },
 };
 
+export const WO_RESOLUTION: Record<string, { label: string; color: string; soft: string }> = {
+  resolved: { label: 'Resolvida', color: '#059669', soft: '#E6F6EF' },
+  partial: { label: 'Parcial', color: '#CA8A04', soft: '#FEF7E0' },
+  unresolved: { label: 'Não resolvida', color: '#DC2626', soft: '#FDECEC' },
+};
+
 // Inventário — tipos principais
 export const INV_TYPE: Record<string, { label: string; short: string; icon: string }> = {
   EQUIPAMENTO: { label: 'Equipamento', short: 'Equip.', icon: 'monitor' },
