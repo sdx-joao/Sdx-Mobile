@@ -23,6 +23,15 @@ export type SelectOption = {
   sortOrder?: number;
 };
 
+export type WorkOrderRequester = {
+  id: string;
+  source: 'user' | 'catalog';
+  name: string;
+  department: string | null;
+  phone: string | null;
+  linkedUserId: string | null;
+};
+
 export type WorkOrderAttachmentCategory = 'before' | 'after' | 'document' | 'general';
 
 export type WorkOrderAttachment = {
@@ -161,6 +170,11 @@ export async function getOptions(token: string | null, kinds: SelectOptionKind[]
   const qs = kinds.map(encodeURIComponent).join(',');
   const res = await apiFetch<{ options: SelectOption[] }>(`/api/mobile/options?kinds=${qs}`, { token });
   return res.options ?? [];
+}
+
+export async function getWorkOrderRequesters(token: string | null): Promise<WorkOrderRequester[]> {
+  const res = await apiFetch<{ requesters: WorkOrderRequester[] }>('/api/mobile/work-orders/requesters', { token });
+  return res.requesters ?? [];
 }
 
 // Busca todos os itens (filtro por primaryType é feito client-side, pois o

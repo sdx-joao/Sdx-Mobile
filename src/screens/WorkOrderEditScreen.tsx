@@ -5,7 +5,15 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
 import { DetailScaffold, EmptyState, FieldLabel, LoadingState, PrimaryButton, SectionCard } from '../components/ui';
 import { T, WO_PRIORITY, WO_RESOLUTION, WO_STATUS } from '../theme/theme';
-import { getOptions, getWorkOrder, updateWorkOrder, type SelectOption, type SelectOptionKind } from '../api/mobile';
+import {
+  getOptions,
+  getWorkOrder,
+  getWorkOrderRequesters,
+  updateWorkOrder,
+  type SelectOption,
+  type SelectOptionKind,
+  type WorkOrderRequester,
+} from '../api/mobile';
 import { useResource } from '../api/use-resource';
 import { useAuth } from '../auth/auth-context';
 import type { WorkOrder, WorkOrderMaterial, WorkOrderPriority, WorkOrderResolution, WorkOrderStatus } from '../data/mock';
@@ -122,6 +130,71 @@ function SuggestedInput({
   );
 }
 
+function normalizeForSearch(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+}
+
+function RequesterInput({
+  value,
+  contact,
+  department,
+  requesters,
+  onPick,
+  onChangeText,
+}: {
+  value: string;
+  contact: string;
+  department: string;
+  requesters: WorkOrderRequester[];
+  onPick: (requester: WorkOrderRequester) => void;
+  onChangeText: (value: string) => void;
+}) {
+  const query = normalizeForSearch(value);
+  const dept = normalizeForSearch(department);
+  const suggestions = requesters
+    .filter(item => !query || normalizeForSearch(item.name).includes(query))
+    .sort((a, b) => {
+      if (!dept) return 0;
+      const aRank = a.department && normalizeForSearch(a.department) === dept ? 0 : (!a.department ? 1 : 2);
+      const bRank = b.department && normalizeForSearch(b.department) === dept ? 0 : (!b.department ? 1 : 2);
+      return aRank - bRank;
+    })
+    .slice(0, 8);
+
+  return (
+    <View>
+      <FieldLabel required>Solicitante</FieldLabel>
+      <Input value={value} onChangeText={onChangeText} placeholder="Solicitante" />
+      {suggestions.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7, paddingTop: 8 }}>
+          {suggestions.map(item => {
+            const deptMatch = dept && item.department && normalizeForSearch(item.department) === dept;
+            const selected = normalizeForSearch(value) === normalizeForSearch(item.name);
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() => onPick(item)}
+                style={{
+                  paddingVertical: 6,
+                  paddingHorizontal: 10,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: selected ? T.primary : deptMatch ? '#059669' : T.border,
+                  backgroundColor: selected ? `${T.primary}12` : deptMatch ? '#E6F6EF' : T.surfaceMuted,
+                }}
+              >
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: selected ? T.primary : deptMatch ? '#047857' : T.muted }}>
+                  {item.name}{item.phone && !contact ? ' · tel.' : ''}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
 function materialToDraft(material: WorkOrderMaterial): MaterialDraft {
   return {
     description: material.description,
@@ -166,11 +239,12 @@ export function WorkOrderEditScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'WorkOrderEdit'>>();
   const { token } = useAuth();
   const loader = useCallback(async () => {
-    const [detail, options] = await Promise.all([
+    const [detail, options, requesters] = await Promise.all([
       getWorkOrder(token, route.params.id),
       getOptions(token, OPTION_KINDS),
+      getWorkOrderRequesters(token),
     ]);
-    return { detail, options };
+    return { detail, options, requesters };
   }, [token, route.params.id]);
   const { data, loading, error } = useResource(loader);
   const order = data?.detail.workOrder;
@@ -253,6 +327,11 @@ export function WorkOrderEditScreen() {
   const removeMaterial = (index: number) => setMaterials(current => current.filter((_, itemIndex) => itemIndex !== index));
   const locked = isClosedStatus(order.status);
   const canEditStatus = !locked;
+  const pickRequester = (requester: WorkOrderRequester) => {
+    setRequestedByName(requester.name);
+    if (requester.department) setDepartment(requester.department);
+    if (requester.phone) setRequesterContact(requester.phone);
+  };
 
   const save = async () => {
     const parsedFinishedAt = fromDateTimeInput(finishedAtText);
@@ -475,7 +554,14 @@ export function WorkOrderEditScreen() {
 
       <SectionCard title="Solicitante e atendimento">
         <View style={{ gap: 14 }}>
-          <View><FieldLabel required>Solicitante</FieldLabel><Input value={requestedByName} onChangeText={setRequestedByName} placeholder="Solicitante" /></View>
+          <RequesterInput
+            value={requestedByName}
+            contact={requesterContact}
+            department={department}
+            requesters={data?.requesters ?? []}
+            onChangeText={setRequestedByName}
+            onPick={pickRequester}
+          />
           <View><FieldLabel>Contato</FieldLabel><Input value={requesterContact} onChangeText={setRequesterContact} placeholder="Contato" /></View>
           <View><FieldLabel required>Solicitação</FieldLabel><Input value={technicianRequest} onChangeText={setTechnicianRequest} placeholder="Descrição da solicitação" multiline /></View>
           <Pressable
