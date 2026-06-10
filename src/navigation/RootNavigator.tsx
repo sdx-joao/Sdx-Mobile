@@ -7,6 +7,7 @@ import { WorkOrdersScreen } from '../screens/WorkOrdersScreen';
 import { InventoryScreen } from '../screens/InventoryScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { WorkOrderDetailScreen } from '../screens/WorkOrderDetailScreen';
+import { WorkOrderEditScreen } from '../screens/WorkOrderEditScreen';
 import { NewWorkOrderScreen } from '../screens/NewWorkOrderScreen';
 import { InventoryDetailScreen } from '../screens/InventoryDetailScreen';
 import { ScanScreen } from '../screens/ScanScreen';
@@ -31,6 +32,7 @@ export function RootNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Tabs" component={Tabs} />
       <Stack.Screen name="WorkOrderDetail" component={WorkOrderDetailScreen} />
+      <Stack.Screen name="WorkOrderEdit" component={WorkOrderEditScreen} />
       <Stack.Screen name="InventoryDetail" component={InventoryDetailScreen} />
       <Stack.Screen name="NewWorkOrder" component={NewWorkOrderScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="Scan" component={ScanScreen} options={{ presentation: 'fullScreenModal' }} />

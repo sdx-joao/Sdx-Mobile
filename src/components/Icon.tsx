@@ -41,6 +41,7 @@ export const ICONS: Record<string, string> = {
   mouse: 'M5 9a7 7 0 0114 0v6a7 7 0 01-14 0zM12 5v4',
   cable: 'M4 9a2 2 0 012-2h2v6a2 2 0 002 2h4a2 2 0 002-2V7h2a2 2 0 012 2 M4 9v6a2 2 0 002 2M20 9v6a2 2 0 01-2 2',
   x: 'M18 6L6 18M6 6l12 12',
+  trash: 'M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15M10 11v6M14 11v6',
   calendar: 'M3 4h18v18H3zM3 10h18M8 2v4M16 2v4',
   building: 'M3 21h18M5 21V7l8-4v18M19 21V11l-6-3M9 9v.01M9 12v.01M9 15v.01M9 18v.01',
   hash: 'M4 9h16M4 15h16M10 3L8 21M16 3l-2 18',

@@ -50,5 +50,7 @@ export function useResource<T>(loader: () => Promise<T>): Resource<T> {
     run(false);
   }, [run]);
 
-  return { data, loading, refreshing, error, reload: () => run(true) };
+  const reload = useCallback(() => run(true), [run]);
+
+  return { data, loading, refreshing, error, reload };
 }

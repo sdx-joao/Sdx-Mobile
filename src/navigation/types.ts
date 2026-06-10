@@ -10,6 +10,7 @@ export type TabParamList = {
 export type RootStackParamList = {
   Tabs: NavigatorScreenParams<TabParamList> | undefined;
   WorkOrderDetail: { id: string };
+  WorkOrderEdit: { id: string };
   NewWorkOrder: undefined;
   InventoryDetail: { id: string };
   Scan: undefined;

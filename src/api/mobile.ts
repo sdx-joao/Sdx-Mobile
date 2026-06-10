@@ -56,9 +56,25 @@ export type CreateWorkOrderInput = {
   priority: WorkOrderPriority;
 };
 
+export type UpdateWorkOrderInput = Partial<CreateWorkOrderInput> & {
+  attendanceNotes?: string | null;
+  resolutionStatus?: WorkOrder['resolutionStatus'];
+  resolutionNotes?: string | null;
+  expectedCompletionHours?: number;
+  materials?: WorkOrder['materials'];
+};
+
 export function createWorkOrder(token: string | null, input: CreateWorkOrderInput) {
   return apiFetch<{ id: string; code: string }>('/api/mobile/work-orders', {
     method: 'POST',
+    token,
+    body: input,
+  });
+}
+
+export function updateWorkOrder(token: string | null, id: string, input: UpdateWorkOrderInput) {
+  return apiFetch<{ ok: true; printRequested?: boolean }>(`/api/mobile/work-orders/${id}`, {
+    method: 'PATCH',
     token,
     body: input,
   });

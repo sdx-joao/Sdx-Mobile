@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
 import { Badge, DetailScaffold, EmptyState, LoadingState, SectionCard, StatItem } from '../components/ui';
@@ -28,6 +28,12 @@ export function WorkOrderDetailScreen() {
   useEffect(() => {
     if (wo) setStatus(wo.status);
   }, [wo]);
+
+  useFocusEffect(
+    useCallback(() => {
+      reload();
+    }, [reload]),
+  );
 
   if (loading) {
     return (
@@ -81,6 +87,21 @@ export function WorkOrderDetailScreen() {
             <Text style={{ fontSize: 12.5, fontWeight: '600', color: '#fff' }}>Prioridade {pr.label}</Text>
           </View>
           <Text style={{ fontSize: 12.5, color: 'rgba(255,255,255,.75)' }}>{wo.category}</Text>
+          <Pressable
+            onPress={() => nav.navigate('WorkOrderEdit', { id: wo.id })}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 5,
+              backgroundColor: '#fff',
+              paddingVertical: 5,
+              paddingHorizontal: 10,
+              borderRadius: 999,
+            }}
+          >
+            <Icon name="sliders" size={13} color={T.primary} />
+            <Text style={{ fontSize: 12.5, fontWeight: '700', color: T.primary }}>Editar</Text>
+          </Pressable>
         </View>
       }
     >

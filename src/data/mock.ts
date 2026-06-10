@@ -14,7 +14,7 @@ export type WorkOrderStatus =
   | 'cancelled';
 export type WorkOrderPriority = 'low' | 'normal' | 'high' | 'urgent';
 
-export type WorkOrderMaterial = { description: string; quantity: number; unit: string };
+export type WorkOrderMaterial = { description: string; quantity: number; unit: string | null };
 
 export type WorkOrder = {
   id: string;
@@ -26,6 +26,7 @@ export type WorkOrder = {
   openedAt: string;
   requestedByName: string;
   requesterContact: string | null;
+  technicianRequest?: string;
   responsibleTechnicianName: string | null;
   technicalTeam: string | null;
   status: WorkOrderStatus;
