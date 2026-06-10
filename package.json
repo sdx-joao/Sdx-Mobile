@@ -22,12 +22,13 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
+    "eas-cli": "^20.1.0",
     "typescript": "~5.9.2"
   },
   "scripts": {
     "start": "expo start",
     "start:dev-client": "expo start --dev-client --tunnel",
-    "build:dev:android": "npx eas build --profile development --platform android",
+    "build:dev:android": "eas build --profile development --platform android",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"
