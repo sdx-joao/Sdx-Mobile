@@ -111,6 +111,21 @@ function normalizeForSearch(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
 }
 
+function getRequesterRank(item: WorkOrderRequester) {
+  if (item.source === 'catalog' && item.phone) return 0;
+  if (item.source === 'catalog') return 1;
+  if (item.phone) return 2;
+  return 3;
+}
+
+function findRequesterForDepartment(department: string, requesters: WorkOrderRequester[]) {
+  const dept = normalizeForSearch(department);
+  if (!dept) return null;
+  return [...requesters]
+    .filter(item => item.department && normalizeForSearch(item.department) === dept)
+    .sort((a, b) => getRequesterRank(a) - getRequesterRank(b) || a.name.localeCompare(b.name, 'pt-BR'))[0] ?? null;
+}
+
 function RequesterInput({
   value,
   contact,
@@ -132,9 +147,9 @@ function RequesterInput({
     .filter(item => !query || normalizeForSearch(item.name).includes(query))
     .sort((a, b) => {
       if (!dept) return 0;
-      const aRank = a.department && normalizeForSearch(a.department) === dept ? 0 : (!a.department ? 1 : 2);
-      const bRank = b.department && normalizeForSearch(b.department) === dept ? 0 : (!b.department ? 1 : 2);
-      return aRank - bRank;
+      const aDeptRank = a.department && normalizeForSearch(a.department) === dept ? 0 : (!a.department ? 1 : 2);
+      const bDeptRank = b.department && normalizeForSearch(b.department) === dept ? 0 : (!b.department ? 1 : 2);
+      return aDeptRank - bDeptRank || getRequesterRank(a) - getRequesterRank(b);
     })
     .slice(0, 8);
 
@@ -174,7 +189,7 @@ function RequesterInput({
 
 export function NewWorkOrderScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const optionsLoader = useCallback(async () => {
     const [options, requesters] = await Promise.all([
       getOptions(token, WORK_ORDER_OPTION_KINDS),
@@ -189,7 +204,7 @@ export function NewWorkOrderScreen() {
   const [department, setDepartment] = useState('');
   const [technicalTeam, setTechnicalTeam] = useState('');
   const [responsibleTechnicianName, setResponsibleTechnicianName] = useState('');
-  const [requestedByName, setRequestedByName] = useState(user?.name || '');
+  const [requestedByName, setRequestedByName] = useState('');
   const [requesterContact, setRequesterContact] = useState('');
   const [technicianRequest, setTechnicianRequest] = useState('');
   const [priority, setPriority] = useState<WorkOrderPriority>('normal');
@@ -210,6 +225,18 @@ export function NewWorkOrderScreen() {
     setRequestedByName(requester.name);
     if (requester.department) setDepartment(requester.department);
     if (requester.phone) setRequesterContact(requester.phone);
+  };
+
+  const selectDepartment = (value: string) => {
+    setDepartment(value);
+    const requester = findRequesterForDepartment(value, data?.requesters ?? []);
+    if (requester) {
+      setRequestedByName(requester.name);
+      setRequesterContact(requester.phone || '');
+    } else {
+      setRequestedByName('');
+      setRequesterContact('');
+    }
   };
 
   async function submit() {
@@ -257,7 +284,7 @@ export function NewWorkOrderScreen() {
           <SuggestedInput label="Categoria" required value={category} onChangeText={setCategory} placeholder="Ex.: TI / Infraestrutura" options={optionsByKind.get('work_order_category') ?? []} />
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <View style={{ flex: 1 }}><SuggestedInput label="Unidade" required value={unitName} onChangeText={setUnitName} placeholder="Unidade" options={optionsByKind.get('work_order_unit') ?? []} /></View>
-            <View style={{ flex: 1 }}><SuggestedInput label="Setor" required value={department} onChangeText={setDepartment} placeholder="Setor" options={optionsByKind.get('work_order_department') ?? []} /></View>
+            <View style={{ flex: 1 }}><SuggestedInput label="Setor" required value={department} onChangeText={selectDepartment} placeholder="Setor" options={optionsByKind.get('work_order_department') ?? []} /></View>
           </View>
           <SuggestedInput label="Equipe técnica" value={technicalTeam} onChangeText={setTechnicalTeam} placeholder="Ex.: TI INTERNO" options={optionsByKind.get('work_order_technical_team') ?? []} />
           <SuggestedInput label="Técnico responsável" value={responsibleTechnicianName} onChangeText={setResponsibleTechnicianName} placeholder="Nome do técnico" options={optionsByKind.get('work_order_responsible_technician') ?? []} />
