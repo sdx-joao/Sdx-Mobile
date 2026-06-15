@@ -225,6 +225,19 @@ function fromDateTimeInput(value: string) {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
+// Formata progressivamente enquanto o usuário digita só os números: DD/MM/AAAA HH:mm
+function maskDateTimeInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 12);
+  let out = '';
+  for (let i = 0; i < digits.length; i += 1) {
+    if (i === 2 || i === 4) out += '/';
+    else if (i === 8) out += ' ';
+    else if (i === 10) out += ':';
+    out += digits[i];
+  }
+  return out;
+}
+
 function isClosedStatus(status: WorkOrderStatus) {
   return status === 'completed' || status === 'delivered' || status === 'cancelled';
 }
@@ -594,8 +607,22 @@ export function WorkOrderEditScreen() {
           )}
           <View><FieldLabel>Solução adotada</FieldLabel><Input value={resolutionNotes} onChangeText={setResolutionNotes} placeholder="Solução executada" multiline /></View>
           <View>
-            <FieldLabel>Hora final</FieldLabel>
-            <Input value={finishedAtText} onChangeText={setFinishedAtText} placeholder="DD/MM/AAAA HH:mm" />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <Text style={{ fontSize: 12.5, fontWeight: '600', color: T.textSoft }}>Hora final</Text>
+              <Pressable
+                onPress={() => setFinishedAtText(toDateTimeInput(new Date().toISOString()))}
+                hitSlop={8}
+                style={{ paddingVertical: 3, paddingHorizontal: 11, borderRadius: 999, borderWidth: 1, borderColor: T.primary, backgroundColor: `${T.primary}12` }}
+              >
+                <Text style={{ color: T.primary, fontSize: 11.5, fontWeight: '700' }}>Agora</Text>
+              </Pressable>
+            </View>
+            <Input
+              value={finishedAtText}
+              onChangeText={(value) => setFinishedAtText(maskDateTimeInput(value))}
+              placeholder="DD/MM/AAAA HH:mm"
+              keyboardType="numeric"
+            />
           </View>
         </View>
       </SectionCard>
