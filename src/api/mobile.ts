@@ -57,6 +57,14 @@ export function getMyProfile(token: string | null) {
   return apiFetch<MobileUser>('/api/mobile/me', { token });
 }
 
+/** Atualiza os próprios dados de contato (espelha a edição do perfil web). */
+export function updateMyProfile(
+  token: string | null,
+  fields: { fullName?: string; email?: string; phone?: string; cpf?: string },
+) {
+  return apiFetch<{ ok: true }>('/api/mobile/me', { method: 'PATCH', token, body: fields });
+}
+
 export type AppNotification = {
   id: string;
   type: 'os_moved' | 'os_assigned' | 'os_escalated' | 'os_new_in_department' | string;
