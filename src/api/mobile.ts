@@ -1,5 +1,6 @@
 import { API_BASE_URL, ApiError, apiFetch } from './client';
 import type { WorkOrder, WorkOrderPriority, WorkOrderStatus, InventoryItem, Movement, TimelineEvent } from '../data/mock';
+import type { MobileUser } from '../auth/types';
 
 export type Summary = {
   workOrders: { activeNow: number; openedToday: number };
@@ -49,6 +50,11 @@ export type WorkOrderAttachment = {
 
 export function getSummary(token: string | null) {
   return apiFetch<Summary>('/api/mobile/summary', { token });
+}
+
+/** Dados completos do perfil do usuário logado (fonte de verdade: backend). */
+export function getMyProfile(token: string | null) {
+  return apiFetch<MobileUser>('/api/mobile/me', { token });
 }
 
 export async function getWorkOrders(

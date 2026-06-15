@@ -1,16 +1,12 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
 import { BlueHeader } from '../components/ui';
 import { Wordmark } from '../components/Brand';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
-
-const ROWS = [
-  { icon: 'user', label: 'Meus dados' },
-  { icon: 'bell', label: 'Notificações' },
-  { icon: 'qr', label: 'Etiquetas e impressão' },
-  { icon: 'download', label: 'Dados offline', note: 'Em breve' },
-];
+import type { RootStackParamList } from '../navigation/types';
 
 function initials(name: string) {
   return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -18,9 +14,17 @@ function initials(name: string) {
 
 export function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const accent = T.primary;
 
   if (!user) return null;
+
+  const rows: Array<{ icon: string; label: string; note?: string; onPress?: () => void }> = [
+    { icon: 'user', label: 'Meus dados', onPress: () => nav.navigate('MyData') },
+    { icon: 'bell', label: 'Notificações', note: 'Em breve' },
+    { icon: 'qr', label: 'Etiquetas e impressão', note: 'Em breve' },
+    { icon: 'download', label: 'Dados offline', note: 'Em breve' },
+  ];
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
@@ -40,8 +44,8 @@ export function ProfileScreen() {
         </View>
 
         <View style={{ backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 14, overflow: 'hidden', marginBottom: 18 }}>
-          {ROWS.map((r, i) => (
-            <Pressable key={r.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 14, paddingHorizontal: 15, borderBottomWidth: i < ROWS.length - 1 ? 1 : 0, borderBottomColor: T.surfaceMuted }}>
+          {rows.map((r, i) => (
+            <Pressable key={r.label} onPress={r.onPress} disabled={!r.onPress} style={{ flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 14, paddingHorizontal: 15, borderBottomWidth: i < rows.length - 1 ? 1 : 0, borderBottomColor: T.surfaceMuted }}>
               <Icon name={r.icon} size={18} color={T.muted} />
               <Text style={{ flex: 1, fontSize: 14, color: T.text }}>{r.label}</Text>
               {r.note && <Text style={{ fontSize: 11, color: T.faint, marginRight: 4 }}>{r.note}</Text>}
