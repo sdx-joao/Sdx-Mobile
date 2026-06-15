@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -102,12 +102,12 @@ export function WorkOrderAttachmentCaptureScreen() {
         </Pressable>
       </View>
 
-      <View
+      <KeyboardAvoidingView
+        style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+       <View
         style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
           padding: 16,
           paddingBottom: 28,
           gap: 12,
@@ -172,7 +172,8 @@ export function WorkOrderAttachmentCaptureScreen() {
           {saving ? <ActivityIndicator color={T.primary} /> : <Icon name="camera" size={20} color={T.primary} />}
           <Text style={{ color: T.primary, fontSize: 15.5, fontWeight: '800' }}>{saving ? 'Enviando...' : 'Capturar e anexar'}</Text>
         </Pressable>
-      </View>
+       </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }

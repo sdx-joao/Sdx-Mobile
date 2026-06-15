@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, PanResponder, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, PanResponder, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import Svg, { Path } from 'react-native-svg';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -109,7 +109,7 @@ export function WorkOrderSignatureScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0F172A', padding: 16, gap: 12 }}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#0F172A', padding: 16, gap: 12 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8 }}>
         <Pressable onPress={() => nav.goBack()} style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,.12)', alignItems: 'center', justifyContent: 'center' }}>
           <Icon name="arrow-left" size={19} color="#fff" />
@@ -146,6 +146,6 @@ export function WorkOrderSignatureScreen() {
         {saving ? <ActivityIndicator color="#fff" /> : <Icon name="check" size={18} color="#fff" />}
         <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>Concluir e solicitar impressão</Text>
       </Pressable>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

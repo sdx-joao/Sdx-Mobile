@@ -1,6 +1,8 @@
 import type { ReactElement, ReactNode } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -289,14 +291,17 @@ export function ModuleScreen({
           </Pressable>
         )}
       </BlueHeader>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[{ paddingTop: onNew ? 10 : 12 }, contentStyle]}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={refreshControl}
-      >
-        {children}
-      </ScrollView>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[{ paddingTop: onNew ? 10 : 12, paddingBottom: 48 }, contentStyle]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          refreshControl={refreshControl}
+        >
+          {children}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -334,9 +339,17 @@ export function DetailScaffold({
         </View>
         {headerExtra}
       </BlueHeader>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
-        {children}
-      </ScrollView>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          refreshControl={refreshControl}
+        >
+          {children}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
