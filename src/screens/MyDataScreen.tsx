@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { RefreshControl, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Avatar } from '../components/Avatar';
 import { DetailScaffold, EmptyState, LoadingState, SectionCard } from '../components/ui';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
@@ -64,6 +65,10 @@ export function MyDataScreen() {
         <EmptyState icon="user" text="Sem dados de perfil." />
       ) : (
         <View style={{ gap: 14 }}>
+          <View style={{ alignItems: 'center', gap: 10, marginBottom: 2 }}>
+            <Avatar name={data.fullName || data.username} avatarUrl={data.avatarUrl} size={88} radius={26} />
+            <Text style={{ fontSize: 16.5, fontWeight: '800', color: T.text }}>{data.fullName || data.username}</Text>
+          </View>
           <SectionCard title="Identificação">
             <Row label="Nome completo" value={data.fullName} />
             <Row label="Usuário" value={data.username} />
