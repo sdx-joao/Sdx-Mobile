@@ -17,4 +17,5 @@ export type RootStackParamList = {
   Scan: undefined;
   WorkOrderSignature: { id: string; status: 'completed' | 'delivered'; signerName?: string };
   MyData: undefined;
+  Notifications: undefined;
 };

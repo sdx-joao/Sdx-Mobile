@@ -57,6 +57,32 @@ export function getMyProfile(token: string | null) {
   return apiFetch<MobileUser>('/api/mobile/me', { token });
 }
 
+export type AppNotification = {
+  id: string;
+  type: 'os_moved' | 'os_assigned' | 'os_escalated' | 'os_new_in_department' | string;
+  workOrderId: string | null;
+  workOrderCode: string | null;
+  title: string;
+  body: string | null;
+  isRead: boolean;
+  createdAt: string | null;
+};
+
+export function getNotifications(token: string | null) {
+  return apiFetch<{ notifications: AppNotification[]; unreadCount: number }>(
+    '/api/mobile/notifications',
+    { token },
+  );
+}
+
+export function markNotificationsRead(token: string | null, ids?: string[]) {
+  return apiFetch<{ ok: true }>('/api/mobile/notifications', {
+    method: 'POST',
+    token,
+    body: ids && ids.length ? { ids } : {},
+  });
+}
+
 export async function getWorkOrders(
   token: string | null,
   opts: { status?: string; q?: string } = {},

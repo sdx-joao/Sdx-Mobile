@@ -1,11 +1,13 @@
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
 import { BlueHeader } from '../components/ui';
 import { Wordmark } from '../components/Brand';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
+import { getNotifications } from '../api/mobile';
 import type { RootStackParamList } from '../navigation/types';
 
 function initials(name: string) {
@@ -13,15 +15,27 @@ function initials(name: string) {
 }
 
 export function ProfileScreen() {
-  const { user, signOut } = useAuth();
+  const { user, token, signOut } = useAuth();
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const accent = T.primary;
+  const [unread, setUnread] = useState(0);
+
+  // Atualiza o contador de não lidas sempre que a aba Perfil ganha foco.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getNotifications(token)
+        .then((res) => { if (active) setUnread(res.unreadCount); })
+        .catch(() => undefined);
+      return () => { active = false; };
+    }, [token]),
+  );
 
   if (!user) return null;
 
-  const rows: Array<{ icon: string; label: string; note?: string; onPress?: () => void }> = [
+  const rows: Array<{ icon: string; label: string; note?: string; badge?: number; onPress?: () => void }> = [
     { icon: 'user', label: 'Meus dados', onPress: () => nav.navigate('MyData') },
-    { icon: 'bell', label: 'Notificações', note: 'Em breve' },
+    { icon: 'bell', label: 'Notificações', badge: unread, onPress: () => nav.navigate('Notifications') },
     { icon: 'qr', label: 'Etiquetas e impressão', note: 'Em breve' },
     { icon: 'download', label: 'Dados offline', note: 'Em breve' },
   ];
@@ -48,6 +62,11 @@ export function ProfileScreen() {
             <Pressable key={r.label} onPress={r.onPress} disabled={!r.onPress} style={{ flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 14, paddingHorizontal: 15, borderBottomWidth: i < rows.length - 1 ? 1 : 0, borderBottomColor: T.surfaceMuted }}>
               <Icon name={r.icon} size={18} color={T.muted} />
               <Text style={{ flex: 1, fontSize: 14, color: T.text }}>{r.label}</Text>
+              {!!r.badge && r.badge > 0 && (
+                <View style={{ minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, backgroundColor: T.danger, alignItems: 'center', justifyContent: 'center', marginRight: 4 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#fff' }}>{r.badge > 99 ? '99+' : r.badge}</Text>
+                </View>
+              )}
               {r.note && <Text style={{ fontSize: 11, color: T.faint, marginRight: 4 }}>{r.note}</Text>}
               <Icon name="chevron-right" size={16} color={T.faint} />
             </Pressable>

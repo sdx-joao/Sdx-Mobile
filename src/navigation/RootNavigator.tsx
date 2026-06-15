@@ -14,6 +14,7 @@ import { InventoryDetailScreen } from '../screens/InventoryDetailScreen';
 import { ScanScreen } from '../screens/ScanScreen';
 import { WorkOrderSignatureScreen } from '../screens/WorkOrderSignatureScreen';
 import { MyDataScreen } from '../screens/MyDataScreen';
+import { NotificationsScreen } from '../screens/NotificationsScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -41,6 +42,7 @@ export function RootNavigator() {
       <Stack.Screen name="Scan" component={ScanScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="WorkOrderSignature" component={WorkOrderSignatureScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="MyData" component={MyDataScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
     </Stack.Navigator>
   );
 }
