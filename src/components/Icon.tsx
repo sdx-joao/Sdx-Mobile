@@ -13,6 +13,7 @@ export const ICONS: Record<string, string> = {
   bell: 'M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0',
   'chevron-right': 'M9 18l6-6-6-6',
   'chevron-left': 'M15 18l-6-6 6-6',
+  'chevron-down': 'M6 9l6 6 6-6',
   'arrow-left': 'M19 12H5M12 19l-7-7 7-7',
   filter: 'M22 3H2l8 9.46V19l4 2v-8.54L22 3z',
   'map-pin': 'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z M15 10a3 3 0 11-6 0 3 3 0 016 0z',

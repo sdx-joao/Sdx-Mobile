@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
 import { DetailScaffold, EmptyState, FieldLabel, LoadingState, PrimaryButton, SectionCard } from '../components/ui';
 import { SuggestedInput } from '../components/SuggestedInput';
+import { RequesterPicker } from '../components/RequesterPicker';
 import { T, WO_PRIORITY, WO_RESOLUTION, WO_STATUS } from '../theme/theme';
 import {
   getOptions,
@@ -79,71 +80,6 @@ function Input({
         color: T.text,
       }}
     />
-  );
-}
-
-function normalizeForSearch(value: string) {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
-}
-
-function RequesterInput({
-  value,
-  contact,
-  department,
-  requesters,
-  onPick,
-  onChangeText,
-}: {
-  value: string;
-  contact: string;
-  department: string;
-  requesters: WorkOrderRequester[];
-  onPick: (requester: WorkOrderRequester) => void;
-  onChangeText: (value: string) => void;
-}) {
-  const query = normalizeForSearch(value);
-  const dept = normalizeForSearch(department);
-  const suggestions = requesters
-    .filter(item => !query || normalizeForSearch(item.name).includes(query))
-    .sort((a, b) => {
-      if (!dept) return 0;
-      const aRank = a.department && normalizeForSearch(a.department) === dept ? 0 : (!a.department ? 1 : 2);
-      const bRank = b.department && normalizeForSearch(b.department) === dept ? 0 : (!b.department ? 1 : 2);
-      return aRank - bRank;
-    })
-    .slice(0, 8);
-
-  return (
-    <View>
-      <FieldLabel required>Solicitante</FieldLabel>
-      <Input value={value} onChangeText={onChangeText} placeholder="Solicitante" />
-      {suggestions.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7, paddingTop: 8 }}>
-          {suggestions.map(item => {
-            const deptMatch = dept && item.department && normalizeForSearch(item.department) === dept;
-            const selected = normalizeForSearch(value) === normalizeForSearch(item.name);
-            return (
-              <Pressable
-                key={item.id}
-                onPress={() => onPick(item)}
-                style={{
-                  paddingVertical: 6,
-                  paddingHorizontal: 10,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: selected ? T.primary : deptMatch ? '#059669' : T.border,
-                  backgroundColor: selected ? `${T.primary}12` : deptMatch ? '#E6F6EF' : T.surfaceMuted,
-                }}
-              >
-                <Text style={{ fontSize: 11.5, fontWeight: '700', color: selected ? T.primary : deptMatch ? '#047857' : T.muted }}>
-                  {item.name}{item.phone && !contact ? ' · tel.' : ''}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      )}
-    </View>
   );
 }
 
@@ -519,12 +455,10 @@ export function WorkOrderEditScreen() {
 
       <SectionCard title="Solicitante e atendimento">
         <View style={{ gap: 14 }}>
-          <RequesterInput
+          <RequesterPicker
             value={requestedByName}
-            contact={requesterContact}
             department={department}
             requesters={data?.requesters ?? []}
-            onChangeText={setRequestedByName}
             onPick={pickRequester}
           />
           <View><FieldLabel>Contato</FieldLabel><Input value={requesterContact} onChangeText={setRequesterContact} placeholder="Contato" /></View>
