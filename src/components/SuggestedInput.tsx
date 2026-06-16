@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Icon } from './Icon';
 import { FieldLabel } from './ui';
 import { T } from '../theme/theme';
+import { useKeyboardHeight } from '../hooks/use-keyboard-height';
 import type { SelectOption } from '../api/mobile';
 
 function norm(value: string) {
@@ -43,6 +44,7 @@ export function SuggestedInput({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const keyboardHeight = useKeyboardHeight();
 
   const filtered = useMemo(() => {
     const q = norm(query);
@@ -74,9 +76,8 @@ export function SuggestedInput({
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: 'rgba(15,23,42,.45)', justifyContent: 'flex-end' }}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <Pressable onPress={() => {}} style={{ backgroundColor: T.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: 520, paddingTop: 10 }}>
+        <Pressable onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: 'rgba(15,23,42,.45)', justifyContent: 'flex-end', paddingBottom: keyboardHeight }}>
+            <Pressable onPress={() => {}} style={{ backgroundColor: T.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: 460, paddingTop: 10 }}>
               <View style={{ alignItems: 'center', paddingBottom: 8 }}>
                 <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: T.border }} />
               </View>
@@ -123,7 +124,6 @@ export function SuggestedInput({
                 )}
               </ScrollView>
             </Pressable>
-          </KeyboardAvoidingView>
         </Pressable>
       </Modal>
     </View>

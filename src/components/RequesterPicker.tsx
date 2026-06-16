@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Icon } from './Icon';
 import { FieldLabel } from './ui';
 import { T } from '../theme/theme';
+import { useKeyboardHeight } from '../hooks/use-keyboard-height';
 import type { WorkOrderRequester } from '../api/mobile';
 
 function normalizeForSearch(value: string) {
@@ -43,6 +44,7 @@ export function RequesterPicker({
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newDept, setNewDept] = useState('');
+  const keyboardHeight = useKeyboardHeight();
 
   const dept = normalizeForSearch(department);
   const filtered = useMemo(() => {
@@ -111,9 +113,8 @@ export function RequesterPicker({
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
-        <Pressable onPress={close} style={{ flex: 1, backgroundColor: 'rgba(15,23,42,.45)', justifyContent: 'flex-end' }}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <Pressable onPress={() => {}} style={{ backgroundColor: T.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: 560, paddingTop: 10 }}>
+        <Pressable onPress={close} style={{ flex: 1, backgroundColor: 'rgba(15,23,42,.45)', justifyContent: 'flex-end', paddingBottom: keyboardHeight }}>
+            <Pressable onPress={() => {}} style={{ backgroundColor: T.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: 480, paddingTop: 10 }}>
               <View style={{ alignItems: 'center', paddingBottom: 8 }}>
                 <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: T.border }} />
               </View>
@@ -198,7 +199,6 @@ export function RequesterPicker({
                 </>
               )}
             </Pressable>
-          </KeyboardAvoidingView>
         </Pressable>
       </Modal>
     </View>
