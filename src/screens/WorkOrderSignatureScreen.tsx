@@ -20,13 +20,15 @@ function pointsToPath(points: Point[]) {
   return points.map((p, index) => `${index === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
 }
 
-function svgDataUrl(strokes: Point[][]) {
+function svgDataUrl(strokes: Point[][], width: number, height: number) {
+  const w = Math.max(1, Math.round(width));
+  const h = Math.max(1, Math.round(height));
   const paths = strokes
     .map(pointsToPath)
     .filter(Boolean)
-    .map(path => `<path d="${path}" fill="none" stroke="#111827" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`)
+    .map(path => `<path d="${path}" fill="none" stroke="#111827" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`)
     .join('');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${PAD_WIDTH}" height="${PAD_HEIGHT}" viewBox="0 0 ${PAD_WIDTH} ${PAD_HEIGHT}"><rect width="100%" height="100%" fill="white"/>${paths}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="100%" height="100%" fill="white"/>${paths}</svg>`;
   return `data:image/svg+xml;base64,${asciiBase64(svg)}`;
 }
 
@@ -55,6 +57,9 @@ export function WorkOrderSignatureScreen() {
   const [saving, setSaving] = useState(false);
   const [padSize, setPadSize] = useState({ width: PAD_WIDTH, height: PAD_HEIGHT });
   const current = useRef<Point[]>([]);
+  const padRef = useRef<View>(null);
+  // Origem e tamanho do quadro em coordenadas de tela (medidos no layout).
+  const padBox = useRef({ x: 0, y: 0, width: PAD_WIDTH, height: PAD_HEIGHT });
 
   useEffect(() => {
     void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => undefined);
@@ -63,25 +68,38 @@ export function WorkOrderSignatureScreen() {
     };
   }, []);
 
-  const scalePoint = (x: number, y: number): Point => ({
-    x: Math.max(0, Math.min(PAD_WIDTH, (x / Math.max(1, padSize.width)) * PAD_WIDTH)),
-    y: Math.max(0, Math.min(PAD_HEIGHT, (y / Math.max(1, padSize.height)) * PAD_HEIGHT)),
-  });
+  const measurePad = () => {
+    padRef.current?.measureInWindow((x, y, width, height) => {
+      if (width > 0 && height > 0) {
+        padBox.current = { x, y, width, height };
+        setPadSize({ width, height });
+      }
+    });
+  };
+
+  // Converte o toque (coordenadas de tela) para pixels reais dentro do quadro.
+  const toLocal = (pageX: number, pageY: number): Point => {
+    const { x, y, width, height } = padBox.current;
+    return {
+      x: Math.max(0, Math.min(width, pageX - x)),
+      y: Math.max(0, Math.min(height, pageY - y)),
+    };
+  };
 
   const pan = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: (event) => {
-      const { locationX, locationY } = event.nativeEvent;
-      current.current = [scalePoint(locationX, locationY)];
+      const { pageX, pageY } = event.nativeEvent;
+      current.current = [toLocal(pageX, pageY)];
       setStrokes(prev => [...prev, current.current]);
     },
     onPanResponderMove: (event) => {
-      const { locationX, locationY } = event.nativeEvent;
-      current.current = [...current.current, scalePoint(locationX, locationY)];
+      const { pageX, pageY } = event.nativeEvent;
+      current.current = [...current.current, toLocal(pageX, pageY)];
       setStrokes(prev => [...prev.slice(0, -1), current.current]);
     },
-  }), [padSize]);
+  }), []);
 
   async function finish() {
     if (!signerName.trim()) {
@@ -95,7 +113,7 @@ export function WorkOrderSignatureScreen() {
     setSaving(true);
     try {
       await updateWorkOrderStatus(token, route.params.id, route.params.status, {
-        signatureDataUrl: svgDataUrl(strokes),
+        signatureDataUrl: svgDataUrl(strokes, padSize.width, padSize.height),
         signerName: signerName.trim(),
         resolutionNotes: 'OS concluída com assinatura coletada no app mobile.',
       });
@@ -121,12 +139,13 @@ export function WorkOrderSignatureScreen() {
       </View>
 
       <View
-        style={{ backgroundColor: '#fff', borderRadius: 12, padding: 10, flex: 1 }}
-        onLayout={(event) => setPadSize({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}
+        ref={padRef}
+        style={{ backgroundColor: '#fff', borderRadius: 12, flex: 1, overflow: 'hidden' }}
+        onLayout={measurePad}
         {...pan.panHandlers}
       >
-        <Svg width="100%" height="100%" viewBox={`0 0 ${PAD_WIDTH} ${PAD_HEIGHT}`}>
-          {strokes.map((points, index) => <Path key={index} d={pointsToPath(points)} fill="none" stroke="#111827" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" />)}
+        <Svg width="100%" height="100%" viewBox={`0 0 ${padSize.width} ${padSize.height}`} preserveAspectRatio="none">
+          {strokes.map((points, index) => <Path key={index} d={pointsToPath(points)} fill="none" stroke="#111827" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />)}
         </Svg>
       </View>
 
