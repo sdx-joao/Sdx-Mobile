@@ -3,6 +3,7 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
+import { Avatar } from '../components/Avatar';
 import { BlueHeader, Badge, EmptyState, LoadingState, SectionTitle, TextLink } from '../components/ui';
 import { BrandTile } from '../components/Brand';
 import { WOCard } from '../components/cards';
@@ -12,10 +13,6 @@ import { useAuth } from '../auth/auth-context';
 import { getInventory, getSummary, getWorkOrders, type Summary } from '../api/mobile';
 import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
-
-function initials(name: string) {
-  return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-}
 
 function StatTile({ value, label, icon, tone, onPress }: { value: number; label: string; icon: string; tone: string; onPress: () => void }) {
   return (
@@ -89,9 +86,7 @@ export function HomeScreen() {
               <Text style={{ fontSize: 12, color: 'rgba(255,255,255,.8)' }}>{[user.unit, user.dept].filter(Boolean).join(' · ')}</Text>
             </View>
           </View>
-          <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: 'rgba(255,255,255,.16)', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>{initials(user.name)}</Text>
-          </View>
+          <Avatar name={user.name} avatarUrl={user.avatarUrl} size={44} radius={13} bgColor="rgba(255,255,255,.16)" textColor="#fff" />
         </View>
       </BlueHeader>
 

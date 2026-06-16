@@ -19,6 +19,7 @@ export type SessionUser = {
   unit: string;
   role: string;
   username: string;
+  avatarUrl: string | null;
 };
 
 function toSessionUser(u: MobileUser): SessionUser {
@@ -28,6 +29,7 @@ function toSessionUser(u: MobileUser): SessionUser {
     unit: '',
     role: u.role,
     username: u.username,
+    avatarUrl: u.avatarUrl ?? null,
   };
 }
 
@@ -75,6 +77,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(res.token);
     setUser(toSessionUser(res.user));
     setStatus('authenticated');
+    // Enriquece a sessão com avatar e demais campos (login devolve o mínimo).
+    try {
+      const me = await apiFetch<MobileUser>('/api/mobile/me', { token: res.token });
+      setUser(toSessionUser(me));
+    } catch {
+      // mantém os dados do login se /me falhar
+    }
   }
 
   async function signOut() {

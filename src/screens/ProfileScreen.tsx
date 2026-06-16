@@ -8,24 +8,20 @@ import { BlueHeader } from '../components/ui';
 import { Wordmark } from '../components/Brand';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
-import { getMyProfile, getNotifications } from '../api/mobile';
+import { getNotifications } from '../api/mobile';
 import type { RootStackParamList } from '../navigation/types';
 
 export function ProfileScreen() {
   const { user, token, signOut } = useAuth();
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [unread, setUnread] = useState(0);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  // Atualiza não lidas + foto sempre que a aba Perfil ganha foco.
+  // Atualiza o contador de não lidas sempre que a aba Perfil ganha foco.
   useFocusEffect(
     useCallback(() => {
       let active = true;
       getNotifications(token)
         .then((res) => { if (active) setUnread(res.unreadCount); })
-        .catch(() => undefined);
-      getMyProfile(token)
-        .then((res) => { if (active) setAvatarUrl(res.avatarUrl ?? null); })
         .catch(() => undefined);
       return () => { active = false; };
     }, [token]),
@@ -48,7 +44,7 @@ export function ProfileScreen() {
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 24 }}>
         <View style={{ backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 18 }}>
-          <Avatar name={user.name} avatarUrl={avatarUrl} size={52} radius={15} />
+          <Avatar name={user.name} avatarUrl={user.avatarUrl} size={52} radius={15} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ fontSize: 16, fontWeight: '700', color: T.text }}>{user.name}</Text>
             <Text style={{ fontSize: 12.5, color: T.muted }}>{user.dept} · {user.role}</Text>

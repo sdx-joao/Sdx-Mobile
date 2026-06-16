@@ -23,11 +23,15 @@ export function Avatar({
   avatarUrl,
   size = 52,
   radius,
+  bgColor,
+  textColor,
 }: {
   name: string;
   avatarUrl?: string | null;
   size?: number;
   radius?: number;
+  bgColor?: string;
+  textColor?: string;
 }) {
   const { token } = useAuth();
   const [failed, setFailed] = useState(false);
@@ -40,7 +44,7 @@ export function Avatar({
         width: size,
         height: size,
         borderRadius: br,
-        backgroundColor: `${T.primary}15`,
+        backgroundColor: bgColor ?? `${T.primary}15`,
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
@@ -56,7 +60,7 @@ export function Avatar({
           onError={() => setFailed(true)}
         />
       ) : (
-        <Text style={{ fontSize: size * 0.34, fontWeight: '800', color: T.primary }}>{initials(name)}</Text>
+        <Text style={{ fontSize: size * 0.34, fontWeight: '800', color: textColor ?? T.primary }}>{initials(name)}</Text>
       )}
     </View>
   );

@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Pressable, Text, View } from 'react-native';
 import { Icon } from './Icon';
 import { Badge, MetaRow } from './ui';
 import { T, WO_STATUS, WO_PRIORITY, INV_TYPE, MOVE_TONE } from '../theme/theme';
@@ -35,6 +36,21 @@ export function WOCard({
   const finished = wo.status === 'completed' || wo.status === 'delivered' || wo.status === 'cancelled';
   const overdue = !!wo.expectedCompletionAt && new Date(wo.expectedCompletionAt) < new Date() && !finished;
 
+  // Chip "Aberta" pulsa sutilmente para chamar atenção das OS sem atendimento.
+  const isOpen = wo.status === 'open';
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!isOpen) return;
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 0.4, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [isOpen, pulse]);
+
   return (
     <Pressable
       onPress={() => onOpen(wo)}
@@ -49,7 +65,11 @@ export function WOCard({
           <Text style={{ fontSize: 14, fontWeight: '700', color: accent, letterSpacing: 0.2 }}>{wo.code}</Text>
           <SourceMark source={wo.source} />
         </View>
-        <Badge tone={st} />
+        {isOpen ? (
+          <Animated.View style={{ opacity: pulse }}><Badge tone={st} /></Animated.View>
+        ) : (
+          <Badge tone={st} />
+        )}
       </View>
       <Text style={{ fontSize: 14.5, fontWeight: '600', color: T.text, marginBottom: 3, lineHeight: 19 }}>{wo.serviceType}</Text>
       <Text style={{ fontSize: 12.5, color: T.faint, marginBottom: 10 }}>{wo.category}</Text>
