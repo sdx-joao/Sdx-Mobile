@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View 
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { DetailScaffold, FieldLabel, PrimaryButton, SectionCard } from '../components/ui';
+import { SuggestedInput } from '../components/SuggestedInput';
 import { T, WO_PRIORITY } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
 import {
@@ -57,53 +58,6 @@ function Input({
         color: T.text,
       }}
     />
-  );
-}
-
-function SuggestedInput({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  options,
-  required,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder: string;
-  options: SelectOption[];
-  required?: boolean;
-}) {
-  const normalized = value.trim().toUpperCase();
-  const suggestions = options
-    .filter(option => !normalized || option.label.toUpperCase().includes(normalized) || option.value.toUpperCase().includes(normalized))
-    .slice(0, 8);
-  return (
-    <View>
-      <FieldLabel required={required}>{label}</FieldLabel>
-      <Input value={value} onChangeText={onChangeText} placeholder={placeholder} />
-      {suggestions.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7, paddingTop: 8 }}>
-          {suggestions.map(option => (
-            <Pressable
-              key={`${option.kind}-${option.value}`}
-              onPress={() => onChangeText(option.value)}
-              style={{
-                paddingVertical: 6,
-                paddingHorizontal: 10,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: value === option.value ? T.primary : T.border,
-                backgroundColor: value === option.value ? `${T.primary}12` : T.surfaceMuted,
-              }}
-            >
-              <Text style={{ fontSize: 11.5, fontWeight: '600', color: value === option.value ? T.primary : T.muted }}>{option.label}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      )}
-    </View>
   );
 }
 
