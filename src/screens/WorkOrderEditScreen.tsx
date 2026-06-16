@@ -607,22 +607,24 @@ export function WorkOrderEditScreen() {
           )}
           <View><FieldLabel>Solução adotada</FieldLabel><Input value={resolutionNotes} onChangeText={setResolutionNotes} placeholder="Solução executada" multiline /></View>
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <Text style={{ fontSize: 12.5, fontWeight: '600', color: T.textSoft }}>Hora final</Text>
+            <FieldLabel>Hora final</FieldLabel>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Input
+                  value={finishedAtText}
+                  onChangeText={(value) => setFinishedAtText(maskDateTimeInput(value))}
+                  placeholder="DD/MM/AAAA HH:mm"
+                  keyboardType="numeric"
+                />
+              </View>
               <Pressable
                 onPress={() => setFinishedAtText(toDateTimeInput(new Date().toISOString()))}
                 hitSlop={8}
-                style={{ paddingVertical: 3, paddingHorizontal: 11, borderRadius: 999, borderWidth: 1, borderColor: T.primary, backgroundColor: `${T.primary}12` }}
+                style={{ height: 44, paddingHorizontal: 14, borderRadius: 11, borderWidth: 1, borderColor: T.primary, backgroundColor: `${T.primary}12`, alignItems: 'center', justifyContent: 'center' }}
               >
-                <Text style={{ color: T.primary, fontSize: 11.5, fontWeight: '700' }}>Agora</Text>
+                <Text style={{ color: T.primary, fontSize: 12.5, fontWeight: '700' }}>Agora</Text>
               </Pressable>
             </View>
-            <Input
-              value={finishedAtText}
-              onChangeText={(value) => setFinishedAtText(maskDateTimeInput(value))}
-              placeholder="DD/MM/AAAA HH:mm"
-              keyboardType="numeric"
-            />
           </View>
         </View>
       </SectionCard>
