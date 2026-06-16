@@ -88,6 +88,8 @@ export function WorkOrderDetailScreen() {
   const st = WO_STATUS[status];
   const pr = WO_PRIORITY[wo.priority];
   const accent = T.primary;
+  // OS finalizada é somente leitura: nenhum botão de ação fica clicável.
+  const finished = wo.status === 'completed' || wo.status === 'delivered' || wo.status === 'cancelled';
   const persistStatus = async (next: WorkOrderStatus) => {
     if (next === status || savingStatus) return;
     if (next === 'completed' || next === 'delivered') {
@@ -123,6 +125,7 @@ export function WorkOrderDetailScreen() {
           <Text style={{ fontSize: 12.5, color: 'rgba(255,255,255,.75)' }}>{wo.category}</Text>
           <Pressable
             onPress={() => nav.navigate('WorkOrderEdit', { id: wo.id })}
+            disabled={finished}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -131,6 +134,7 @@ export function WorkOrderDetailScreen() {
               paddingVertical: 5,
               paddingHorizontal: 10,
               borderRadius: 999,
+              opacity: finished ? 0.4 : 1,
             }}
           >
             <Icon name="sliders" size={13} color={T.primary} />
@@ -139,7 +143,8 @@ export function WorkOrderDetailScreen() {
         </View>
       }
     >
-      {/* Status changer */}
+      {/* Status changer — oculto para OS finalizadas (somente leitura) */}
+      {!finished && (
       <SectionCard title="Atualizar status">
         {status !== 'in_progress' && (
           <View style={{ marginBottom: 12 }}>
@@ -204,6 +209,7 @@ export function WorkOrderDetailScreen() {
           </View>
         )}
       </SectionCard>
+      )}
 
       <SectionCard title="Solicitação">
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -220,9 +226,11 @@ export function WorkOrderDetailScreen() {
         </View>
         {!!wo.requesterContact && (
           <Pressable
+            disabled={finished}
             style={{
               marginTop: 2, height: 42, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface,
               flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+              opacity: finished ? 0.4 : 1,
             }}
           >
             <Icon name={wo.source === 'whatsapp' ? 'whatsapp' : 'phone'} size={16} color={wo.source === 'whatsapp' ? '#16A34A' : accent} />
@@ -272,6 +280,7 @@ export function WorkOrderDetailScreen() {
             <Pressable
               key={category}
               onPress={() => nav.navigate('WorkOrderAttachmentCapture', { id: wo.id, category })}
+              disabled={finished}
               style={{
                 flex: 1,
                 minHeight: 40,
@@ -282,6 +291,7 @@ export function WorkOrderDetailScreen() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 paddingHorizontal: 8,
+                opacity: finished ? 0.4 : 1,
               }}
             >
               <Text style={{ color: T.primary, fontSize: 11.5, fontWeight: '800', textAlign: 'center' }}>{label}</Text>
