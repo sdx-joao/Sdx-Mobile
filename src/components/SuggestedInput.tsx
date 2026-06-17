@@ -3,7 +3,7 @@ import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-nativ
 import { Icon } from './Icon';
 import { FieldLabel } from './ui';
 import { T } from '../theme/theme';
-import { useKeyboardHeight } from '../hooks/use-keyboard-height';
+import { useKeyboardHeight } from './use-keyboard-height';
 import type { SelectOption } from '../api/mobile';
 
 function norm(value: string) {
