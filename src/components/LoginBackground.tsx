@@ -35,10 +35,10 @@ type Drop = {
 };
 
 const DROPS: Drop[] = [
-  { id: 'd1', size: W * 1.1, color: '#3E7BFF', opacity: 0.55, left: -W * 0.3, top: -H * 0.05, duration: 14000, px: [0, 70, 30, 90, 0], py: [0, 40, 90, 50, 0], scale: [1, 1.18] },
-  { id: 'd2', size: W * 1.25, color: '#7C3AED', opacity: 0.5, left: W * 0.25, top: H * 0.45, duration: 18000, px: [0, -80, -30, -70, 0], py: [0, -60, -20, -80, 0], scale: [1.1, 0.9] },
-  { id: 'd3', size: W * 0.95, color: '#22D3EE', opacity: 0.42, left: W * 0.35, top: -H * 0.08, duration: 16000, px: [0, -50, 30, -40, 0], py: [0, 70, 110, 60, 0], scale: [0.95, 1.2] },
-  { id: 'd4', size: W * 1.05, color: '#2563EB', opacity: 0.5, left: -W * 0.25, top: H * 0.5, duration: 20000, px: [0, 60, 100, 40, 0], py: [0, -40, -90, -50, 0], scale: [1.05, 0.92] },
+  { id: 'd1', size: W * 1.1, color: '#3E7BFF', opacity: 0.55, left: -W * 0.3, top: -H * 0.05, duration: 9000, px: [0, 70, 30, 90, 0], py: [0, 40, 90, 50, 0], scale: [1, 1.18] },
+  { id: 'd2', size: W * 1.25, color: '#7C3AED', opacity: 0.5, left: W * 0.25, top: H * 0.45, duration: 11500, px: [0, -80, -30, -70, 0], py: [0, -60, -20, -80, 0], scale: [1.1, 0.9] },
+  { id: 'd3', size: W * 0.95, color: '#22D3EE', opacity: 0.42, left: W * 0.35, top: -H * 0.08, duration: 10000, px: [0, -50, 30, -40, 0], py: [0, 70, 110, 60, 0], scale: [0.95, 1.2] },
+  { id: 'd4', size: W * 1.05, color: '#2563EB', opacity: 0.5, left: -W * 0.25, top: H * 0.5, duration: 12500, px: [0, 60, 100, 40, 0], py: [0, -40, -90, -50, 0], scale: [1.05, 0.92] },
 ];
 
 function AnimatedDrop({ drop }: { drop: Drop }) {
