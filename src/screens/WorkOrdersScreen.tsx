@@ -17,7 +17,7 @@ export function WorkOrdersScreen() {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
   const loader = useCallback(() => getWorkOrders(token), [token]);
-  const { data, loading, refreshing, error, reload } = useResource(loader);
+  const { data, loading, refreshing, error, reload } = useResource(loader, { reloadOnFocus: true });
   const orders = data ?? [];
 
   const counts = useMemo(() => {

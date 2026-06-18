@@ -25,7 +25,7 @@ export function InventoryDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'InventoryDetail'>>();
   const { token } = useAuth();
   const loader = useCallback(() => getInventoryItem(token, route.params.id), [token, route.params.id]);
-  const { data, loading, refreshing, error, reload } = useResource(loader);
+  const { data, loading, refreshing, error, reload } = useResource(loader, { reloadOnFocus: true });
   const item = data?.item;
 
   if (loading) {

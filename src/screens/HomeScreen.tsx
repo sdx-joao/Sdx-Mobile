@@ -50,7 +50,7 @@ export function HomeScreen() {
     ]);
     return { summary, orders, inventory };
   }, [token]);
-  const { data, loading, refreshing, error, reload } = useResource(loader);
+  const { data, loading, refreshing, error, reload } = useResource(loader, { reloadOnFocus: true });
 
   if (!user) return null;
 

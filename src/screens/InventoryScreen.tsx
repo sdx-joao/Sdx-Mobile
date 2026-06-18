@@ -17,7 +17,7 @@ export function InventoryScreen() {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
   const loader = useCallback(() => getInventory(token), [token]);
-  const { data, loading, refreshing, error, reload } = useResource(loader);
+  const { data, loading, refreshing, error, reload } = useResource(loader, { reloadOnFocus: true });
   const inventory = data ?? [];
 
   const counts = useMemo(() => {

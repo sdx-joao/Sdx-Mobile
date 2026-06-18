@@ -36,7 +36,7 @@ export function NotificationsScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { token } = useAuth();
   const loader = useCallback(() => getNotifications(token), [token]);
-  const { data, loading, refreshing, error, reload } = useResource(loader);
+  const { data, loading, refreshing, error, reload } = useResource(loader, { reloadOnFocus: true });
   const [busy, setBusy] = useState(false);
 
   const items = data?.notifications ?? [];

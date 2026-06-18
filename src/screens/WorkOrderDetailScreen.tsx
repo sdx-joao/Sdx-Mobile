@@ -50,7 +50,7 @@ export function WorkOrderDetailScreen() {
     ]);
     return { ...detail, attachments };
   }, [token, route.params.id]);
-  const { data, loading, refreshing, error, reload } = useResource(loader);
+  const { data, loading, refreshing, error, reload } = useResource(loader, { reloadOnFocus: true });
   const wo = data?.workOrder;
   const timeline = data?.timeline;
   const attachments = data?.attachments ?? [];
