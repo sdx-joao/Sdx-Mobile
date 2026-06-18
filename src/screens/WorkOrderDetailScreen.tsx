@@ -143,71 +143,62 @@ export function WorkOrderDetailScreen() {
         </View>
       }
     >
-      {/* Status changer — oculto para OS finalizadas (somente leitura) */}
+      {/* Status e prazo — exibidos, mas só editáveis pela tela de Edição */}
       {!finished && (
-      <SectionCard title="Atualizar status">
-        {status !== 'in_progress' && (
-          <View style={{ marginBottom: 12 }}>
-            <Text style={{ fontSize: 11, color: T.faint, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 7 }}>
-              Prazo ao iniciar atendimento
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-              {COMPLETION_PERIOD_OPTIONS.map(option => {
-                const active = expectedCompletionHours === option.hours;
-                return (
-                  <Pressable
-                    key={option.hours}
-                    onPress={() => setExpectedCompletionHours(option.hours)}
-                    style={{
-                      paddingVertical: 7,
-                      paddingHorizontal: 12,
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      borderColor: active ? T.primary : T.border,
-                      backgroundColor: active ? `${T.primary}12` : T.surfaceMuted,
-                    }}
-                  >
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: active ? T.primary : T.muted }}>{option.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-          {FLOW.map((s) => {
-            const on = status === s;
-            const tone = WO_STATUS[s];
-            return (
-              <Pressable
-                key={s}
-                onPress={() => persistStatus(s)}
-                disabled={savingStatus}
-                style={{
-                  paddingVertical: 8, paddingHorizontal: 13, borderRadius: 10, borderWidth: 1,
-                  borderColor: on ? tone.solid : T.border, backgroundColor: on ? tone.soft : T.surface,
-                }}
-              >
-                <Text style={{ fontSize: 12.5, fontWeight: '600', color: on ? tone.fg : T.muted }}>{tone.label}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-        {savingStatus && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 11 }}>
-            <ActivityIndicator color={accent} />
-            <Text style={{ fontSize: 12, color: T.muted }}>Salvando status...</Text>
-          </View>
-        )}
-        {!!statusError && (
-          <Text style={{ fontSize: 12, color: T.danger, marginTop: 11 }}>{statusError}</Text>
-        )}
-        {status !== wo.status && !savingStatus && !statusError && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 11 }}>
-            <Icon name="check-circle" size={14} color={accent} />
-            <Text style={{ fontSize: 12, color: T.muted }}>Status atualizado no servidor.</Text>
-          </View>
-        )}
+      <SectionCard title="Status e prazo">
+        <View pointerEvents="none" style={{ opacity: 0.6 }}>
+          {status !== 'in_progress' && (
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ fontSize: 11, color: T.faint, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 7 }}>
+                Prazo ao iniciar atendimento
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
+                {COMPLETION_PERIOD_OPTIONS.map(option => {
+                  const active = expectedCompletionHours === option.hours;
+                  return (
+                    <View
+                      key={option.hours}
+                      style={{
+                        paddingVertical: 7,
+                        paddingHorizontal: 12,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: active ? T.primary : T.border,
+                        backgroundColor: active ? `${T.primary}12` : T.surfaceMuted,
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: active ? T.primary : T.muted }}>{option.label}</Text>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
+            {FLOW.map((s) => {
+              const on = status === s;
+              const tone = WO_STATUS[s];
+              return (
+                <View
+                  key={s}
+                  style={{
+                    paddingVertical: 8, paddingHorizontal: 13, borderRadius: 10, borderWidth: 1,
+                    borderColor: on ? tone.solid : T.border, backgroundColor: on ? tone.soft : T.surface,
+                  }}
+                >
+                  <Text style={{ fontSize: 12.5, fontWeight: '600', color: on ? tone.fg : T.muted }}>{tone.label}</Text>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+        <Pressable
+          onPress={() => nav.navigate('WorkOrderEdit', { id: wo.id })}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}
+        >
+          <Icon name="sliders" size={13} color={accent} />
+          <Text style={{ fontSize: 12, color: accent, fontWeight: '700' }}>Toque em Editar para alterar status e prazo</Text>
+        </Pressable>
       </SectionCard>
       )}
 
@@ -271,16 +262,10 @@ export function WorkOrderDetailScreen() {
       )}
 
       <SectionCard title={`Anexos (${attachments.length})`}>
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: attachments.length ? 12 : 0 }}>
-          {([
-            ['before', 'Foto antes'],
-            ['after', 'Foto depois'],
-            ['general', 'Foto geral'],
-          ] as Array<[PhotoAttachmentCategory, string]>).map(([category, label]) => (
-            <Pressable
-              key={category}
-              onPress={() => nav.navigate('WorkOrderAttachmentCapture', { id: wo.id, category })}
-              disabled={finished}
+        <View pointerEvents="none" style={{ flexDirection: 'row', gap: 8, marginBottom: 10, opacity: 0.6 }}>
+          {(['Foto antes', 'Foto depois', 'Foto geral']).map((label) => (
+            <View
+              key={label}
               style={{
                 flex: 1,
                 minHeight: 40,
@@ -291,13 +276,21 @@ export function WorkOrderDetailScreen() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 paddingHorizontal: 8,
-                opacity: finished ? 0.4 : 1,
               }}
             >
               <Text style={{ color: T.primary, fontSize: 11.5, fontWeight: '800', textAlign: 'center' }}>{label}</Text>
-            </Pressable>
+            </View>
           ))}
         </View>
+        {!finished && (
+          <Pressable
+            onPress={() => nav.navigate('WorkOrderEdit', { id: wo.id })}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: attachments.length ? 12 : 0 }}
+          >
+            <Icon name="sliders" size={13} color={accent} />
+            <Text style={{ fontSize: 12, color: accent, fontWeight: '700' }}>Toque em Editar para adicionar fotos</Text>
+          </Pressable>
+        )}
         {attachments.length === 0 ? (
           <Text style={{ fontSize: 12.5, color: T.muted }}>Nenhum anexo registrado.</Text>
         ) : (

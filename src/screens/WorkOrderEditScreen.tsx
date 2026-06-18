@@ -542,6 +542,27 @@ export function WorkOrderEditScreen() {
         </View>
       </SectionCard>
 
+      {!locked && (
+        <SectionCard title="Fotos">
+          <Text style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>Capture fotos do atendimento. Elas aparecem nos anexos da OS.</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {([
+              ['before', 'Foto antes'],
+              ['after', 'Foto depois'],
+              ['general', 'Foto geral'],
+            ] as Array<['before' | 'after' | 'general', string]>).map(([category, label]) => (
+              <Pressable
+                key={category}
+                onPress={() => nav.navigate('WorkOrderAttachmentCapture', { id: order.id, category })}
+                style={{ flex: 1, minHeight: 44, borderRadius: 11, borderWidth: 1, borderColor: T.primary, backgroundColor: `${T.primary}10`, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 }}
+              >
+                <Text style={{ color: T.primary, fontSize: 11.5, fontWeight: '800', textAlign: 'center' }}>{label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </SectionCard>
+      )}
+
       {!!formError && <Text style={{ color: T.danger, fontSize: 13, marginBottom: 12 }}>{formError}</Text>}
       {locked ? null : saving ? (
         <View style={{ height: 50, alignItems: 'center', justifyContent: 'center' }}>
