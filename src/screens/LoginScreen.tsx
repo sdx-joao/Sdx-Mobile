@@ -3,6 +3,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, Text, Tex
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
+import { LoginBackground } from '../components/LoginBackground';
 import { BrandTile, PoweredBy } from '../components/Brand';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
@@ -60,6 +61,7 @@ export function LoginScreen() {
 
   return (
     <LinearGradient colors={[T.primaryDark, T.primary, '#0B1A8F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1 }}>
+      <LoginBackground />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 28, paddingTop: insets.top }}>
           <BrandTile size={72} />
