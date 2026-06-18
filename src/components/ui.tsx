@@ -1,8 +1,6 @@
 import type { ReactElement, ReactNode } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -14,6 +12,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from './Icon';
+import { useKeyboardHeight } from './use-keyboard-height';
 import { T, type Tone } from '../theme/theme';
 
 // ── Badge (pílula com dot) ──────────────────────────────────────────────────
@@ -268,6 +267,7 @@ export function ModuleScreen({
   contentStyle?: ViewStyle;
   refreshControl?: ReactElement<RefreshControlProps>;
 }) {
+  const keyboardHeight = useKeyboardHeight();
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
       <BlueHeader>
@@ -291,7 +291,7 @@ export function ModuleScreen({
           </Pressable>
         )}
       </BlueHeader>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={{ flex: 1, paddingBottom: keyboardHeight }}>
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={[{ paddingTop: onNew ? 10 : 12, paddingBottom: 48 }, contentStyle]}
@@ -301,7 +301,7 @@ export function ModuleScreen({
         >
           {children}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }
@@ -319,6 +319,7 @@ export function DetailScaffold({
   children: ReactNode;
   refreshControl?: ReactElement<RefreshControlProps>;
 }) {
+  const keyboardHeight = useKeyboardHeight();
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
       <BlueHeader compact={compact}>
@@ -339,7 +340,7 @@ export function DetailScaffold({
         </View>
         {headerExtra}
       </BlueHeader>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={{ flex: 1, paddingBottom: keyboardHeight }}>
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
@@ -349,7 +350,7 @@ export function DetailScaffold({
         >
           {children}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }
