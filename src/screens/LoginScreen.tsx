@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { LoginBackground } from '../components/LoginBackground';
+import { useKeyboardHeight } from '../components/use-keyboard-height';
 import { BrandTile, PoweredBy } from '../components/Brand';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
@@ -11,6 +12,7 @@ import { ApiError } from '../api/client';
 
 export function LoginScreen() {
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const { signIn } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -62,7 +64,7 @@ export function LoginScreen() {
   return (
     <LinearGradient colors={[T.primaryDark, T.primary, '#0B1A8F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1 }}>
       <LoginBackground />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={{ flex: 1, paddingBottom: keyboardHeight }}>
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 28, paddingTop: insets.top }}>
           <BrandTile size={72} />
           <Text style={{ marginTop: 24, fontSize: 30, fontWeight: '800', color: '#fff', letterSpacing: -0.5 }}>ScandexPRO™</Text>
@@ -91,11 +93,13 @@ export function LoginScreen() {
           </Pressable>
         </View>
 
-        <View style={{ paddingHorizontal: 28, paddingBottom: insets.bottom + 30, alignItems: 'center', gap: 12 }}>
-          <Text style={{ fontSize: 12, color: 'rgba(255,255,255,.55)', fontStyle: 'italic' }}>Hospital do Olho Júlio Cândido de Brito</Text>
-          <PoweredBy tone="light" />
-        </View>
-      </KeyboardAvoidingView>
+        {keyboardHeight === 0 && (
+          <View style={{ paddingHorizontal: 28, paddingBottom: insets.bottom + 30, alignItems: 'center', gap: 12 }}>
+            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,.55)', fontStyle: 'italic' }}>Hospital do Olho Júlio Cândido de Brito</Text>
+            <PoweredBy tone="light" />
+          </View>
+        )}
+      </View>
     </LinearGradient>
   );
 }
