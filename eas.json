@@ -20,6 +20,10 @@
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_SDX_API_URL": "https://app.scandexplus.com.br",
+        "EXPO_PUBLIC_APP_ENV": "production"
       }
     }
   },
