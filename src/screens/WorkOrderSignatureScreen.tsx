@@ -144,6 +144,8 @@ export function WorkOrderSignatureScreen() {
         signerName: signerName.trim(),
         resolutionNotes: 'OS concluída com assinatura coletada no app mobile.',
       });
+      // Volta o telefone para a vertical já ao salvar (junto com o compartilhamento).
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => undefined);
       if (IS_TEST_BUILD) {
         // Ambiente de teste: gera o PDF da OS no aparelho e abre o compartilhamento.
         try {
