@@ -225,7 +225,7 @@ export function BlueHeader({ children, compact }: { children: ReactNode; compact
   const insets = useSafeAreaInsets();
   return (
     <LinearGradient
-      colors={[T.primary, T.primaryDark]}
+      colors={IS_TEST_BUILD ? ['#8B93A4', '#5A6373'] : [T.primary, T.primaryDark]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={{

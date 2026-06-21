@@ -101,7 +101,7 @@ export function LoginScreen() {
   const isRegister = mode === 'register';
 
   return (
-    <LinearGradient colors={[T.primaryDark, T.primary, '#0B1A8F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1 }}>
+    <LinearGradient colors={IS_TEST_BUILD ? ['#5A6373', '#8B93A4', '#6B7384'] : [T.primaryDark, T.primary, '#0B1A8F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1 }}>
       <LoginBackground />
       <View style={{ flex: 1, paddingBottom: keyboardHeight }}>
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 28, paddingTop: insets.top }}>

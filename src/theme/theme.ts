@@ -3,15 +3,12 @@
 //   ScandexPlus Mobile Design System/export/scandex-mobile-concept/mobile/ui.jsx
 //   (que por sua vez deriva de ScandexGed/src/app/globals.css)
 
-import { IS_TEST_BUILD } from '../api/client';
-
 export const T = {
   primary: '#0728CA',
   primaryDark: '#051E9B',
   primaryFg: '#FFFFFF',
   teal: '#0F9488',
-  // No build de teste o fundo é cinza, pra deixar claro que é a versão de teste.
-  bg: IS_TEST_BUILD ? '#C9CED8' : '#F5F7FB',
+  bg: '#F5F7FB',
   surface: '#FFFFFF',
   surfaceMuted: '#F1F5FB',
   text: '#0F172A',
