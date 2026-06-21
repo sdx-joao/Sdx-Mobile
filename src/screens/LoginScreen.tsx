@@ -106,7 +106,12 @@ export function LoginScreen() {
       <View style={{ flex: 1, paddingBottom: keyboardHeight }}>
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 28, paddingTop: insets.top }}>
           <BrandTile size={72} />
-          <Text style={{ marginTop: 24, fontSize: 30, fontWeight: '800', color: '#fff', letterSpacing: -0.5 }}>ScandexPRO™</Text>
+          {IS_TEST_BUILD && (
+            <View style={{ alignSelf: 'flex-start', marginTop: 14, paddingVertical: 3, paddingHorizontal: 12, borderRadius: 999, backgroundColor: '#F59E0B' }}>
+              <Text style={{ color: '#1F2937', fontSize: 10.5, fontWeight: '900', letterSpacing: 1 }}>VERSÃO DE TESTE</Text>
+            </View>
+          )}
+          <Text style={{ marginTop: IS_TEST_BUILD ? 14 : 24, fontSize: 30, fontWeight: '800', color: '#fff', letterSpacing: -0.5 }}>ScandexPRO™</Text>
           <Text style={{ marginTop: 8, fontSize: 14, color: 'rgba(255,255,255,.78)', lineHeight: 21 }}>
             {isRegister ? 'Crie seu usuário de teste para acessar o app.' : 'Insira suas credenciais para acessar o ScandexPRO™.'}
           </Text>

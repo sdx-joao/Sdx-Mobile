@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from './Icon';
 import { useKeyboardHeight } from './use-keyboard-height';
+import { IS_TEST_BUILD } from '../api/client';
 import { T, type Tone } from '../theme/theme';
 
 // ── Badge (pílula com dot) ──────────────────────────────────────────────────
@@ -233,6 +234,11 @@ export function BlueHeader({ children, compact }: { children: ReactNode; compact
         paddingHorizontal: 18,
       }}
     >
+      {IS_TEST_BUILD && (
+        <View style={{ alignSelf: 'center', marginBottom: 9, paddingVertical: 2, paddingHorizontal: 11, borderRadius: 999, backgroundColor: '#F59E0B' }}>
+          <Text style={{ color: '#1F2937', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>VERSÃO DE TESTE</Text>
+        </View>
+      )}
       {children}
     </LinearGradient>
   );
