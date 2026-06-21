@@ -9,13 +9,15 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "android": {
@@ -24,7 +26,18 @@
       "env": {
         "EXPO_PUBLIC_SDX_API_URL": "https://app.scandexplus.com.br",
         "EXPO_PUBLIC_APP_ENV": "production"
-      }
+      },
+      "channel": "production"
+    },
+    "test": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_SDX_API_URL": "https://app-test.scandexplus.com.br",
+        "EXPO_PUBLIC_APP_ENV": "test"
+      },
+      "channel": "test"
     }
   },
   "submit": {
