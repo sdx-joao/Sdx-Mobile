@@ -40,3 +40,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Builds locais do EAS (AAB/APK)
+Build Expo/
+*.aab
+*.apk
