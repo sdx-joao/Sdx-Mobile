@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, PanResponder, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import Svg, { Path } from 'react-native-svg';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
-import { updateWorkOrderStatus } from '../api/mobile';
+import { getWorkOrder, updateWorkOrderStatus } from '../api/mobile';
+import { IS_TEST_BUILD } from '../api/client';
 import type { RootStackParamList } from '../navigation/types';
 
 type Point = { x: number; y: number };
@@ -46,6 +49,64 @@ function asciiBase64(value: string) {
     output += Number.isNaN(c3) ? '=' : chars.charAt(c3 & 63);
   }
   return output;
+}
+
+// SVG da assinatura (markup cru, embutido direto no HTML do PDF).
+function svgMarkup(strokes: Point[][], width: number, height: number) {
+  const w = Math.max(1, Math.round(width));
+  const h = Math.max(1, Math.round(height));
+  const paths = strokes
+    .map(pointsToPath)
+    .filter(Boolean)
+    .map(path => `<path d="${path}" fill="none" stroke="#111827" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`)
+    .join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${paths}</svg>`;
+}
+
+function esc(value: unknown) {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function fmtDt(iso?: string | null) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+// Gera um PDF da OS no aparelho e abre o compartilhamento (usado no build de teste).
+async function shareWorkOrderPdf(token: string | null, id: string, signatureSvg: string, signerName: string) {
+  const { workOrder: wo } = await getWorkOrder(token, id);
+  const materials = (wo.materials ?? [])
+    .map(m => `<tr><td>${esc(m.description)}</td><td style="text-align:right">${esc(m.quantity)} ${esc(m.unit || '')}</td></tr>`)
+    .join('');
+  const row = (label: string, value: unknown) => `<div><div class="lbl">${label}</div><div class="val">${esc(value) || '—'}</div></div>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><style>
+    body{font-family:-apple-system,Roboto,Arial,sans-serif;color:#0f172a;padding:24px;font-size:13px}
+    .hd{background:#0728CA;color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:18px}
+    .hd .code{font-family:monospace;opacity:.9;font-size:12px}.hd h1{margin:2px 0 0;font-size:18px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;margin-bottom:14px}
+    .lbl{font-size:10px;text-transform:uppercase;color:#64748b;letter-spacing:.4px}.val{font-weight:600}
+    .box{border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:10px}
+    .box h3{margin:0 0 6px;font-size:11px;text-transform:uppercase;color:#475569}
+    table{width:100%;border-collapse:collapse}td{border-bottom:1px solid #eef2f7;padding:6px 4px}
+    .sig{margin-top:26px}.sig svg{height:90px;display:block;margin:6px 0;max-width:340px;border-bottom:1px solid #0f172a}
+  </style></head><body>
+    <div class="hd"><div class="code">${esc(wo.code)}</div><h1>${esc(wo.serviceType)}</h1></div>
+    <div class="grid">
+      ${row('Setor', wo.department)}${row('Unidade', wo.unitName)}
+      ${row('Solicitante', wo.requestedByName)}${row('Contato', wo.requesterContact)}
+      ${row('Técnico responsável', wo.responsibleTechnicianName)}${row('Equipe', wo.technicalTeam)}
+      ${row('Abertura', fmtDt(wo.openedAt))}${row('Conclusão', fmtDt(wo.finishedAt))}
+    </div>
+    <div class="box"><h3>Solicitação</h3>${esc(wo.technicianRequest) || '—'}</div>
+    <div class="box"><h3>Solução adotada</h3>${esc(wo.resolutionNotes) || '—'}</div>
+    ${materials ? `<div class="box"><h3>Materiais</h3><table>${materials}</table></div>` : ''}
+    <div class="sig"><div class="lbl">Assinatura do solicitante</div>${signatureSvg}<div class="val">${esc(signerName)}</div></div>
+  </body></html>`;
+  const { uri } = await Print.printToFileAsync({ html });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `OS ${wo.code}`, UTI: 'com.adobe.pdf' });
+  }
 }
 
 export function WorkOrderSignatureScreen() {
@@ -117,7 +178,17 @@ export function WorkOrderSignatureScreen() {
         signerName: signerName.trim(),
         resolutionNotes: 'OS concluída com assinatura coletada no app mobile.',
       });
-      Alert.alert('OS concluída', 'Assinatura salva e impressão solicitada ao Electron.');
+      if (IS_TEST_BUILD) {
+        // Ambiente de teste: gera o PDF da OS no aparelho e abre o compartilhamento.
+        try {
+          await shareWorkOrderPdf(token, route.params.id, svgMarkup(strokes, padSize.width, padSize.height), signerName.trim());
+        } catch (pdfErr) {
+          Alert.alert('OS concluída', 'OS salva, mas não foi possível gerar/compartilhar o PDF.');
+          console.warn('Falha ao gerar/compartilhar PDF da OS:', pdfErr);
+        }
+      } else {
+        Alert.alert('OS concluída', 'Assinatura salva e impressão solicitada ao Electron.');
+      }
       nav.popToTop();
     } catch (e) {
       Alert.alert('Erro', e instanceof Error ? e.message : 'Não foi possível concluir a OS.');
