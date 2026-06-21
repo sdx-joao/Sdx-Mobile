@@ -24,10 +24,7 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
-      ],
-      "runtimeVersion": {
-        "policy": "appVersion"
-      }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -49,6 +46,9 @@
     "owner": "sdx-joao",
     "updates": {
       "url": "https://u.expo.dev/62ce89bc-bb9b-42f7-9770-8f44d79fae09"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }
