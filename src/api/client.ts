@@ -4,6 +4,10 @@ const REQUEST_TIMEOUT_MS = 15000;
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_SDX_API_URL?.replace(/\/$/, '') || DEFAULT_API_URL;
 
+export const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV || 'development';
+/** Build de teste (ambiente de teste) — habilita recursos só de teste, ex.: auto-cadastro. */
+export const IS_TEST_BUILD = APP_ENV === 'test';
+
 export class ApiError extends Error {
   status: number;
   code?: string;

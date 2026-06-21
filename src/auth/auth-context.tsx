@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { apiFetch } from '../api/client';
-import { clearToken, getToken, saveToken } from './token-store';
+import { clearToken, getToken, markDeviceRegistered, saveToken } from './token-store';
 import type { LoginResponse, MobileUser } from './types';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
@@ -38,6 +38,7 @@ type AuthContextValue = {
   user: SessionUser | null;
   token: string | null;
   signIn: (username: string, password: string) => Promise<void>;
+  signUp: (username: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -86,6 +87,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Auto-cadastro (só ambiente de teste). Cria o usuário, marca o aparelho como
+  // já cadastrado (trava de 1 por aparelho) e já entra.
+  async function signUp(username: string, password: string, fullName: string) {
+    const res = await apiFetch<LoginResponse>('/api/mobile/auth/register', {
+      method: 'POST',
+      body: { username, password, fullName },
+    });
+    await saveToken(res.token);
+    await markDeviceRegistered(username);
+    setToken(res.token);
+    setUser(toSessionUser(res.user));
+    setStatus('authenticated');
+    try {
+      const me = await apiFetch<MobileUser>('/api/mobile/me', { token: res.token });
+      setUser(toSessionUser(me));
+    } catch {
+      // mantém os dados do registro se /me falhar
+    }
+  }
+
   async function signOut() {
     await clearToken();
     setToken(null);
@@ -94,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, token, signIn, signOut }),
+    () => ({ status, user, token, signIn, signUp, signOut }),
     [status, user, token],
   );
 
