@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.sdxpro.mobile",
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -45,6 +45,7 @@
     },
     "owner": "sdx-joao",
     "updates": {
+      "enabled": false,
       "url": "https://u.expo.dev/62ce89bc-bb9b-42f7-9770-8f44d79fae09"
     },
     "runtimeVersion": {
