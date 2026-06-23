@@ -42,13 +42,11 @@ workflows:
       node: 20.18.0
       android_signing:
         - sdxmobile_keystore
-      groups:
-        - sentry
       vars:
         EXPO_PUBLIC_SDX_API_URL: "https://app-test.scandexplus.com.br"
         EXPO_PUBLIC_APP_ENV: "test"
-        SENTRY_ORG: "scandexplus"
-        SENTRY_PROJECT: "javascript-nextjs"
+        # Sentry: source maps DESLIGADOS por ora (upload derrubava o bundleRelease).
+        SENTRY_DISABLE_AUTO_UPLOAD: "true"
     scripts:
       - *deps
       - *prebuild
@@ -64,13 +62,11 @@ workflows:
       node: 20.18.0
       android_signing:
         - sdxmobile_keystore
-      groups:
-        - sentry
       vars:
         EXPO_PUBLIC_SDX_API_URL: "https://app.scandexplus.com.br"
         EXPO_PUBLIC_APP_ENV: "production"
-        SENTRY_ORG: "scandexplus"
-        SENTRY_PROJECT: "javascript-nextjs"
+        # Sentry: source maps DESLIGADOS por ora (upload derrubava o bundleRelease).
+        SENTRY_DISABLE_AUTO_UPLOAD: "true"
     scripts:
       - *deps
       - *prebuild
