@@ -1,0 +1,363 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/Avatar/**",
+              "components/BlueHeader/**",
+              "components/Icon/**",
+              "components/MobileButton/**",
+              "components/MobileCard/**",
+              "components/SearchField/**",
+              "components/SegmentedControl/**",
+              "components/StatusBadge/**",
+              "components/StatusDot/**",
+              "components/TabBar/**",
+              "export/scandex-mobile-concept/mobile/**",
+              "mobile/**",
+              "ui_kits/scandexpro/**",
+              "uploads/Landing Page ScandexPlus/**",
+              "uploads/Landing Page ScandexPlus/download/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Inter))/i]",
+        "message": "Font not provided by the design system. Available: Inter."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Avatar'] > JSXAttribute > JSXIdentifier[name!=/^(?:name|initials|src|size|radius|color|style|key|ref|className|style|children)$/]",
+        "message": "<Avatar> doesn't accept that prop. Declared props: name, initials, src, size, radius, color, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='BlueHeader'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|subtitle|eyebrow|onBack|action|brand|compact|children|style|key|ref|className|style|children)$/]",
+        "message": "<BlueHeader> doesn't accept that prop. Declared props: title, subtitle, eyebrow, onBack, action, brand, compact, children, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Icon'] > JSXAttribute > JSXIdentifier[name!=/^(?:name|size|color|strokeWidth|style|key|ref|className|style|children)$/]",
+        "message": "<Icon> doesn't accept that prop. Declared props: name, size, color, strokeWidth, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='MobileButton'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|fullWidth|disabled|loading|onClick|children|style|key|ref|className|style|children)$/]",
+        "message": "<MobileButton> doesn't accept that prop. Declared props: variant, size, fullWidth, disabled, loading, onClick, children, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='MobileButton'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:primary|secondary|outline|ghost|danger)$/]",
+        "message": "<MobileButton> variant must be one of 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='MobileButton'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md|lg)$/]",
+        "message": "<MobileButton> size must be one of 'sm' | 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='MobileCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|accent|padding|onClick|children|style|key|ref|className|style|children)$/]",
+        "message": "<MobileCard> doesn't accept that prop. Declared props: variant, accent, padding, onClick, children, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='MobileCard'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:elevated|flat)$/]",
+        "message": "<MobileCard> variant must be one of 'elevated' | 'flat'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SearchField'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|onChange|placeholder|type|inputMode|leading|valid|clearable|style|key|ref|className|style|children)$/]",
+        "message": "<SearchField> doesn't accept that prop. Declared props: value, onChange, placeholder, type, inputMode, leading, valid, clearable, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SearchField'] > JSXAttribute[name.name='inputMode'] > Literal[value!=/^(?:text|numeric|tel|email|search|decimal)$/]",
+        "message": "<SearchField> inputMode must be one of 'text' | 'numeric' | 'tel' | 'email' | 'search' | 'decimal'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SegmentOption'] > JSXAttribute > JSXIdentifier[name!=/^(?:key|label|count|key|ref|className|style|children)$/]",
+        "message": "<SegmentOption> doesn't accept that prop. Declared props: key, label, count."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatusBadge'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|color|variant|dot|size|style|key|ref|className|style|children)$/]",
+        "message": "<StatusBadge> doesn't accept that prop. Declared props: label, color, variant, dot, size, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatusBadge'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:soft|solid)$/]",
+        "message": "<StatusBadge> variant must be one of 'soft' | 'solid'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatusBadge'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md)$/]",
+        "message": "<StatusBadge> size must be one of 'sm' | 'md'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatusDot'] > JSXAttribute > JSXIdentifier[name!=/^(?:status|reported|size|key|ref|className|style|children)$/]",
+        "message": "<StatusDot> doesn't accept that prop. Declared props: status, reported, size."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='TabItem'] > JSXAttribute > JSXIdentifier[name!=/^(?:key|label|icon|key|ref|className|style|children)$/]",
+        "message": "<TabItem> doesn't accept that prop. Declared props: key, label, icon."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "Avatar": {
+        "replaces": []
+      },
+      "BlueHeader": {
+        "replaces": []
+      },
+      "Icon": {
+        "replaces": []
+      },
+      "MobileButton": {
+        "replaces": []
+      },
+      "MobileCard": {
+        "replaces": []
+      },
+      "SearchField": {
+        "replaces": []
+      },
+      "SegmentOption": {
+        "replaces": []
+      },
+      "StatusBadge": {
+        "replaces": []
+      },
+      "StatusDot": {
+        "replaces": []
+      },
+      "TabItem": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--accent",
+      "--accent-foreground",
+      "--background",
+      "--border",
+      "--card",
+      "--card-foreground",
+      "--destructive",
+      "--destructive-foreground",
+      "--font-body",
+      "--font-code",
+      "--font-headline",
+      "--foreground",
+      "--input",
+      "--muted",
+      "--muted-foreground",
+      "--popover",
+      "--popover-foreground",
+      "--primary",
+      "--primary-foreground",
+      "--radius",
+      "--ring",
+      "--sdx-blue",
+      "--sdx-blue-light",
+      "--sdx-destructive",
+      "--sdx-gray-border",
+      "--sdx-gray-dark",
+      "--sdx-gray-input",
+      "--sdx-gray-muted",
+      "--sdx-m-bg",
+      "--sdx-m-border",
+      "--sdx-m-border-strong",
+      "--sdx-m-btn-height",
+      "--sdx-m-danger",
+      "--sdx-m-danger-soft",
+      "--sdx-m-doc-absent",
+      "--sdx-m-doc-absent-ring",
+      "--sdx-m-doc-altered",
+      "--sdx-m-doc-altered-ring",
+      "--sdx-m-doc-available",
+      "--sdx-m-doc-available-ring",
+      "--sdx-m-doc-missing",
+      "--sdx-m-doc-missing-ring",
+      "--sdx-m-doc-processing",
+      "--sdx-m-doc-processing-ring",
+      "--sdx-m-faint",
+      "--sdx-m-field-height",
+      "--sdx-m-gap",
+      "--sdx-m-gutter",
+      "--sdx-m-header",
+      "--sdx-m-muted",
+      "--sdx-m-on-primary",
+      "--sdx-m-primary",
+      "--sdx-m-primary-dark",
+      "--sdx-m-radius-btn",
+      "--sdx-m-radius-card",
+      "--sdx-m-radius-chip",
+      "--sdx-m-radius-field",
+      "--sdx-m-radius-header",
+      "--sdx-m-shadow-card",
+      "--sdx-m-shadow-float",
+      "--sdx-m-shadow-header",
+      "--sdx-m-success",
+      "--sdx-m-surface",
+      "--sdx-m-surface-muted",
+      "--sdx-m-teal",
+      "--sdx-m-text",
+      "--sdx-m-text-soft",
+      "--sdx-m-touch",
+      "--sdx-near-black",
+      "--sdx-off-white",
+      "--sdx-radius",
+      "--sdx-radius-lg",
+      "--sdx-radius-md",
+      "--sdx-radius-sm",
+      "--sdx-shadow-lg",
+      "--sdx-shadow-md",
+      "--sdx-shadow-sm",
+      "--sdx-shadow-xl",
+      "--sdx-status-absent",
+      "--sdx-status-altered",
+      "--sdx-status-available",
+      "--sdx-status-missing",
+      "--sdx-status-processing",
+      "--sdx-teal",
+      "--sdx-teal-light",
+      "--sdx-white",
+      "--secondary",
+      "--secondary-foreground",
+      "--sidebar-accent",
+      "--sidebar-accent-foreground",
+      "--sidebar-background",
+      "--sidebar-border",
+      "--sidebar-foreground",
+      "--sidebar-primary",
+      "--sidebar-primary-foreground",
+      "--sidebar-ring"
+    ],
+    "tokenKinds": {
+      "--sdx-blue": "color",
+      "--sdx-blue-light": "color",
+      "--sdx-teal": "color",
+      "--sdx-teal-light": "color",
+      "--sdx-white": "color",
+      "--sdx-off-white": "color",
+      "--sdx-gray-border": "color",
+      "--sdx-gray-input": "color",
+      "--sdx-gray-muted": "color",
+      "--sdx-gray-dark": "color",
+      "--sdx-near-black": "color",
+      "--sdx-destructive": "color",
+      "--sdx-status-available": "color",
+      "--sdx-status-missing": "color",
+      "--sdx-status-processing": "color",
+      "--sdx-status-altered": "color",
+      "--sdx-status-absent": "color",
+      "--sdx-radius": "radius",
+      "--sdx-radius-md": "radius",
+      "--sdx-radius-sm": "radius",
+      "--sdx-radius-lg": "radius",
+      "--sdx-shadow-sm": "shadow",
+      "--sdx-shadow-md": "shadow",
+      "--sdx-shadow-lg": "shadow",
+      "--sdx-shadow-xl": "shadow",
+      "--sdx-m-primary": "color",
+      "--sdx-m-primary-dark": "color",
+      "--sdx-m-on-primary": "color",
+      "--sdx-m-teal": "color",
+      "--sdx-m-bg": "color",
+      "--sdx-m-surface": "color",
+      "--sdx-m-surface-muted": "color",
+      "--sdx-m-text": "color",
+      "--sdx-m-text-soft": "color",
+      "--sdx-m-muted": "color",
+      "--sdx-m-faint": "color",
+      "--sdx-m-border": "color",
+      "--sdx-m-border-strong": "color",
+      "--sdx-m-danger": "color",
+      "--sdx-m-danger-soft": "color",
+      "--sdx-m-success": "color",
+      "--sdx-m-header": "color",
+      "--sdx-m-doc-available": "color",
+      "--sdx-m-doc-available-ring": "color",
+      "--sdx-m-doc-processing": "color",
+      "--sdx-m-doc-processing-ring": "color",
+      "--sdx-m-doc-altered": "color",
+      "--sdx-m-doc-altered-ring": "color",
+      "--sdx-m-doc-missing": "color",
+      "--sdx-m-doc-missing-ring": "color",
+      "--sdx-m-doc-absent": "color",
+      "--sdx-m-doc-absent-ring": "color",
+      "--sdx-m-radius-card": "radius",
+      "--sdx-m-radius-btn": "radius",
+      "--sdx-m-radius-field": "radius",
+      "--sdx-m-radius-chip": "radius",
+      "--sdx-m-radius-header": "radius",
+      "--sdx-m-touch": "spacing",
+      "--sdx-m-btn-height": "spacing",
+      "--sdx-m-field-height": "spacing",
+      "--sdx-m-gutter": "spacing",
+      "--sdx-m-gap": "spacing",
+      "--sdx-m-shadow-card": "shadow",
+      "--sdx-m-shadow-header": "shadow",
+      "--sdx-m-shadow-float": "shadow",
+      "--background": "color",
+      "--foreground": "color",
+      "--card": "color",
+      "--card-foreground": "color",
+      "--popover": "color",
+      "--popover-foreground": "color",
+      "--primary": "color",
+      "--primary-foreground": "color",
+      "--secondary": "color",
+      "--secondary-foreground": "color",
+      "--muted": "color",
+      "--muted-foreground": "color",
+      "--accent": "color",
+      "--accent-foreground": "color",
+      "--destructive": "color",
+      "--destructive-foreground": "color",
+      "--border": "color",
+      "--input": "color",
+      "--ring": "color",
+      "--radius": "radius",
+      "--sidebar-background": "color",
+      "--sidebar-foreground": "color",
+      "--sidebar-primary": "color",
+      "--sidebar-primary-foreground": "color",
+      "--sidebar-accent": "color",
+      "--sidebar-accent-foreground": "color",
+      "--sidebar-border": "color",
+      "--sidebar-ring": "color",
+      "--font-body": "font",
+      "--font-headline": "font",
+      "--font-code": "font"
+    },
+    "fontFamilies": [
+      "Inter"
+    ]
+  }
+}

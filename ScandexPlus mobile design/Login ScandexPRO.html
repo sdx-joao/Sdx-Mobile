@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Components" name="Login ScandexPRO" subtitle="Tela de login desvinculada do hospital — identidade Scandex" viewport="1280x800" -->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ScandexPRO — Entrar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:      #2f6eb5;
+      --blue-dark: #1b3f6e;
+      --blue-mid:  #245594;
+      --blue-pale: #eaf1fb;
+      --blue-line: #c8daf2;
+      --white:     #ffffff;
+      --off:       #f6f8fc;
+      --border:    #dce8f5;
+      --text:      #111927;
+      --muted:     #7a8fa8;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--off);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 440px;
+      height: 100vh;
+      min-height: 600px;
+    }
+
+    /* ═══════════════ LEFT ═══════════════ */
+    .left {
+      position: relative;
+      background: var(--white);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 52px 64px;
+      border-right: 1px solid var(--border);
+    }
+
+    /* faint blue tint wash bottom-right */
+    .left::after {
+      content: '';
+      position: absolute;
+      bottom: -120px; right: -120px;
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, rgba(47,110,181,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* brand */
+    .left-brand {
+      position: relative; z-index: 1;
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .brand-badge {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      overflow: hidden; flex-shrink: 0;
+      border: 1px solid var(--border);
+    }
+
+    .brand-badge img {
+      width: 100%; height: 100%;
+      object-fit: cover; border-radius: 50%;
+    }
+
+    .brand-name {
+      font-size: 13px; font-weight: 600;
+      color: var(--blue-dark); letter-spacing: 0.02em;
+    }
+
+    .brand-sub {
+      font-size: 10px; color: var(--muted);
+      font-weight: 400; letter-spacing: 0.07em; text-transform: uppercase;
+    }
+
+    /* ── center art ── */
+    .art {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 0;
+    }
+
+    .art svg {
+      width: min(440px, 75%);
+      height: auto;
+    }
+
+    /* ── copy ── */
+    .left-copy {
+      position: relative; z-index: 1;
+    }
+
+    /* ── bottom-right stamp ── */
+    .left-stamp {
+      position: absolute;
+      bottom: 52px;
+      right: 64px;
+      z-index: 1;
+      text-align: right;
+    }
+
+    .stamp-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 30px; font-weight: 700;
+      letter-spacing: -0.01em;
+      background: linear-gradient(90deg, #1b3f6e 0%, #2f6eb5 50%, #5a9fd4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+
+    .stamp-name sup {
+      font-size: 13px;
+      vertical-align: super;
+    }
+
+    .stamp-sub {
+      font-size: 10px; font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 5px;
+    }
+
+    .left-copy .eyebrow {
+      font-size: 11px; font-weight: 500;
+      color: var(--blue);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .left-copy .eyebrow::before {
+      content: '';
+      display: block;
+      width: 24px; height: 1.5px;
+      background: var(--blue);
+      flex-shrink: 0;
+    }
+
+    .left-copy h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 44px; font-weight: 700;
+      color: var(--text);
+      line-height: 1.1; letter-spacing: -0.03em;
+    }
+
+    .left-copy h1 .gradient-word {
+      display: inline-block;
+      background: linear-gradient(90deg, #1b3f6e 0%, #2f6eb5 40%, #5a9fd4 70%, #a8d4f5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-size: 52px;
+      letter-spacing: -0.02em;
+    }
+
+    /* ═══════════════ RIGHT ═══════════════ */
+    .right {
+      background: var(--off);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 52px 56px;
+      position: relative;
+    }
+
+    .form-wrap { width: 100%; max-width: 320px; }
+
+    .form-logo {
+      display: block;
+      max-width: 160px;
+      margin: 0 auto 48px;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      mix-blend-mode: multiply;
+    }
+
+    .form-title {
+      font-size: 20px; font-weight: 700;
+      color: var(--text); letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .form-subtitle {
+      font-size: 13.5px; color: var(--muted);
+      margin-bottom: 30px; line-height: 1.55;
+      font-weight: 400;
+    }
+
+    .field-group { margin-bottom: 16px; }
+
+    label {
+      display: block;
+      font-size: 11px; font-weight: 600;
+      color: #3d5470;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      margin-bottom: 7px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; color: var(--text);
+      background: var(--white);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(47,110,181,0.11);
+    }
+
+    input::placeholder { color: #b8c8da; }
+
+    .btn-login {
+      width: 100%; padding: 12.5px; margin-top: 10px;
+      background: var(--blue-mid);
+      color: white; border: none; border-radius: 8px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; letter-spacing: 0.03em;
+      transition: background 0.2s, transform 0.1s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+
+    .btn-login:hover { background: var(--blue-dark); }
+    .btn-login:active { transform: scale(0.99); }
+
+    .scandex-pro-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+    }
+
+    .brand-badge-right {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      overflow: hidden; flex-shrink: 0;
+      border: 1px solid var(--border);
+    }
+
+    .brand-badge-right img {
+      width: 100%; height: 100%;
+      object-fit: cover; border-radius: 50%;
+    }
+
+    /* scan animation */
+    @keyframes scanAnim {
+      0%   { transform: translateY(0px);   opacity: 0; }
+      8%   { opacity: 1; }
+      92%  { opacity: 1; }
+      100% { transform: translateY(192px); opacity: 0; }
+    }
+
+    .scan-beam {
+      animation: scanAnim 4s ease-in-out infinite;
+    }
+
+    /* pulse ring */
+    @keyframes pulse {
+      0%, 100% { r: 110; opacity: 0.06; }
+      50%       { r: 126; opacity: 0.03; }
+    }
+
+    .pulse-ring { animation: pulse 4s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ════ LEFT ════ -->
+  <div class="left">
+
+
+
+    <!-- ── Minimal geometric art ── -->
+    <div class="art">
+      <svg viewBox="0 0 460 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="hline" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stop-color="rgba(47,110,181,0)"/>
+            <stop offset="50%"  stop-color="rgba(47,110,181,0.7)"/>
+            <stop offset="100%" stop-color="rgba(47,110,181,0)"/>
+          </linearGradient>
+          <clipPath id="docClip">
+            <rect x="144" y="80" width="172" height="220" rx="6"/>
+          </clipPath>
+        </defs>
+
+        <!-- outer pulse ring -->
+        <circle cx="230" cy="190" r="110" stroke="rgba(47,110,181,0.06)" stroke-width="1" class="pulse-ring"/>
+
+        <!-- large circle outline -->
+        <circle cx="230" cy="190" r="96" stroke="rgba(47,110,181,0.1)" stroke-width="1.2"/>
+
+        <!-- subtle crosshair -->
+        <line x1="230" y1="94" x2="230" y2="106" stroke="rgba(47,110,181,0.18)" stroke-width="1.2" stroke-linecap="round"/>
+        <line x1="230" y1="274" x2="230" y2="286" stroke="rgba(47,110,181,0.18)" stroke-width="1.2" stroke-linecap="round"/>
+        <line x1="134" y1="190" x2="146" y2="190" stroke="rgba(47,110,181,0.18)" stroke-width="1.2" stroke-linecap="round"/>
+        <line x1="314" y1="190" x2="326" y2="190" stroke="rgba(47,110,181,0.18)" stroke-width="1.2" stroke-linecap="round"/>
+
+        <!-- document body -->
+        <rect x="144" y="80" width="172" height="220" rx="6"
+              fill="white" stroke="rgba(47,110,181,0.18)" stroke-width="1.2"
+              style="filter: drop-shadow(0 8px 24px rgba(47,110,181,0.1))"/>
+
+        <!-- doc header band -->
+        <rect x="144" y="80" width="172" height="28" rx="6" fill="rgba(47,110,181,0.06)"/>
+        <rect x="144" y="100" width="172" height="8" fill="rgba(47,110,181,0.04)"/>
+
+        <!-- header dots -->
+        <circle cx="160" cy="94" r="3.5" fill="rgba(47,110,181,0.15)"/>
+        <circle cx="173" cy="94" r="3.5" fill="rgba(47,110,181,0.1)"/>
+        <circle cx="186" cy="94" r="3.5" fill="rgba(47,110,181,0.07)"/>
+
+        <!-- content lines -->
+        <rect x="160" y="122" width="140" height="3.5" rx="1.75" fill="rgba(47,110,181,0.18)"/>
+        <rect x="160" y="133" width="108" height="3"   rx="1.5"  fill="rgba(47,110,181,0.11)"/>
+        <rect x="160" y="144" width="124" height="3"   rx="1.5"  fill="rgba(47,110,181,0.11)"/>
+        <rect x="160" y="155" width="90"  height="3"   rx="1.5"  fill="rgba(47,110,181,0.08)"/>
+
+        <!-- subtle separator -->
+        <line x1="160" y1="170" x2="300" y2="170" stroke="rgba(47,110,181,0.08)" stroke-width="1"/>
+
+        <rect x="160" y="180" width="130" height="3"   rx="1.5"  fill="rgba(47,110,181,0.09)"/>
+        <rect x="160" y="191" width="100" height="3"   rx="1.5"  fill="rgba(47,110,181,0.07)"/>
+        <rect x="160" y="202" width="116" height="3"   rx="1.5"  fill="rgba(47,110,181,0.07)"/>
+        <rect x="160" y="213" width="80"  height="3"   rx="1.5"  fill="rgba(47,110,181,0.06)"/>
+        <rect x="160" y="224" width="110" height="3"   rx="1.5"  fill="rgba(47,110,181,0.06)"/>
+        <rect x="160" y="235" width="70"  height="3"   rx="1.5"  fill="rgba(47,110,181,0.05)"/>
+        <rect x="160" y="246" width="96"  height="3"   rx="1.5"  fill="rgba(47,110,181,0.05)"/>
+        <rect x="160" y="257" width="82"  height="3"   rx="1.5"  fill="rgba(47,110,181,0.05)"/>
+        <rect x="160" y="268" width="60"  height="3"   rx="1.5"  fill="rgba(47,110,181,0.04)"/>
+
+        <!-- scan line beam (clipped to doc) -->
+        <g clip-path="url(#docClip)">
+          <rect x="144" y="80" width="172" height="2" fill="url(#hline)" class="scan-beam"/>
+        </g>
+
+        <!-- scan corner brackets -->
+        <polyline points="148,84 148,96 160,96" stroke="rgba(47,110,181,0.55)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="312,84 312,96 300,96" stroke="rgba(47,110,181,0.55)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="148,296 148,284 160,284" stroke="rgba(47,110,181,0.55)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="312,296 312,284 300,284" stroke="rgba(47,110,181,0.55)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+        <!-- verified checkmark badge -->
+        <circle cx="302" cy="290" r="16" fill="white" stroke="rgba(47,110,181,0.2)" stroke-width="1.2"/>
+        <circle cx="302" cy="290" r="11" fill="rgba(47,110,181,0.08)"/>
+        <polyline points="295,290 300,295 309,283" stroke="rgba(47,160,110,0.9)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <div class="left-copy">
+      <div class="eyebrow">Gestão documental hospitalar</div>
+      <h1>Gestão. Memória.<br/>Conformidade.<br/>Sob <span class="gradient-word">CONTROLE.</span></h1>
+    </div>
+
+    <div class="left-stamp">
+      <div class="stamp-name">ScandexPRO<sup>®</sup></div>
+      <div class="stamp-sub">Gestão de Documentos</div>
+    </div>
+
+  </div>
+
+  <!-- ════ RIGHT ════ -->
+  <div class="right">
+    <div class="form-wrap">
+      <img class="form-logo" src="uploads/LOGO PRINCIPAL (2).png" alt="Scandex+" />
+
+      <div class="form-title">Entrar</div>
+      <div class="form-subtitle">Insira suas credenciais para acessar o sistema.</div>
+
+      <div class="field-group">
+        <label for="usuario">Usuário</label>
+        <input type="text" id="usuario" placeholder="nome de usuário" autocomplete="username" />
+      </div>
+
+      <div class="field-group">
+        <label for="senha">Senha</label>
+        <input type="password" id="senha" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+
+      <button class="btn-login">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+          <path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M11 5l3 3-3 3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M14 8H7" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Entrar
+      </button>
+
+      <div class="scandex-pro-label">
+        <div class="brand-badge-right">
+          <img src="uploads/secundaria.png" alt="Scandex" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

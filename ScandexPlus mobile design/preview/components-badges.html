@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Components" name="Badges & Role Tags" subtitle="Role badges, status badges, notification dot" viewport="700x200" -->
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { margin: 0; padding: 16px; background: #f8f9fb; font-family: 'Inter', sans-serif; }
+.label { font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; margin-bottom: 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+.badge {
+  display: inline-flex; align-items: center; padding: 2px 8px;
+  border-radius: 4px; font-size: 10px; font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase;
+  font-family: 'Inter', sans-serif;
+}
+.role-super { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.role-admin { background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; }
+.role-gerente { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.role-user { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+.role-colab { background: hsl(210 40% 96.1%); color: #374151; border: 1px solid hsl(214.3 31.8% 91.4%); }
+.badge-secondary { background: hsl(210 40% 96.1%); color: hsl(222.2 47.4% 11.2%); border: 1px solid transparent; }
+.badge-outline { background: transparent; border: 1px solid hsl(214.3 31.8% 91.4%); color: hsl(222.2 84% 4.9%); }
+.badge-primary { background: #072AC8; color: #fff; }
+.badge-accent { background: #4DB6AC; color: #fff; }
+.badge-destructive { background: hsl(0 84.2% 60.2%); color: #fff; }
+.badge-success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.badge-warning { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+/* notification dot */
+.notif-wrap { position: relative; display: inline-flex; }
+.notif-dot {
+  position: absolute; top: -5px; right: -5px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #f87171; border: 2px solid #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 7px; font-weight: 700; color: #fff;
+}
+.icon-btn { background: transparent; border: none; cursor: pointer; padding: 6px; border-radius: 6px; color: #072AC8; }
+</style>
+</head><body>
+<div class="label">Role Badges</div>
+<div class="row">
+  <span class="badge role-super">SuperAdministrador</span>
+  <span class="badge role-admin">Admin</span>
+  <span class="badge role-gerente">Gerente</span>
+  <span class="badge role-user">Usuário</span>
+  <span class="badge role-colab">Colaborador</span>
+</div>
+<div class="label">Status Badges</div>
+<div class="row">
+  <span class="badge badge-success">Disponível</span>
+  <span class="badge badge-destructive">Ausente</span>
+  <span class="badge badge-warning">Alterado</span>
+  <span class="badge badge-primary">Processando</span>
+  <span class="badge badge-accent">Concluído</span>
+</div>
+<div class="label">Utility Badges</div>
+<div class="row">
+  <span class="badge badge-secondary">PDF</span>
+  <span class="badge badge-secondary">Imagem</span>
+  <span class="badge badge-outline">Cirurgia</span>
+  <span class="badge badge-outline">Consulta</span>
+  <span class="badge badge-primary">Novo</span>
+</div>
+<div class="label">Notification Count</div>
+<div class="row">
+  <div class="notif-wrap">
+    <button class="icon-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </button>
+    <div class="notif-dot">3</div>
+  </div>
+  <span style="font-size:12px;color:#6b7280;margin-left:4px">Comunicação com pendências</span>
+</div>
+</body></html>

@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<!-- @dsCard group="UI Kit — Scandexpro" name="ScandexPRO UI Kit" subtitle="Interactive prototype — login, dashboard, doc viewer, users, reports, admin" viewport="1200x700" -->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ScandexPRO™ — UI Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root { height: 100%; }
+  body { font-family: 'DM Sans', sans-serif; background: #f4f7fc; -webkit-font-smoothing: antialiased; }
+  input, button, select, textarea { font-family: inherit; }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="Components.jsx"></script>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ── Icons (inline Lucide-style SVGs) ─────────────────────────────────────
+const Ico = ({ d, size=16, color='currentColor', ...extra }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+    {d && <path d={d}/>}
+    {extra.circle && <circle {...extra.circle}/>}
+    {extra.line && <line {...extra.line}/>}
+    {extra.polyline && <polyline points={extra.polyline}/>}
+    {extra.rect && <rect {...extra.rect}/>}
+  </svg>
+);
+const IcoSearch = ({s=16}) => <Ico size={s} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>;
+const IcoDash  = ({s=16}) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>;
+const IcoMsg   = ({s=16}) => <Ico size={s} d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>;
+const IcoUser  = ({s=16}) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>;
+const IcoBar   = ({s=16}) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
+const IcoOut   = ({s=16}) => <Ico size={s} d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>;
+const IcoFile  = ({s=16}) => <Ico size={s} d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>;
+const IcoEye   = ({s=16}) => <Ico size={s} d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" circle={{cx:"12",cy:"12",r:"3"}}/>;
+const IcoPrint = ({s=16}) => <Ico size={s} d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/>;
+const IcoChev  = ({s=16,up=false}) => <Ico size={s} d={up?"M18 15l-6-6-6 6":"M6 9l6 6 6-6"}/>;
+const IcoX     = ({s=16}) => <Ico size={s} d="M18 6 6 18M6 6l12 12"/>;
+const IcoAlert = ({s=16}) => <Ico size={s} d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" line={{x1:"12",y1:"9",x2:"12",y2:"13"}} circle={{cx:"12",cy:"17",r:"1"}}/>;
+const IcoSettings = ({s=16}) => <Ico size={s} d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>;
+const IcoUsers = ({s=16}) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+const IcoGauge = ({s=16}) => <Ico size={s} d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 12l4-4"/>;
+
+// ── Data ─────────────────────────────────────────────────────────────────
+const MOCK_USER = { name: 'João Costa', role: 'Admin', initials: 'JC' };
+const MOCK_PATIENTS = [
+  { id: '9999999', name: 'Paciente de Demonstração (Mock)', age: 45, cpf: '999.999.999-99', sus: '900 9876 5432 1098',
+    surgeries: [
+      { id: 1, date: '10/03/2024', name: 'Exame de Fundo de Olho', dr: 'Dr. Olhano Fictício', status: 'available', pages: 8 },
+      { id: 2, date: '15/01/2024', name: 'Facectomia com Lente', dr: 'Dra. Vista Clara', status: 'available', pages: 3 },
+      { id: 3, date: '15/11/2023', name: 'Exame Legado', dr: 'Dr. Arquivista', status: 'processing', pages: 0 },
+      { id: 4, date: '01/01/2023', name: 'Tomografia Incompleta', dr: 'Dr. Parcial', status: 'missing_info', pages: 2 },
+      { id: 5, date: '10/02/2023', name: 'Consulta sem Documento', dr: 'Dra. Esquecida', status: 'absent', pages: 0 },
+    ]
+  },
+  { id: '100111', name: 'Edna Lucia da Conceição', age: 62, cpf: '111.222.333-44', sus: '100 1234 5678 9012',
+    surgeries: [
+      { id: 6, date: '17/01/2025', name: 'Correção de Catarata', dr: 'Dr. Visão', status: 'available', pages: 8 },
+      { id: 7, date: '03/09/2024', name: 'Retinografia', dr: 'Dra. Luz', status: 'available', pages: 4 },
+    ]
+  },
+];
+const MOCK_USERS_LIST = [
+  { id: 1, name: 'João Costa', username: 'joao.costa', role: 'Admin', email: 'joao@hospital.com', initials: 'JC' },
+  { id: 2, name: 'Maria Souza', username: 'maria.souza', role: 'Gerente', email: 'maria@hospital.com', initials: 'MS' },
+  { id: 3, name: 'Pedro Lima', username: 'pedro.lima', role: 'Colaborador', email: 'pedro@hospital.com', initials: 'PL' },
+  { id: 4, name: 'Ana Ferreira', username: 'ana.ferreira', role: 'User', email: 'ana@hospital.com', initials: 'AF' },
+];
+
+// ── Theme palette ─────────────────────────────────────────────────────────
+// ── Theme modes ───────────────────────────────────────────────────────────
+const THEME_MODES = [
+  { id: 'favorito', label: 'Favorito', primary: '#245594', bg: '#f4f7fc',
+    icon: (c) => <svg width="14" height="14" viewBox="0 0 24 24" fill={c} stroke={c} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> },
+  { id: 'claro',    label: 'Claro',    primary: '#0284c7', bg: '#f0f9ff',
+    icon: (c) => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> },
+  { id: 'escuro',   label: 'Escuro',   primary: '#1e293b', bg: '#0f172a',
+    icon: (c) => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> },
+];
+
+// ── App Header ────────────────────────────────────────────────────────────
+const AppHeader = ({ screen, setScreen, notifCount = 2, theme, setTheme, app, setApp }) => {
+  const primary = theme?.primary || '#245594';
+  const nav = [
+    { id: 'dashboard',     label: 'Painel',     Icon: IcoDash },
+    { id: 'communication', label: 'Mensagens',  Icon: IcoMsg, badge: notifCount },
+    { id: 'users',         label: 'Usuários',   Icon: IcoUsers },
+    { id: 'reports',       label: 'Relatórios', Icon: IcoBar },
+    { id: 'admin',         label: 'Admin',      Icon: IcoGauge },
+  ];
+  const themeIdx = THEME_MODES.findIndex(t => t.id === theme?.id) ?? 0;
+  const cycleTheme = () => setTheme(THEME_MODES[(themeIdx + 1) % THEME_MODES.length]);
+  const curTheme = THEME_MODES[themeIdx] || THEME_MODES[0];
+
+  return (
+    <header style={{
+      background: primary, color: '#fff', height: 56,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '0 20px', position: 'sticky', top: 0, zIndex: 50,
+      boxShadow: '0 1px 6px rgba(0,0,0,0.15)', borderBottom: '1px solid rgba(255,255,255,0.1)',
+      flexShrink: 0, gap: 0,
+    }}>
+      {/* Brand + theme cycle */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        <div onClick={() => setScreen('dashboard')} style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', fontFamily: "'Space Grotesk', sans-serif" }}>
+          ScandexPRO™
+        </div>
+        {/* 3-state theme cycle — bare icon, no box */}
+        <button onClick={cycleTheme} title={`Tema: ${curTheme.label}`} style={{
+          background: 'none', border: 'none', padding: '3px',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'rgba(255,255,255,.6)', transition: 'color .2s', flexShrink: 0,
+        }}
+        onMouseEnter={e => e.currentTarget.style.color='rgba(255,255,255,1)'}
+        onMouseLeave={e => e.currentTarget.style.color='rgba(255,255,255,.6)'}>
+          {curTheme.icon('currentColor')}
+        </button>
+      </div>
+
+      {/* Divider */}
+      <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,.2)', margin: '0 10px', flexShrink: 0 }}/>
+
+      {/* Nav — icon + label stacked */}
+      <nav style={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+        {nav.map(({ id, label, Icon: NavIcon, badge }) => {
+          const active = screen === id;
+          return (
+            <button key={id} onClick={() => setScreen(id)} title={label} style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              width: 52, height: 44, borderRadius: 8, border: 'none', cursor: 'pointer', position: 'relative',
+              background: active ? 'rgba(255,255,255,.22)' : 'transparent',
+              color: active ? '#fff' : 'rgba(255,255,255,.6)',
+              fontFamily: "'DM Sans', sans-serif", gap: 3, transition: 'all .15s', flexShrink: 0,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,.15)'; e.currentTarget.style.color='#fff'; }}
+            onMouseLeave={e => { e.currentTarget.style.background=active?'rgba(255,255,255,.22)':'transparent'; e.currentTarget.style.color=active?'#fff':'rgba(255,255,255,.6)'; }}>
+              <NavIcon s={16}/>
+              <span style={{ fontSize: 8.5, fontWeight: 500, lineHeight: 1 }}>{label}</span>
+              {badge > 0 && (
+                <span style={{ position: 'absolute', top: 6, right: 8, width: 6, height: 6, borderRadius: '50%', background: '#f87171', border: `1.5px solid ${primary}` }}/>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Divider */}
+      <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,.2)', margin: '0 12px', flexShrink: 0 }}/>
+
+      {/* User */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: 6, background: 'rgba(255,255,255,.2)',
+          border: '1.5px solid rgba(255,255,255,.35)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', fontSize: 11, fontWeight: 700,
+        }}>{MOCK_USER.initials}</div>
+        <div style={{ lineHeight: 1.2 }}>
+          <div style={{ fontSize: 11, fontWeight: 600 }}>{MOCK_USER.name}</div>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', opacity: .65 }}>{MOCK_USER.role}</div>
+        </div>
+        <button onClick={() => setScreen('login')} title="Sair" style={{
+          background: 'transparent', border: 'none', color: 'rgba(255,255,255,.55)',
+          cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex', alignItems: 'center',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,.15)'; e.currentTarget.style.color='#fff'; }}
+        onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='rgba(255,255,255,.55)'; }}>
+          <IcoOut s={14}/>
+        </button>
+      </div>
+    </header>
+  );
+};
+
+// ── Login Screen ──────────────────────────────────────────────────────────
+const LoginScreen = ({ onLogin }) => {
+  const [user, setUser] = useState('');
+  const [pass, setPass] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+
+  const submit = (e) => {
+    e.preventDefault();
+    setErr('');
+    if (!user || !pass) { setErr('Preencha todos os campos.'); return; }
+    setLoading(true);
+    setTimeout(() => { setLoading(false); onLogin(); }, 900);
+  };
+
+  return (
+    <div style={{ display: 'flex', height: '100%', minHeight: '100vh', background: '#fff' }}>
+      {/* Left — image */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a2744' }}>
+        <img src="../../assets/hospital.png" alt="Hospital" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7 }}/>
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(36,85,148,0.35)' }}/>
+        <div style={{ position: 'relative', color: '#fff', textAlign: 'center', padding: 32 }}>
+          <div style={{ fontSize: 14, letterSpacing: '.15em', textTransform: 'uppercase', opacity: .7, marginBottom: 8 }}>Bem-vindo ao</div>
+          <div style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.03em' }}>ScandexPRO™</div>
+          <div style={{ fontSize: 13, opacity: .65, marginTop: 8 }}>Gerenciamento Eletrônico de Documentos</div>
+        </div>
+      </div>
+      {/* Right — form */}
+      <div style={{ width: 440, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 40px', background: '#fff' }}>
+        <div style={{ width: '100%', maxWidth: 340 }}>
+          {/* Client logo */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
+            <img src="../../assets/ho-logo.png" alt="Hospital do Olho" style={{ height: 110 }}/>
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 700, textAlign: 'center', color: '#1e2d42', marginBottom: 4 }}>Entrar</div>
+          <div style={{ fontSize: 13, color: '#7a8fa8', textAlign: 'center', marginBottom: 24 }}>
+            Insira suas credenciais para acessar o ScandexPRO™.
+          </div>
+          <form onSubmit={submit}>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 5, color: '#1e2d42' }}>Nome de Usuário</label>
+              <input type="text" placeholder="ex: nome" value={user} onChange={e => setUser(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', background: '#f6f8fc', border: '1.5px solid #dce8f5', borderRadius: 7, fontSize: 13, outline: 'none', transition: 'all 0.15s', color: '#1e2d42' }}
+                onFocus={e => { e.target.style.borderColor = '#245594'; e.target.style.boxShadow = '0 0 0 2px rgba(36,85,148,.15)'; }}
+                onBlur={e => { e.target.style.borderColor = '#8a9db8'; e.target.style.boxShadow = 'none'; }}
+              />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 5, color: '#1e2d42' }}>Senha</label>
+              <input type="password" placeholder="ex: senha" value={pass} onChange={e => setPass(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', background: '#f6f8fc', border: '1.5px solid #dce8f5', borderRadius: 7, fontSize: 13, outline: 'none', transition: 'all 0.15s', color: '#1e2d42' }}
+                onFocus={e => { e.target.style.borderColor = '#245594'; e.target.style.boxShadow = '0 0 0 2px rgba(36,85,148,.15)'; }}
+                onBlur={e => { e.target.style.borderColor = '#8a9db8'; e.target.style.boxShadow = 'none'; }}
+              />
+            </div>
+            {err && <div style={{ fontSize: 12, color: '#dc2626', marginBottom: 12 }}>{err}</div>}
+            <button type="submit" disabled={loading} style={{
+              width: '100%', padding: '10px', background: loading ? '#3a57d9' : '#245594', color: '#fff',
+              border: '1px solid transparent', borderRadius: 8, fontSize: 14, fontWeight: 500,
+              cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
+            }}>
+              {loading ? (
+                <><span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }}/> Entrando...</>
+              ) : (<>
+                <IcoOut s={15}/>Entrar
+              </>)}
+            </button>
+          </form>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 32, color: '#8a9db8', fontSize: 13 }}>
+            <span style={{ fontStyle: 'italic' }}>powered by</span>
+            <img src="../../assets/logo-02.png" alt="ScandexPlus" style={{ width: 22, height: 22, borderRadius: '50%', background: '#f5f5f5' }}/>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Dashboard Screen ──────────────────────────────────────────────────────
+const DashboardScreen = ({ setScreen, app, setApp }) => {
+  const [prontuario, setProntuario] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [patient, setPatient] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState(null);
+
+  const doSearch = () => {
+    const q = prontuario.trim() || cpf.trim();
+    if (!q || q.length < 5) return;
+    setLoading(true); setPatient(null); setNotFound(false); setSelectedDoc(null);
+    setTimeout(() => {
+      const found = MOCK_PATIENTS.find(p =>
+        p.id === prontuario.trim() ||
+        p.cpf.replace(/\D/g,'') === cpf.replace(/\D/g,'') ||
+        p.name.toLowerCase().includes(q.toLowerCase())
+      );
+      setLoading(false);
+      if (found) setPatient(found); else setNotFound(true);
+    }, 600);
+  };
+
+  const resetSearch = () => {
+    setProntuario(''); setCpf(''); setPatient(null);
+    setNotFound(false); setSelectedDoc(null);
+  };
+
+  const statusLabel = { available: 'Disponível', absent: 'Ausente', missing_info: 'Incompleto', processing: 'Processando', altered: 'Alterado' };
+
+  return (
+    <div style={{ flex: 1, overflow: 'auto', background: '#f4f7fc' }}>
+
+      {/* ── Hero search area ── */}
+      {!patient && !loading && !notFound && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '52px 24px 40px', minHeight: 340 }}>
+
+          {/* App selector — ghost inline, no visible box */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 28, position: 'relative' }}>
+            {APPLICATIONS.map((a, i) => {
+              const sel = app?.id === a.id;
+              return (
+                <button key={a.id} onClick={() => setApp(a)} style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  padding: '4px 14px', fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 13, fontWeight: sel ? 700 : 400,
+                  color: sel ? '#245594' : '#8a9db8',
+                  borderBottom: sel ? '2px solid #245594' : '2px solid transparent',
+                  transition: 'all .15s', letterSpacing: sel ? '-.01em' : 'normal',
+                  borderLeft: i > 0 ? '1px solid #e5e7eb' : 'none',
+                }}>
+                  {a.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Title */}
+          <div style={{ fontSize: 26, fontWeight: 700, color: '#1e2d42', marginBottom: 6, letterSpacing: '-.025em', textAlign: 'center', fontFamily: "'Space Grotesk', sans-serif" }}>
+            {app?.label || 'Pesquisa de Paciente'}
+          </div>
+          <div style={{ fontSize: 13, color: '#8a9db8', marginBottom: 36, textAlign: 'center' }}>
+            Informe o prontuário <b>ou</b> o CPF para localizar o paciente
+          </div>
+
+          {/* Two distinct inputs */}
+          <div style={{ display: 'flex', gap: 16, width: '100%', maxWidth: 580, alignItems: 'flex-end' }}>
+            {/* Prontuário */}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#8a9db8', marginBottom: 6 }}>
+                Nº Prontuário
+              </div>
+              <input
+                type="text" placeholder="Ex: 9999999"
+                value={prontuario}
+                onChange={e => { setProntuario(e.target.value); setCpf(''); }}
+                onKeyDown={e => e.key === 'Enter' && doSearch()}
+                style={{
+                  width: '100%', padding: '13px 16px',
+                  background: '#fff',
+                  border: `1.5px solid ${prontuario ? '#245594' : '#dce8f5'}`,
+                  borderRadius: 10, fontSize: 16, fontWeight: 500,
+                  outline: 'none', color: '#1e2d42', fontFamily: "'DM Sans', sans-serif",
+                  boxShadow: prontuario ? '0 0 0 3px rgba(36,85,148,.1)' : '0 1px 3px rgb(0 0 0/.06)',
+                  transition: 'all .15s',
+                }}
+                onFocus={e => { e.target.style.borderColor='#245594'; e.target.style.boxShadow='0 0 0 3px rgba(36,85,148,.1)'; }}
+                onBlur={e => { if (!prontuario) { e.target.style.borderColor='#dce8f5'; e.target.style.boxShadow='0 1px 3px rgb(0 0 0/.06)'; }}}
+              />
+            </div>
+
+            {/* Divider */}
+            <div style={{ paddingBottom: 14, color: '#d1d5db', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>ou</div>
+
+            {/* CPF */}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#8a9db8', marginBottom: 6 }}>
+                CPF
+              </div>
+              <input
+                type="text" placeholder="000.000.000-00"
+                value={cpf}
+                onChange={e => { setCpf(e.target.value); setProntuario(''); }}
+                onKeyDown={e => e.key === 'Enter' && doSearch()}
+                style={{
+                  width: '100%', padding: '13px 16px',
+                  background: '#fff',
+                  border: `1.5px solid ${cpf ? '#245594' : '#dce8f5'}`,
+                  borderRadius: 10, fontSize: 16, fontWeight: 500,
+                  outline: 'none', color: '#1e2d42', fontFamily: "'DM Sans', sans-serif",
+                  boxShadow: cpf ? '0 0 0 3px rgba(36,85,148,.1)' : '0 1px 3px rgb(0 0 0/.06)',
+                  transition: 'all .15s',
+                }}
+                onFocus={e => { e.target.style.borderColor='#245594'; e.target.style.boxShadow='0 0 0 3px rgba(36,85,148,.1)'; }}
+                onBlur={e => { if (!cpf) { e.target.style.borderColor='#dce8f5'; e.target.style.boxShadow='0 1px 3px rgb(0 0 0/.06)'; }}}
+              />
+            </div>
+          </div>
+
+          {/* Search button */}
+          <button onClick={doSearch} style={{
+            marginTop: 22, padding: '13px 40px',
+            background: '#245594', color: '#fff',
+            border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+            fontFamily: "'DM Sans', sans-serif",
+            boxShadow: '0 4px 14px rgba(36,85,148,.35)',
+            transition: 'all .15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.boxShadow='0 6px 20px rgba(36,85,148,.5)'}
+          onMouseLeave={e => e.currentTarget.style.boxShadow='0 4px 14px rgba(36,85,148,.35)'}>
+            <IcoSearch s={16}/> Pesquisar Paciente
+          </button>
+          <div style={{ marginTop: 12, fontSize: 11, color: '#c4c9d4' }}>Tente: <b>9999999</b> ou CPF <b>999.999.999-99</b></div>
+        </div>
+      )}
+
+      {loading && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 24px', color: '#7a8fa8', fontSize: 14 }}>
+          <div style={{ width: 28, height: 28, border: '2.5px solid #e5e7eb', borderTopColor: '#245594', borderRadius: '50%', animation: 'spin 0.7s linear infinite', marginBottom: 14 }}/>
+          Localizando paciente...
+        </div>
+      )}
+
+      {notFound && !loading && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 24px' }}>
+          <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 12, padding: '20px 28px', display: 'flex', gap: 12, alignItems: 'flex-start', maxWidth: 420 }}>
+            <IcoAlert s={18} color="#dc2626"/>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#991b1b' }}>Paciente não encontrado</div>
+              <div style={{ fontSize: 12, color: '#b91c1c', marginTop: 3 }}>Verifique os dados informados e tente novamente.</div>
+            </div>
+          </div>
+          <button onClick={resetSearch} style={{ marginTop: 16, background: 'none', border: 'none', color: '#245594', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>← Nova pesquisa</button>
+        </div>
+      )}
+
+      {patient && !loading && !selectedDoc && (
+        <div style={{ maxWidth: 700, margin: '0 auto', padding: '24px 24px 0' }}>
+          <button onClick={resetSearch} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#8a9db8', fontSize: 12, fontWeight: 500, marginBottom: 14, fontFamily: "'DM Sans', sans-serif" }}>
+            ← Nova pesquisa
+          </button>
+          {/* Patient header */}
+          <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #dce8f5', boxShadow: '0 4px 6px -1px rgb(0 0 0/.08)', padding: 20, marginBottom: 16 }}>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+              <div style={{ width: 56, height: 56, borderRadius: 10, background: 'rgba(36,85,148,.1)', border: '2px solid rgba(36,85,148,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, color: '#245594', flexShrink: 0 }}>
+                {patient.name[0]}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 17, fontWeight: 700, color: '#1e2d42', marginBottom: 6 }}>{patient.name}</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 12, color: '#7a8fa8' }}>
+                  <span><b style={{ color: '#2d4560' }}>Prontuário:</b> {patient.id}</span>
+                  <span><b style={{ color: '#2d4560' }}>Idade:</b> {patient.age} anos</span>
+                  <span><b style={{ color: '#2d4560' }}>CPF:</b> {patient.cpf}</span>
+                  <span><b style={{ color: '#2d4560' }}>SUS:</b> {patient.sus}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Surgery list */}
+          <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #dce8f5', boxShadow: '0 4px 6px -1px rgb(0 0 0/.08)', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid #dce8f5', fontSize: 15, fontWeight: 600, color: '#1e2d42' }}>
+              Histórico de Procedimentos ({patient.surgeries.length})
+            </div>
+            {patient.surgeries.map(s => (
+              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: '1px solid #dce8f5', cursor: s.status === 'available' || s.status === 'missing_info' ? 'pointer' : 'default', transition: 'background 0.1s' }}
+                onClick={() => (s.status === 'available' || s.status === 'missing_info') && setSelectedDoc(s)}
+                onMouseEnter={e => { if (s.status === 'available' || s.status === 'missing_info') e.currentTarget.style.background = '#f4f7fc'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+                <SDXStatusDot status={s.status} size={12}/>
+                <div style={{ width: 80, fontSize: 11, color: '#8a9db8', flexShrink: 0 }}>{s.date}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: '#1e2d42' }}>{s.name}</div>
+                  <div style={{ fontSize: 11, color: '#7a8fa8' }}>{s.dr}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{
+                    fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 4,
+                    background: s.status === 'available' ? '#d1fae5' : s.status === 'absent' ? '#fee2e2' : s.status === 'processing' ? '#dbeafe' : s.status === 'missing_info' ? '#ffedd5' : '#fef9c3',
+                    color: s.status === 'available' ? '#065f46' : s.status === 'absent' ? '#991b1b' : s.status === 'processing' ? '#1e40af' : s.status === 'missing_info' ? '#9a3412' : '#713f12',
+                  }}>{statusLabel[s.status]}</span>
+                  {(s.status === 'available' || s.status === 'missing_info') && <IcoEye s={14} color="#9ca3af"/>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Document viewer */}
+      {selectedDoc && (
+        <div style={{ maxWidth: 700, margin: '0 auto', padding: '24px 24px 0' }}>
+          <button onClick={() => setSelectedDoc(null)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#245594', fontSize: 13, fontWeight: 500, marginBottom: 14, fontFamily: "'DM Sans', sans-serif" }}>
+            ← Voltar ao prontuário
+          </button>
+          <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #dce8f5', boxShadow: '0 4px 6px -1px rgb(0 0 0/.08)', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid #dce8f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#1e2d42' }}>{selectedDoc.name}</div>
+                <div style={{ fontSize: 12, color: '#7a8fa8' }}>{selectedDoc.date} · {selectedDoc.dr} · {selectedDoc.pages} página{selectedDoc.pages !== 1 ? 's' : ''}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", color: '#2d4560' }}>
+                  <IcoPrint s={13}/> Imprimir
+                </button>
+                <button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', background: '#245594', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
+                  <IcoFile s={13}/> Baixar
+                </button>
+              </div>
+            </div>
+            <div style={{ background: '#1e1e2e', minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+              <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.5)' }}>
+                <IcoFile s={48} color="rgba(255,255,255,.3)"/>
+                <div style={{ marginTop: 12, fontSize: 13 }}>Visualizador de Documento</div>
+                <div style={{ fontSize: 11, marginTop: 4 }}>{selectedDoc.pages} páginas · PDF/TIFF</div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16 }}>
+                  {[1,2,3].map(p => (
+                    <div key={p} style={{ width: 40, height: 52, background: 'rgba(255,255,255,.15)', borderRadius: 4, border: p===1 ? '1.5px solid #4DB6AC' : '1px solid rgba(255,255,255,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'rgba(255,255,255,.6)', cursor: 'pointer' }}>
+                      {p}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: '10px 20px', borderTop: '1px solid #dce8f5', display: 'flex', justifyContent: 'center', gap: 12 }}>
+              <button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: '#2d4560' }}>← Anterior</button>
+              <span style={{ fontSize: 12, color: '#7a8fa8', padding: '6px 0' }}>Pág. 1 / {selectedDoc.pages}</span>
+              <button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: '#2d4560' }}>Próxima →</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const APPLICATIONS = [
+  { id: 'cirurgias_ho', label: 'Cirurgias — Hospital do Olho', desc: 'Prontuários e documentos cirúrgicos' },
+  { id: 'juridico_ho',  label: 'Jurídico — HO',               desc: 'Processos e documentos jurídicos' },
+];
+
+// ── WIP Screen ───────────────────────────────────────────────────────────
+const WIPScreen = ({ label }) => (
+  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f4f7fc', gap: 14 }}>
+    <div style={{ width: 56, height: 56, borderRadius: 14, background: 'rgba(36,85,148,.06)', border: '1.5px dashed rgba(36,85,148,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+    </div>
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: 16, fontWeight: 600, color: '#2d4560', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 12, color: '#8a9db8' }}>Em desenvolvimento · Work in Progress</div>
+    </div>
+    <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', background: '#fef9c3', color: '#854d0e', border: '1px solid #fde047', padding: '3px 10px', borderRadius: 20 }}>WIP</span>
+  </div>
+);
+// ── Communication Screen ──────────────────────────────────────────────────
+const CommunicationScreen = () => {
+  const [tab, setTab] = useState('all');
+  const [priority, setPriority] = useState('all');
+
+  const tasks = [
+    { id: 1, title: 'Documento ausente — Prontuário 100111', from: 'Maria Souza', fromInitials: 'MS', priority: 'urgent', status: 'pending', time: '14:22', desc: 'O documento da cirurgia de 17/01/2025 não foi localizado no file server.' },
+    { id: 2, title: 'Digitalização incompleta — 8 páginas esperadas, 2 recebidas', from: 'Pedro Lima', fromInitials: 'PL', priority: 'medium', status: 'pending', time: '13:05', desc: 'Tomografia do prontuário 9999999 está incompleta.' },
+    { id: 3, title: 'Configuração de impressora Zebra GK420d', from: 'Admin Sistema', fromInitials: 'AS', priority: 'low', status: 'solved', time: '09:30', desc: 'Driver instalado e testado com sucesso.' },
+  ];
+
+  const prioMeta = {
+    urgent: { label: 'Urgente', color: '#dc2626', bg: '#fef2f2', border: '#fca5a5' },
+    medium: { label: 'Média',   color: '#f97316', bg: '#fff7ed', border: '#fed7aa' },
+    low:    { label: 'Baixa',   color: '#7a8fa8', bg: '#f9fafb', border: '#f6f8fc' },
+  };
+
+  const filtered = tasks.filter(t => {
+    if (tab === 'mine' && t.from !== 'Maria Souza') return false;
+    if (priority !== 'all' && t.priority !== priority) return false;
+    return true;
+  });
+
+  return (
+    <div style={{ flex: 1, overflow: 'auto', background: '#f4f7fc', padding: '24px 28px' }}>
+      <div style={{ maxWidth: 860, margin: '0 auto' }}>
+
+        {/* Header row */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(36,85,148,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <IcoMsg s={16} color="#245594"/>
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#1e2d42', fontFamily: "'Space Grotesk', sans-serif" }}>Comunicação Interna</div>
+            </div>
+            <div style={{ fontSize: 12, color: '#8a9db8', marginLeft: 42 }}>Central de tarefas, pedidos e atualizações da equipe.</div>
+          </div>
+          <button style={{
+            display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px',
+            background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8,
+            fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+            boxShadow: '0 2px 8px rgba(220,38,38,.3)',
+          }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Emitir Alerta Global
+          </button>
+        </div>
+
+        {/* Tabs + filters */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #dce8f5' }}>
+            {[['all','Todas as Tarefas'],['mine','Para Mim']].map(([id, label]) => (
+              <button key={id} onClick={() => setTab(id)} style={{
+                padding: '8px 18px', background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: tab===id ? 600 : 400,
+                color: tab===id ? '#245594' : '#6b7280',
+                borderBottom: tab===id ? '2px solid #245594' : '2px solid transparent',
+                marginBottom: -2, transition: 'all .15s',
+              }}>{label}</button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {[['all','Todas'],['urgent','Urgente'],['medium','Média'],['low','Baixa']].map(([id, label]) => (
+              <button key={id} onClick={() => setPriority(id)} style={{
+                padding: '5px 12px', borderRadius: 6, border: '1px solid',
+                borderColor: priority===id ? '#245594' : '#dce8f5',
+                background: priority===id ? '#245594' : '#fff',
+                color: priority===id ? '#fff' : '#6b7280',
+                fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                transition: 'all .15s',
+              }}>{label}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Task list */}
+        {filtered.length === 0 ? (
+          <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #dce8f5', padding: '60px 24px', textAlign: 'center' }}>
+            <IcoMsg s={40} color="#d1d5db"/>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#2d4560', marginTop: 16 }}>Nenhuma Tarefa ou Pedido</div>
+            <div style={{ fontSize: 12, color: '#8a9db8', marginTop: 6 }}>Não há comunicações com os filtros selecionados no momento.</div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {filtered.map(t => {
+              const pm = prioMeta[t.priority];
+              return (
+                <div key={t.id} style={{
+                  background: '#fff', borderRadius: 10,
+                  border: `1px solid ${t.status === 'solved' ? '#dce8f5' : pm.border}`,
+                  padding: '14px 18px', display: 'flex', gap: 14, alignItems: 'flex-start',
+                  opacity: t.status === 'solved' ? 0.65 : 1,
+                  boxShadow: t.status !== 'solved' ? '0 1px 4px rgba(0,0,0,.06)' : 'none',
+                  transition: 'all .15s', cursor: 'pointer',
+                }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.1)'}
+                onMouseLeave={e => e.currentTarget.style.boxShadow=t.status!=='solved'?'0 1px 4px rgba(0,0,0,.06)':'none'}>
+                  {/* Avatar */}
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: pm.bg, border: `1.5px solid ${pm.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: pm.color, flexShrink: 0 }}>{t.fromInitials}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1e2d42', marginBottom: 3 }}>{t.title}</div>
+                    <div style={{ fontSize: 11, color: '#8a9db8', marginBottom: 6 }}>De: {t.from} · {t.time}</div>
+                    <div style={{ fontSize: 12, color: '#7a8fa8', lineHeight: 1.5 }}>{t.desc}</div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: pm.bg, color: pm.color, border: `1px solid ${pm.border}`, letterSpacing: '.03em' }}>{pm.label}</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 20, background: t.status==='solved'?'#d1fae5':'#dbeafe', color: t.status==='solved'?'#065f46':'#1e40af' }}>{t.status==='solved'?'Resolvido':'Pendente'}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Users Screen ──────────────────────────────────────────────────────────
+const UsersScreen = () => {
+  const users = [
+    { id: 1, name: 'João Oliveira', username: 'joaoliveira', role: 'SuperAdministrador', initials: 'JO', email: 'joao@hospital.com', active: true },
+    { id: 2, name: 'Mylena Santos', username: 'mylena.santos', role: 'Colaborador', initials: 'MS', email: 'mylena@hospital.com', active: true },
+    { id: 3, name: 'Ana Ferreira', username: 'ana.ferreira', role: 'Gerente', initials: 'AF', email: 'ana@hospital.com', active: false },
+  ];
+  const [search, setSearch] = useState('');
+  const filtered = users.filter(u => u.name.toLowerCase().includes(search.toLowerCase()) || u.username.includes(search));
+
+  return (
+    <div style={{ flex: 1, overflow: 'auto', background: '#f4f7fc', padding: '24px 28px' }}>
+      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#1e2d42', fontFamily: "'Space Grotesk', sans-serif", marginBottom: 3 }}>Gerenciamento de Usuários</div>
+            <div style={{ fontSize: 12, color: '#8a9db8' }}>Visualize, gerencie funções, permissões e detalhes dos usuários.</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#fff', border: '1px solid #dce8f5', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", color: '#2d4560' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              Gerenciar Modelos
+            </button>
+            <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#245594', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 2px 8px rgba(36,85,148,.25)' }}>
+              <IcoUser s={13}/>
+              Adicionar Usuário
+            </button>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div style={{ position: 'relative', marginBottom: 16, maxWidth: 320 }}>
+          <IcoSearch s={14} color="#9ca3af" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}/>
+          <input placeholder="Buscar usuário..." value={search} onChange={e => setSearch(e.target.value)} style={{
+            width: '100%', padding: '8px 10px 8px 32px', background: '#fff',
+            border: '1px solid #dce8f5', borderRadius: 8, fontSize: 13,
+            fontFamily: "'DM Sans', sans-serif", outline: 'none', color: '#1e2d42',
+          }}/>
+        </div>
+
+        {/* Table */}
+        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #dce8f5', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,.05)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.5fr 1.5fr auto', gap: 12, padding: '10px 18px', background: '#f4f7fc', borderBottom: '1px solid #dce8f5', fontSize: 10, fontWeight: 600, letterSpacing: '.07em', textTransform: 'uppercase', color: '#8a9db8' }}>
+            <span>Nome de Usuário</span><span>Função</span><span>Configurações</span><span>E-mail</span><span>Ações</span>
+          </div>
+          {filtered.map((u, i) => (
+            <div key={u.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.5fr 1.5fr auto', gap: 12, padding: '14px 18px', borderBottom: i < filtered.length-1 ? '1px solid #dce8f5' : 'none', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(36,85,148,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#245594', flexShrink: 0, border: '1.5px solid rgba(36,85,148,.12)' }}>{u.initials}</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1e2d42' }}>{u.name}</div>
+                  <div style={{ fontSize: 11, color: '#8a9db8' }}>@{u.username}</div>
+                </div>
+              </div>
+              <div><SDXRoleBadge role={u.role}/></div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button style={{ padding: '4px 10px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: '#2d4560', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                  Modelo
+                </button>
+                <button style={{ padding: '4px 10px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: '#2d4560', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  Permissões
+                </button>
+              </div>
+              <div style={{ fontSize: 12, color: '#7a8fa8' }}>{u.email}</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button style={{ padding: '5px 10px', background: 'rgba(36,85,148,.06)', border: '1px solid rgba(36,85,148,.15)', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: '#245594', fontWeight: 500 }}>Detalhes</button>
+                <button style={{ padding: '5px 10px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: '#dc2626', fontWeight: 500 }}>Excluir</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 10, fontSize: 11, color: '#8a9db8' }}>{filtered.length} usuário{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}</div>
+      </div>
+    </div>
+  );
+};
+
+// ── Admin Screen ──────────────────────────────────────────────────────────
+const AdminScreen = () => {
+  const modules = [
+    { id: 'fin',  label: 'Finanças',     color: '#0ea5e9', bg: '#f0f9ff', items: ['Demonstrativo de Resultados (DRE)', 'Fluxo de Caixa Detalhado', 'Análise de Rentabilidade', 'Contas a Receber por Convênio'], icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> },
+    { id: 'cli',  label: 'Clientes',     color: '#8b5cf6', bg: '#f5f3ff', items: ['Lista de Clientes', 'Histórico de Interações', 'Segmentação', 'Programas de Fidelidade'], icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+    { id: 'srv',  label: 'Serviços',     color: '#10b981', bg: '#f0fdf4', items: ['Catálogo de Serviços', 'Agendamentos', 'Precificação', 'Avaliações de Serviços'], icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> },
+    { id: 'ges',  label: 'Gestão',       color: '#f59e0b', bg: '#fffbeb', items: ['Relatórios de Desempenho', 'Metas e Indicadores (KPIs)', 'Gerenciamento de Projetos', 'Comunicação Interna'], icon: <IcoGauge s={18}/> },
+    { id: 'eq',   label: 'Equipamentos', color: '#ef4444', bg: '#fef2f2', items: ['Inventário de Equipamentos', 'Manutenção Agendada', 'Histórico de Reparos', 'Calibração'], icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> },
+    { id: 'est',  label: 'Estoque',      color: '#06b6d4', bg: '#ecfeff', items: ['Níveis de Estoque', 'Pedidos de Reposição', 'Controle de Lotes', 'Fornecedores'], icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg> },
+    { id: 'app',  label: 'Aplicação',    color: '#6366f1', bg: '#eef2ff', items: ['Criar aplicação', 'Cria esquema de banco', 'Gerenciar bancos', 'Exportações de dados'], icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/></svg> },
+  ];
+
+  return (
+    <div style={{ flex: 1, overflow: 'auto', background: '#f4f7fc', padding: '24px 28px' }}>
+      <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#1e2d42', fontFamily: "'Space Grotesk', sans-serif", marginBottom: 3 }}>Área Administrativa</div>
+          <div style={{ fontSize: 12, color: '#8a9db8' }}>Painel de controle para funcionalidades administrativas.</div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+          {modules.map(m => (
+            <div key={m.id} style={{
+              background: '#fff', borderRadius: 12,
+              border: '1px solid #dce8f5',
+              padding: '18px', display: 'flex', flexDirection: 'column', gap: 14,
+              boxShadow: '0 1px 4px rgba(0,0,0,.05)', transition: 'all .2s', cursor: 'pointer',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.1)'; e.currentTarget.style.borderColor=m.color+'44'; e.currentTarget.style.transform='translateY(-2px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,.05)'; e.currentTarget.style.borderColor='#dce8f5'; e.currentTarget.style.transform='none'; }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 9, background: m.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: m.color, flexShrink: 0 }}>{m.icon}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1e2d42' }}>{m.label}</div>
+              </div>
+              <ul style={{ margin: 0, padding: '0 0 0 4px', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
+                {m.items.map(item => (
+                  <li key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11, color: '#7a8fa8', lineHeight: 1.4 }}>
+                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: m.color, marginTop: 5, flexShrink: 0 }}/>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <button style={{
+                width: '100%', padding: '8px', background: m.bg,
+                border: `1px solid ${m.color}33`, borderRadius: 7,
+                color: m.color, fontSize: 12, fontWeight: 600,
+                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                transition: 'all .15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background=m.color; e.currentTarget.style.color='#fff'; }}
+              onMouseLeave={e => { e.currentTarget.style.background=m.bg; e.currentTarget.style.color=m.color; }}>
+                Acessar Módulo
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Reports Screen (multi-view) ───────────────────────────────────────────
+const ReportsScreen = () => {
+  const [view, setView] = useState('hub');
+  const [selUsers, setSelUsers] = useState([]);
+  const [logCat, setLogCat] = useState('all');
+  const [globalMode, setGlobalMode] = useState(false);
+  const [relTab, setRelTab] = useState('pacientes');
+  const [relType, setRelType] = useState('sintetico');
+  const [orient, setOrient] = useState('retrato');
+
+  const USERS = [
+    {id:'jo', name:'João Oliveira', username:'joaoliveira', role:'SuperAdministrador', initials:'JO'},
+    {id:'ms', name:'Mylena N dos Santos', username:'mylena.santos', role:'Colaborador', initials:'MN'},
+  ];
+  const toggleUser = (id) => setSelUsers(s => s.includes(id) ? s.filter(x=>x!==id) : [...s,id]);
+
+  const BackBtn = ({ to, label='Voltar para Relatórios' }) => (
+    <button onClick={() => setView(to)} style={{
+      display:'flex', alignItems:'center', gap:6, padding:'7px 14px',
+      background:'#fff', border:'1px solid #dce8f5', borderRadius:8,
+      fontSize:12, fontWeight:500, cursor:'pointer', fontFamily:'Inter,sans-serif', color:'#374151',
+      boxShadow:'0 1px 3px rgba(0,0,0,.05)',
+    }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      {label}
+    </button>
+  );
+
+  const UserCard = ({u, checked, onToggle}) => (
+    <div onClick={onToggle} style={{
+      display:'flex', alignItems:'center', gap:12, padding:'14px 18px',
+      background: checked ? 'rgba(36,85,148,.04)' : '#fff',
+      border:`1.5px solid ${checked?'#245594':'#dce8f5'}`,
+      borderRadius:10, cursor:'pointer', transition:'all .15s',
+      boxShadow: checked?'0 0 0 3px rgba(36,85,148,.08)':'0 1px 3px rgba(0,0,0,.05)',
+    }}>
+      <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${checked?'#245594':'#d1d5db'}`,background:checked?'#245594':'#fff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+        {checked&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+      </div>
+      <div style={{width:38,height:38,borderRadius:9,background:'rgba(36,85,148,.08)',border:'1.5px solid rgba(36,85,148,.12)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:'#245594',flexShrink:0}}>{u.initials}</div>
+      <div style={{flex:1}}>
+        <div style={{fontSize:13,fontWeight:600,color:'#111827'}}>{u.name}</div>
+        <div style={{fontSize:11,color:'#8a9db8',marginBottom:4}}>Usuário: {u.username}</div>
+        <SDXRoleBadge role={u.role}/>
+      </div>
+    </div>
+  );
+
+  // HUB
+  if (view==='hub') {
+    const modules = [
+      {id:'mon',label:'Monitoramento',desc:'Acompanhe os logs de atividade dos usuários em tempo real.',color:'#245594',bg:'#eff6ff',
+        icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+        stats:[{label:'Eventos hoje',value:'1.284'},{label:'Usuários ativos',value:'7'}],next:'mon-select'},
+      {id:'prod',label:'Produção',desc:'Visualize etiquetas (barcodes) geradas e cadastros realizados.',color:'#4DB6AC',bg:'#f0fdfa',
+        icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
+        stats:[{label:'Barcodes hoje',value:'47'},{label:'Cadastros',value:'12'}],next:'prod-select'},
+      {id:'stat',label:'Estatísticas',desc:'Visualize dados estatísticos e métricas de uso do sistema.',color:'#8b5cf6',bg:'#f5f3ff',
+        icon:<IcoBar s={20}/>,stats:[{label:'Pesquisas',value:'384'},{label:'Docs acessados',value:'219'}],next:'stats'},
+      {id:'rep',label:'Relatórios',desc:'Gera relatórios de pacientes, documentos e cirurgias com layout para impressão.',color:'#f59e0b',bg:'#fffbeb',
+        icon:<IcoFile s={20}/>,stats:[{label:'Gerados hoje',value:'8'},{label:'Impressos',value:'5'}],next:'rel'},
+    ];
+    return (
+      <div style={{flex:1,overflow:'auto',background:'#f4f7fc',padding:'24px 28px'}}>
+        <div style={{maxWidth:900,margin:'0 auto'}}>
+          <div style={{marginBottom:24}}>
+            <div style={{fontSize:20,fontWeight:700,color:'#111827',marginBottom:3}}>Relatórios e Estatísticas</div>
+            <div style={{fontSize:12,color:'#8a9db8'}}>Ferramentas para análise de dados, monitoramento e geração de relatórios.</div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:14}}>
+            {modules.map(m=>(
+              <div key={m.id} onClick={()=>setView(m.next)} style={{background:'#fff',borderRadius:12,border:'1px solid #dce8f5',overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,.05)',transition:'all .2s',cursor:'pointer'}}
+                onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.1)';e.currentTarget.style.transform='translateY(-2px)';}}
+                onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,.05)';e.currentTarget.style.transform='none';}}>
+                <div style={{height:3,background:m.color}}/>
+                <div style={{padding:'18px 20px'}}>
+                  <div style={{display:'flex',alignItems:'flex-start',gap:12,marginBottom:14}}>
+                    <div style={{width:40,height:40,borderRadius:10,background:m.bg,display:'flex',alignItems:'center',justifyContent:'center',color:m.color,flexShrink:0}}>{m.icon}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:15,fontWeight:700,color:'#111827',marginBottom:4}}>{m.label}</div>
+                      <div style={{fontSize:12,color:'#6b7280',lineHeight:1.5}}>{m.desc}</div>
+                    </div>
+                  </div>
+                  <div style={{display:'flex',gap:12,marginBottom:16}}>
+                    {m.stats.map(s=>(
+                      <div key={s.label} style={{flex:1,background:m.bg,borderRadius:8,padding:'8px 12px'}}>
+                        <div style={{fontSize:16,fontWeight:700,color:m.color}}>{s.value}</div>
+                        <div style={{fontSize:10,color:'#8a9db8',marginTop:2}}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={e=>{e.stopPropagation();setView(m.next);}} style={{width:'100%',padding:'9px',background:m.color,border:'none',borderRadius:8,color:'#fff',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'Inter,sans-serif',display:'flex',alignItems:'center',justifyContent:'center',gap:6,boxShadow:`0 2px 8px ${m.color}44`}}>
+                    Acessar <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // MONITORAMENTO — select
+  if (view==='mon-select') return (
+    <div style={{flex:1,overflow:'auto',background:'#f4f7fc',padding:'24px 28px'}}>
+      <div style={{maxWidth:800,margin:'0 auto'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:24}}>
+          <div><div style={{fontSize:20,fontWeight:700,color:'#111827',marginBottom:3}}>Monitoramento de Atividades</div>
+          <div style={{fontSize:12,color:'#8a9db8'}}>Selecione um ou mais usuários para visualizar logs detalhados.</div></div>
+          <BackBtn to="hub"/>
+        </div>
+        <div style={{background:'#fff',borderRadius:12,border:'1px solid #dce8f5',padding:'20px',boxShadow:'0 1px 4px rgba(0,0,0,.05)'}}>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}><IcoUsers s={16} color="#245594"/><div style={{fontSize:14,fontWeight:600,color:'#111827'}}>Selecionar Usuários para Monitoramento</div></div>
+          <div style={{fontSize:12,color:'#8a9db8',marginBottom:16}}>Clique nos usuários para selecionar. Você pode selecionar múltiplos usuários.</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:20}}>
+            {USERS.map(u=><UserCard key={u.id} u={u} checked={selUsers.includes(u.id)} onToggle={()=>toggleUser(u.id)}/>)}
+          </div>
+          <button onClick={()=>selUsers.length>0&&setView('mon-logs')} style={{padding:'10px 24px',background:selUsers.length>0?'#245594':'#f6f8fc',color:selUsers.length>0?'#fff':'#8a9db8',border:'none',borderRadius:8,fontSize:13,fontWeight:600,cursor:selUsers.length>0?'pointer':'not-allowed',fontFamily:'Inter,sans-serif',display:'flex',alignItems:'center',gap:7,boxShadow:selUsers.length>0?'0 2px 8px rgba(36,85,148,.25)':'none'}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Ver Logs {selUsers.length>0?`(${selUsers.length} usuário${selUsers.length>1?'s':''})`:'' }
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // MONITORAMENTO — logs
+  if (view==='mon-logs') {
+    const logs = [
+      {id:1,initials:'JO',user:'João Oliveira',username:'joaoliveira',role:'SuperAdministrador',time:'24/04/2026 às 10:43:41',cat:'activity',msg:'Visualizando logs de: joaoliveira'},
+      {id:2,initials:'JO',user:'João Oliveira',username:'joaoliveira',role:'SuperAdministrador',time:'24/04/2026 às 10:43:32',cat:'activity',msg:'Navegou para Relatórios (/reports).'},
+      {id:3,initials:'JO',user:'João Oliveira',username:'joaoliveira',role:'SuperAdministrador',time:'24/04/2026 às 10:32:13',cat:'activity',msg:'Navegou para Relatórios (/reports).'},
+      {id:4,initials:'JO',user:'João Oliveira',username:'joaoliveira',role:'SuperAdministrador',time:'24/04/2026 às 10:31:50',cat:'activity',msg:'Navegou para Área Admin (/admin).'},
+      {id:5,initials:'JO',user:'João Oliveira',username:'joaoliveira',role:'SuperAdministrador',time:'24/04/2026 às 10:31:30',cat:'search',msg:'Pesquisou prontuário: 100111.'},
+      {id:6,initials:'JO',user:'João Oliveira',username:'joaoliveira',role:'SuperAdministrador',time:'24/04/2026 às 10:28:14',cat:'modification',msg:'Atualizou permissões do usuário mylena.santos.'},
+    ];
+    const cats=[{id:'all',label:'Todas',count:1000},{id:'search',label:'Pesquisas',count:161},{id:'activity',label:'Atividades',count:783},{id:'modification',label:'Modificações',count:50}];
+    const catColor={search:'#0ea5e9',activity:'#245594',modification:'#f59e0b'};
+    const catLabel={search:'Pesquisa',activity:'Atividade',modification:'Modificação'};
+    const filtered=logCat==='all'?logs:logs.filter(l=>l.cat===logCat);
+    return (
+      <div style={{flex:1,overflow:'auto',background:'#f4f7fc',padding:'24px 28px'}}>
+        <div style={{maxWidth:860,margin:'0 auto'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+            <div style={{display:'flex',alignItems:'center',gap:12}}>
+              <div style={{width:40,height:40,borderRadius:10,background:'rgba(36,85,148,.08)',border:'1.5px solid rgba(36,85,148,.12)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,color:'#245594'}}>JO</div>
+              <div><div style={{fontSize:16,fontWeight:700,color:'#111827'}}>João Oliveira</div><div style={{fontSize:12,color:'#8a9db8'}}>Visualizando logs de atividades</div></div>
+            </div>
+            <div style={{display:'flex',gap:8}}><BackBtn to="mon-select" label="Voltar à Seleção"/><BackBtn to="hub" label="Relatórios"/></div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:10}}>
+            <div style={{display:'flex',gap:4}}>
+              {cats.map(c=>(
+                <button key={c.id} onClick={()=>setLogCat(c.id)} style={{padding:'6px 14px',borderRadius:7,border:'1px solid',borderColor:logCat===c.id?'#245594':'#dce8f5',background:logCat===c.id?'#245594':'#fff',color:logCat===c.id?'#fff':'#6b7280',fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'Inter,sans-serif',display:'flex',alignItems:'center',gap:5}}>
+                  <IcoBar s={11}/>{c.label} <span style={{opacity:.7,fontSize:11}}>({c.count})</span>
+                </button>
+              ))}
+            </div>
+            <div style={{display:'flex',gap:8,alignItems:'center'}}>
+              <span style={{fontSize:11,color:'#8a9db8'}}>De:</span>
+              <input type="date" style={{padding:'5px 8px',border:'1px solid #dce8f5',borderRadius:6,fontSize:12,fontFamily:'Inter,sans-serif',color:'#374151'}}/>
+              <span style={{fontSize:11,color:'#8a9db8'}}>Até:</span>
+              <input type="date" style={{padding:'5px 8px',border:'1px solid #dce8f5',borderRadius:6,fontSize:12,fontFamily:'Inter,sans-serif',color:'#374151'}}/>
+            </div>
+          </div>
+          <div style={{background:'#fff',borderRadius:12,border:'1px solid #dce8f5',overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,.05)'}}>
+            <div style={{padding:'12px 18px',borderBottom:'1px solid #dce8f5',display:'flex',alignItems:'center',gap:8}}>
+              <IcoBar s={14} color="#245594"/>
+              <div style={{fontSize:14,fontWeight:600,color:'#245594'}}>Histórico de Logs</div>
+              <div style={{fontSize:12,color:'#8a9db8',marginLeft:4}}>Categoria: <b style={{color:'#374151'}}>{cats.find(c=>c.id===logCat)?.label}</b></div>
+            </div>
+            {filtered.map((l,i)=>(
+              <div key={l.id} style={{padding:'12px 18px',borderBottom:i<filtered.length-1?'1px solid #dce8f5':'none',background:i%2===0?'rgba(36,85,148,.015)':'#fff',display:'flex',alignItems:'flex-start',gap:12}}>
+                <div style={{width:28,height:28,borderRadius:7,background:'rgba(36,85,148,.08)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:'#245594',flexShrink:0}}>{l.initials}</div>
+                <div style={{flex:1}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+                    <span style={{fontSize:13,fontWeight:600,color:'#111827'}}>{l.user}</span>
+                    <span style={{fontSize:11,color:'#8a9db8'}}>@{l.username} · {l.time}</span>
+                  </div>
+                  <SDXRoleBadge role={l.role}/>
+                  <div style={{fontSize:12,color:'#374151',marginTop:6}}>{l.msg}</div>
+                </div>
+                <span style={{fontSize:10,fontWeight:700,padding:'3px 9px',borderRadius:20,flexShrink:0,background:(catColor[l.cat]||'#6b7280')+'18',color:catColor[l.cat]||'#6b7280',border:`1px solid ${(catColor[l.cat]||'#6b7280')}33`}}>{catLabel[l.cat]||l.cat}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // PRODUÇÃO — select
+  if (view==='prod-select') return (
+    <div style={{flex:1,overflow:'auto',background:'#f4f7fc',padding:'24px 28px'}}>
+      <div style={{maxWidth:800,margin:'0 auto'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:24}}>
+          <div><div style={{fontSize:20,fontWeight:700,color:'#111827',marginBottom:3}}>Relatório de Produção</div>
+          <div style={{fontSize:12,color:'#8a9db8'}}>Visualize etiquetas (barcodes) geradas e cadastros realizados.</div></div>
+          <BackBtn to="hub"/>
+        </div>
+        <div style={{background:'#fff',borderRadius:12,border:'1px solid #dce8f5',padding:'20px',boxShadow:'0 1px 4px rgba(0,0,0,.05)',marginBottom:12}}>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}><IcoUsers s={16} color="#4DB6AC"/><div style={{fontSize:14,fontWeight:600,color:'#111827'}}>Selecionar Usuários</div></div>
+          <div style={{fontSize:12,color:'#8a9db8',marginBottom:14}}>Selecione usuários para ver sua produção ou marque "Ver Todos" para visualização global.</div>
+          <div onClick={()=>setGlobalMode(v=>!v)} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',border:`1.5px solid ${globalMode?'#4DB6AC':'#dce8f5'}`,borderRadius:8,cursor:'pointer',marginBottom:14,background:globalMode?'rgba(77,182,172,.06)':'#fff',transition:'all .15s'}}>
+            <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${globalMode?'#4DB6AC':'#d1d5db'}`,background:globalMode?'#4DB6AC':'#fff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              {globalMode&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+            </div>
+            <span style={{fontSize:13,fontWeight:500,color:globalMode?'#4DB6AC':'#374151'}}>Ver Todos os Cadastros (Global)</span>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,opacity:globalMode?.4:1,pointerEvents:globalMode?'none':'auto'}}>
+            {USERS.map(u=><UserCard key={u.id} u={u} checked={selUsers.includes(u.id)} onToggle={()=>toggleUser(u.id)}/>)}
+          </div>
+        </div>
+        <div style={{background:'#fff',borderRadius:12,border:'1px solid #dce8f5',padding:'16px 20px',boxShadow:'0 1px 4px rgba(0,0,0,.05)',marginBottom:12}}>
+          <div style={{fontSize:12,fontWeight:600,color:'#374151',marginBottom:10}}>Filtros de Data:</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            {['De:','Até:'].map((lbl,i)=>(
+              <div key={i}><div style={{fontSize:11,color:'#8a9db8',marginBottom:4}}>{lbl}</div>
+              <input type="date" style={{width:'100%',padding:'9px 12px',border:'1px solid #dce8f5',borderRadius:8,fontSize:13,fontFamily:'Inter,sans-serif',color:'#374151',outline:'none'}}/></div>
+            ))}
+          </div>
+        </div>
+        <button onClick={()=>setView('prod-result')} style={{width:'100%',padding:'11px',background:'#4DB6AC',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'Inter,sans-serif',display:'flex',alignItems:'center',justifyContent:'center',gap:8,boxShadow:'0 2px 10px rgba(77,182,172,.35)'}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Visualizar Produção ({globalMode?'Global':`${selUsers.length}`})
+        </button>
+      </div>
+    </div>
+  );
+
+  // PRODUÇÃO — results
+  if (view==='prod-result') {
+    const barcodes=[
+      {id:1,code:'1704265904738K',user:'João Oliveira',username:'joaoliveira',date:'20/04/2026 13:20'},
+      {id:2,code:'1704265904739M',user:'João Oliveira',username:'joaoliveira',date:'20/04/2026 13:18'},
+    ];
+    return (
+      <div style={{flex:1,overflow:'auto',background:'#f4f7fc',padding:'24px 28px'}}>
+        <div style={{maxWidth:860,margin:'0 auto'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
+            <div><div style={{fontSize:20,fontWeight:700,color:'#111827',marginBottom:3}}>Produção de 1 usuário(s)</div>
+            <div style={{fontSize:12,color:'#8a9db8'}}>{barcodes.length} cadastro{barcodes.length!==1?'s':''} encontrado{barcodes.length!==1?'s':''}</div></div>
+            <BackBtn to="prod-select" label="Voltar à Seleção"/>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {barcodes.map(b=>(
+              <div key={b.id} style={{background:'#fff',borderRadius:10,border:'1px solid #dce8f5',padding:'14px 18px',display:'flex',alignItems:'center',gap:16,boxShadow:'0 1px 3px rgba(0,0,0,.05)'}}>
+                <div style={{padding:'8px 14px',borderRadius:8,border:'2px solid #dc2626',flexShrink:0,textAlign:'center'}}>
+                  <div style={{fontSize:9,fontWeight:700,color:'#dc2626',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:2}}>Reimpressão</div>
+                  <div style={{fontSize:13,fontWeight:700,color:'#dc2626',fontFamily:'monospace',letterSpacing:'.04em'}}>{b.code}</div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:10,flex:1}}>
+                  <div style={{width:28,height:28,borderRadius:7,background:'rgba(36,85,148,.08)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:'#245594',flexShrink:0}}>JO</div>
+                  <div><div style={{fontSize:13,fontWeight:600,color:'#111827'}}>{b.user}</div><div style={{fontSize:11,color:'#8a9db8'}}>@{b.username}</div></div>
+                  <div style={{fontSize:12,color:'#6b7280',marginLeft:8}}><span style={{color:'#8a9db8'}}>Prontuário:</span> Paciente</div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <div style={{fontSize:11,color:'#8a9db8'}}>{b.date}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ESTATÍSTICAS
+  if (view==='stats') {
+    const kpis=[
+      {label:'Total de Pesquisas de Documentos',value:'114',sub:'Número total de vezes que documentos foram pesquisados no sistema.',color:'#245594',link:'Ver Detalhes'},
+      {label:'Documento Mais Pesquisado',value:'154023 (20x)',sub:'Prontuário 154023 foi o mais acessado.',color:'#4DB6AC',link:'Ver Detalhes'},
+      {label:'Problemas Reportados por Usuários',value:'0',sub:'Cirurgias e documentos com alertas ou problemas reportados pelos usuários.',color:'#10b981',link:null},
+      {label:'Pesquisas Sem Resultados',value:'31',sub:'Quantidade de pesquisas que não retornaram nenhum documento.',color:'#f59e0b',link:'Ver Detalhes'},
+      {label:'Tempo Médio de Uso do Sistema',value:'31.5 min',sub:'Tempo médio por sessão de usuário no sistema.',color:'#8b5cf6',link:'Detalhes por Usuário (Futuro)'},
+      {label:'Total de Sessões de Usuários',value:'83',sub:'Número total de logins (sessões completas) no sistema.',color:'#06b6d4',link:null},
+      {label:'Prontuários Armazenados',value:'69.976',sub:'Quantidade total de prontuários únicos cadastrados no sistema.',color:'#ef4444',link:null},
+      {label:'Volume de Dados de Documentos',value:'159.95 GB',sub:'Espaço total ocupado pelos documentos digitalizados.',color:'#0ea5e9',link:null},
+      {label:'Documentos Digitalizados',value:'75.812',sub:'Total de documentos PDF/Imagem vinculados a prontuários no sistema.',color:'#f97316',link:null},
+    ];
+    return (
+      <div style={{flex:1,overflow:'auto',background:'#f4f7fc',padding:'24px 28px'}}>
+        <div style={{maxWidth:980,margin:'0 auto'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:24}}>
+            <div><div style={{fontSize:20,fontWeight:700,color:'#111827',marginBottom:3}}>Estatísticas de Documentos e Uso</div>
+            <div style={{fontSize:12,color:'#8a9db8'}}>Visão geral da atividade e métricas de documentos no sistema.</div></div>
+            <BackBtn to="hub" label="Voltar para Tipos de Relatório"/>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14}}>
+            {kpis.map((k,i)=>(
+              <div key={i} style={{background:'#fff',borderRadius:12,border:'1px solid #dce8f5',padding:'18px',boxShadow:'0 1px 4px rgba(0,0,0,.05)',display:'flex',flexDirection:'column',gap:8,borderTop:`3px solid ${k.color}`}}>
+                <div style={{fontSize:11,fontWeight:600,color:'#6b7280',lineHeight:1.4}}>{k.label}</div>
+                <div style={{fontSize:24,fontWeight:700,color:k.color,letterSpacing:'-.02em'}}>{k.value}</div>
+                <div style={{fontSize:11,color:'#8a9db8',lineHeight:1.5,flex:1}}>{k.sub}</div>
+                {k.link&&<div style={{fontSize:11,fontWeight:600,color:k.color,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>{k.link}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // RELATÓRIOS — table
+  if (view==='rel') {
+    const tabs=[
+      {id:'pacientes',label:'Pacientes'},{id:'documentos',label:'Documentos'},
+      {id:'cirurgias',label:'Cirurgias'},{id:'etiquetas',label:'Etiquetas'},
+    ];
+    const rows=[
+      ['0100051','PAULO SERGIO SOARES DE OLIVEIRA','50675404788','27/04/2001','—','0','1','20/04/2026'],
+      ['7847583','ANTONIA DE FATIMA BARBOSA DINIZ','20632384420','01/01/2001','—','0','1','17/04/2026'],
+      ['163697','LUCIA HELENA PESSOA DOS SANTOS','44585522720','08/08/2001','—','0','1','17/04/2026'],
+      ['287495','JANETE BASTOS BATISTA','50768735734','04/03/2001','—','0','1','17/04/2026'],
+      ['99388','JOSE CARLOS RONCATO WANDERMURM','—','—','—','2','0','02/04/2026'],
+      ['99366','LILIA MARIA ALVES DO COUTO','—','—','—','0','1','02/04/2026'],
+      ['99371','SERGIO SOARES DE CARVALHO','—','—','—','0','0','02/04/2026'],
+    ];
+    return (
+      <div style={{flex:1,overflow:'auto',background:'#f4f7fc',padding:'24px 28px'}}>
+        <div style={{maxWidth:1000,margin:'0 auto'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
+            <div><div style={{fontSize:20,fontWeight:700,color:'#111827',marginBottom:3}}>Relatórios</div>
+            <div style={{fontSize:12,color:'#8a9db8'}}>Gera relatórios sintéticos ou analíticos com layout para impressão.</div></div>
+            <BackBtn to="hub" label="Voltar"/>
+          </div>
+          <div style={{background:'#fff',borderRadius:12,border:'1px solid #dce8f5',padding:'16px 20px',boxShadow:'0 1px 4px rgba(0,0,0,.05)',marginBottom:14}}>
+            <div style={{display:'flex',gap:0,borderBottom:'1.5px solid #dce8f5',marginBottom:16}}>
+              {tabs.map(t=>(
+                <button key={t.id} onClick={()=>setRelTab(t.id)} style={{padding:'8px 18px',background:'none',border:'none',cursor:'pointer',fontFamily:'Inter,sans-serif',fontSize:13,fontWeight:relTab===t.id?600:400,color:relTab===t.id?'#245594':'#6b7280',borderBottom:relTab===t.id?'2px solid #245594':'2px solid transparent',marginBottom:-1.5,transition:'all .15s'}}>{t.label}</button>
+              ))}
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1.5fr',gap:12,marginBottom:14}}>
+              {['Data inicial','Data final'].map((lbl,i)=>(
+                <div key={i}><div style={{fontSize:11,color:'#8a9db8',marginBottom:4}}>{lbl}</div>
+                <input type="date" style={{width:'100%',padding:'8px 10px',border:'1px solid #dce8f5',borderRadius:8,fontSize:12,fontFamily:'Inter,sans-serif',color:'#374151',outline:'none'}}/></div>
+              ))}
+              <div><div style={{fontSize:11,color:'#8a9db8',marginBottom:4}}>Buscar por nome ou prontuário</div>
+              <input placeholder="Digite para filtrar..." style={{width:'100%',padding:'8px 10px',border:'1px solid #dce8f5',borderRadius:8,fontSize:12,fontFamily:'Inter,sans-serif',color:'#374151',outline:'none'}}/></div>
+            </div>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10}}>
+              <div style={{display:'flex',gap:6}}>
+                {[['sintetico','Sintético'],['analitico','Analítico']].map(([id,lbl])=>(
+                  <button key={id} onClick={()=>setRelType(id)} style={{padding:'5px 14px',borderRadius:7,border:'1px solid',borderColor:relType===id?'#245594':'#dce8f5',background:relType===id?'rgba(36,85,148,.06)':'#fff',color:relType===id?'#245594':'#6b7280',fontSize:12,fontWeight:relType===id?600:400,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>{lbl}</button>
+                ))}
+              </div>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <div style={{display:'flex',gap:4,background:'#f3f4f6',borderRadius:7,padding:3}}>
+                  {[['retrato','Retrato'],['paisagem','Paisagem']].map(([id,lbl])=>(
+                    <button key={id} onClick={()=>setOrient(id)} style={{padding:'4px 12px',borderRadius:5,border:'none',background:orient===id?'#fff':'transparent',color:orient===id?'#111827':'#6b7280',fontSize:11,fontWeight:orient===id?600:400,cursor:'pointer',fontFamily:'Inter,sans-serif',boxShadow:orient===id?'0 1px 3px rgba(0,0,0,.1)':'none'}}>{lbl}</button>
+                  ))}
+                </div>
+                <button style={{display:'flex',alignItems:'center',gap:7,padding:'8px 16px',background:'#245594',color:'#fff',border:'none',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'Inter,sans-serif',boxShadow:'0 2px 8px rgba(36,85,148,.25)'}}>
+                  <IcoBar s={13}/>Carregar Dados
+                </button>
+                <button style={{display:'flex',alignItems:'center',gap:7,padding:'8px 14px',background:'#fff',border:'1px solid #dce8f5',borderRadius:8,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'Inter,sans-serif',color:'#374151'}}>
+                  <IcoPrint s={13}/>Imprimir / Salvar PDF
+                </button>
+              </div>
+            </div>
+          </div>
+          <div style={{background:'#fff',borderRadius:12,border:'1px solid #dce8f5',overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,.05)'}}>
+            <div style={{padding:'12px 18px',borderBottom:'1px solid #dce8f5',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div style={{fontSize:14,fontWeight:600,color:'#111827'}}>Pacientes Cadastrados <span style={{color:'#8a9db8',fontSize:12,fontWeight:400}}>— 23/03/2026 a 24/04/2026</span></div>
+              <div style={{fontSize:11,color:'#8a9db8'}}>2000 registros · Gerado 24/04/2026 às 10:45</div>
+            </div>
+            <div style={{overflowX:'auto'}}>
+              <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+                <thead><tr style={{background:'#f4f7fc'}}>
+                  {['Prontuário','Nome Completo','CPF','Nascimento','Tipo Sang.','Docs','Cirurg.','Cadastrado em'].map(h=>(
+                    <th key={h} style={{padding:'9px 14px',textAlign:'left',fontSize:10,fontWeight:700,letterSpacing:'.05em',textTransform:'uppercase',color:'#8a9db8',borderBottom:'1px solid #dce8f5',whiteSpace:'nowrap'}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {rows.map((r,i)=>(
+                    <tr key={i} style={{borderBottom:'1px solid hsl(214.3,31.8%,97%)',transition:'background .1s'}}
+                      onMouseEnter={e=>e.currentTarget.style.background='rgba(36,85,148,.02)'}
+                      onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                      {r.map((cell,j)=>(
+                        <td key={j} style={{padding:'9px 14px',color:j===1?'#111827':'#6b7280',fontWeight:j===1?500:400,fontFamily:j===0||j===2?'monospace':'inherit',fontSize:j===0?11:12}}>{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+};
+
+// ── Root App ──────────────────────────────────────────────────────────────
+const App = () => {
+  const [screen, setScreen] = useState(() => localStorage.getItem('sdx_screen') || 'login');
+  const [toast, setToast] = useState(null);
+  const [supportModal, setSupportModal] = useState(false);
+  const [theme, setTheme] = useState(THEME_MODES[0]);
+  const [app, setApp] = useState(APPLICATIONS[0]);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => { localStorage.setItem('sdx_screen', screen); }, [screen]);
+
+  const handleLogin = () => {
+    setScreen('dashboard');
+    setToast({ title: 'Login Bem-Sucedido', desc: 'Bem-vindo de volta ao ScandexPRO™!', variant: 'accent' });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const screenMap = {
+    dashboard:     <DashboardScreen setScreen={setScreen} app={app} setApp={setApp} />,
+    communication: <CommunicationScreen />,
+    users:         <UsersScreen />,
+    reports:       <ReportsScreen />,
+    admin:         <AdminScreen />,
+  };
+
+  if (screen === 'login') return (
+    <>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <LoginScreen onLogin={handleLogin} />
+      {toast && <SDXToast {...toast} onClose={() => setToast(null)} />}
+    </>
+  );
+
+  return (
+    <>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes fadeIn { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:translateY(0); } }`}</style>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <AppHeader screen={screen} setScreen={setScreen} notifCount={2} theme={theme} setTheme={setTheme} app={app} setApp={setApp} />
+        <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+          {screenMap[screen] || <DashboardScreen setScreen={setScreen} />}
+        </div>
+
+        {/* ── Footer ── */}
+        <footer style={{
+          flexShrink: 0, height: 36, background: '#fff',
+          borderTop: '1px solid #dce8f5',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 16px',
+        }}>
+          {/* Left — version + update check */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={() => {
+              if (checking) return;
+              setChecking(true);
+              setUpdateAvailable(false);
+              setTimeout(() => { setChecking(false); setUpdateAvailable(true); }, 1800);
+            }} style={{
+              background: 'none', border: 'none', cursor: checking ? 'wait' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: 5,
+              fontSize: 11, color: '#8a9db8', fontFamily: "'DM Sans', sans-serif",
+              padding: '3px 7px', borderRadius: 5, transition: 'all .15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background='hsl(210,40%,96.1%)'; e.currentTarget.style.color='#374151'; }}
+            onMouseLeave={e => { e.currentTarget.style.background='none'; e.currentTarget.style.color='#8a9db8'; }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                style={{ animation: checking ? 'spin 0.7s linear infinite' : 'none' }}>
+                <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+              ScandexPRO™ v2.4.1
+            </button>
+            {updateAvailable && (
+              <span style={{
+                fontSize: 10, fontWeight: 600, background: '#fef9c3', color: '#854d0e',
+                border: '1px solid #fde047', borderRadius: 5, padding: '2px 7px',
+                animation: 'fadeIn .3s ease',
+              }}>
+                ✦ v2.5.0 disponível
+              </span>
+            )}
+          </div>
+
+          {/* Right — guide & support */}
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button onClick={() => setSupportModal(true)} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 5,
+              fontSize: 11, color: '#8a9db8', fontFamily: "'DM Sans', sans-serif",
+              padding: '3px 8px', borderRadius: 5, transition: 'all .15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background='hsl(210,40%,96.1%)'; e.currentTarget.style.color='#374151'; }}
+            onMouseLeave={e => { e.currentTarget.style.background='none'; e.currentTarget.style.color='#8a9db8'; }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              Guia &amp; Suporte
+            </button>
+          </div>
+        </footer>
+      </div>
+
+      {/* Support modal */}
+      {supportModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setSupportModal(false)}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: '24px 28px', width: 340, boxShadow: '0 20px 40px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#1e2d42', marginBottom: 4 }}>Guia &amp; Suporte</div>
+            <div style={{ fontSize: 12, color: '#7a8fa8', marginBottom: 18 }}>Recursos de ajuda para o ScandexPRO™</div>
+            {[
+              { icon: '📖', label: 'Manual do Usuário', desc: 'Documentação completa do sistema' },
+              { icon: '🎥', label: 'Vídeos Tutoriais', desc: 'Aprenda com demonstrações em vídeo' },
+              { icon: '💬', label: 'Suporte Técnico', desc: 'Abrir chamado com a equipe Scandex' },
+              { icon: '🔔', label: 'Reportar Problema', desc: 'Envie um bug ou sugestão de melhoria' },
+            ].map(({ icon, label, desc }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid #dce8f5', cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.opacity='.7'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+                <span style={{ fontSize: 18 }}>{icon}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1e2d42' }}>{label}</div>
+                  <div style={{ fontSize: 11, color: '#8a9db8' }}>{desc}</div>
+                </div>
+              </div>
+            ))}
+            <button onClick={() => setSupportModal(false)} style={{ marginTop: 16, width: '100%', padding: '8px', background: 'hsl(210,40%,96.1%)', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: '#2d4560', fontWeight: 500 }}>Fechar</button>
+          </div>
+        </div>
+      )}
+    
+      {toast && <SDXToast {...toast} onClose={() => setToast(null)} />}
+    </> 
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

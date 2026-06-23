@@ -1,0 +1,38 @@
+<!-- @dsCard group="Components — Mobile" name="MobileCard" subtitle="Surface card · 16px radius, soft elevation, accent border" viewport="440x360" -->
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8" />
+<link rel="stylesheet" href="../../colors_and_type.css" />
+<style>
+  body { margin: 0; background: var(--sdx-m-bg, #F5F7FB); font-family: 'Inter', sans-serif; padding: 26px; display: flex; justify-content: center; }
+  .col { width: 340px; display: flex; flex-direction: column; gap: 12px; }
+  .code { font-size: 13px; font-weight: 700; color: var(--sdx-m-primary, #072AC8); letter-spacing: .2px; }
+  .ttl { font-size: 14.5px; font-weight: 600; color: var(--sdx-m-text, #0F172A); margin-top: 3px; }
+  .sub { font-size: 12.5px; color: var(--sdx-m-muted, #64748B); margin-top: 2px; }
+</style>
+</head><body>
+<div id="root" class="col"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+  const { MobileCard, Icon } = window.ScandexPlusDesignSystem_c9a9df;
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <>
+      <MobileCard accent="#EA580C">
+        <div className="code">OS-2025-0418</div>
+        <div className="ttl">Manutenção corretiva</div>
+        <div className="sub">Centro Cirúrgico · HO — JCB</div>
+      </MobileCard>
+      <MobileCard>
+        <div className="ttl">Card elevado padrão</div>
+        <div className="sub">Superfície branca, borda suave e raio de 16px.</div>
+      </MobileCard>
+      <MobileCard variant="flat">
+        <div className="ttl">Variante flat</div>
+        <div className="sub">Sem sombra — para listas densas dentro de outro card.</div>
+      </MobileCard>
+    </>
+  );
+</script>
+</body></html>

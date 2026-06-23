@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.sdxpro.mobile",
-      "versionCode": 6,
+      "versionCode": 7,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -36,7 +36,8 @@
         {
           "cameraPermission": "O ScandexPRO usa a câmera para ler o QR Code das etiquetas de patrimônio."
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "extra": {
       "eas": {

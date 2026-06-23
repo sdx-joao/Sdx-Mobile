@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Spacing" name="Spacing, Radius & Shadows" subtitle="Spacing scale, border radii, shadow system" viewport="700x240" -->
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { margin: 0; padding: 16px; background: #f8f9fb; font-family: 'Inter', sans-serif; }
+.label { font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; margin-bottom: 10px; }
+/* Spacing tokens */
+.sp-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 16px; }
+.sp-box { background: #072AC8; opacity: 0.7; border-radius: 3px; }
+.sp-label { font-size: 10px; color: #374151; text-align: center; margin-top: 4px; }
+.sp-item { display: flex; flex-direction: column; align-items: center; }
+/* Radii */
+.r-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.r-box { width: 52px; height: 36px; background: #072AC8; display: flex; align-items: center; justify-content: center; }
+.r-label { font-size: 9px; color: #6b7280; margin-top: 4px; text-align: center; }
+.r-item { display: flex; flex-direction: column; align-items: center; }
+/* Shadows */
+.sh-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.sh-box { width: 70px; height: 40px; background: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #6b7280; }
+</style>
+</head><body>
+<div class="label">Spacing Scale (px)</div>
+<div class="sp-row">
+  <div class="sp-item"><div class="sp-box" style="width:4px;height:4px"></div><div class="sp-label">1</div></div>
+  <div class="sp-item"><div class="sp-box" style="width:8px;height:8px"></div><div class="sp-label">2</div></div>
+  <div class="sp-item"><div class="sp-box" style="width:12px;height:12px"></div><div class="sp-label">3</div></div>
+  <div class="sp-item"><div class="sp-box" style="width:16px;height:16px"></div><div class="sp-label">4</div></div>
+  <div class="sp-item"><div class="sp-box" style="width:20px;height:20px"></div><div class="sp-label">5</div></div>
+  <div class="sp-item"><div class="sp-box" style="width:24px;height:24px"></div><div class="sp-label">6</div></div>
+  <div class="sp-item"><div class="sp-box" style="width:32px;height:32px"></div><div class="sp-label">8</div></div>
+  <div class="sp-item"><div class="sp-box" style="width:40px;height:40px"></div><div class="sp-label">10</div></div>
+  <div class="sp-item"><div class="sp-box" style="width:48px;height:48px"></div><div class="sp-label">12</div></div>
+</div>
+<div class="label">Border Radius</div>
+<div class="r-row">
+  <div class="r-item"><div class="r-box" style="border-radius:2px"></div><div class="r-label">sm<br>4px</div></div>
+  <div class="r-item"><div class="r-box" style="border-radius:6px"></div><div class="r-label">md<br>6px</div></div>
+  <div class="r-item"><div class="r-box" style="border-radius:8px"></div><div class="r-label">lg<br>8px</div></div>
+  <div class="r-item"><div class="r-box" style="border-radius:12px"></div><div class="r-label">xl<br>12px</div></div>
+  <div class="r-item"><div class="r-box" style="border-radius:18px"></div><div class="r-label">2xl<br>18px</div></div>
+  <div class="r-item"><div class="r-box" style="border-radius:50px;width:52px"></div><div class="r-label">full<br>pill</div></div>
+</div>
+<div class="label">Shadow System</div>
+<div class="sh-row">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+    <div class="sh-box" style="box-shadow:0 1px 2px 0 rgb(0 0 0/.05)">sm</div>
+    <div style="font-size:9px;color:#9ca3af">shadow-sm</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+    <div class="sh-box" style="box-shadow:0 4px 6px -1px rgb(0 0 0/.1),0 2px 4px -2px rgb(0 0 0/.1)">md</div>
+    <div style="font-size:9px;color:#9ca3af">shadow-md</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+    <div class="sh-box" style="box-shadow:0 10px 15px -3px rgb(0 0 0/.1),0 4px 6px -4px rgb(0 0 0/.1)">lg</div>
+    <div style="font-size:9px;color:#9ca3af">shadow-lg</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+    <div class="sh-box" style="box-shadow:0 20px 25px -5px rgb(0 0 0/.1),0 8px 10px -6px rgb(0 0 0/.1)">xl</div>
+    <div style="font-size:9px;color:#9ca3af">shadow-xl</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+    <div class="sh-box" style="box-shadow:0 0 0 2px rgba(7,42,200,0.4)">ring</div>
+    <div style="font-size:9px;color:#9ca3af">focus-ring</div>
+  </div>
+</div>
+</body></html>

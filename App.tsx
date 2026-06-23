@@ -1,11 +1,23 @@
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Sentry from '@sentry/react-native';
 import { SplashScreen } from './src/components/Brand';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { IS_TEST_BUILD } from './src/api/client';
+
+Sentry.init({
+  dsn: 'https://f970f6013e4d7cae4d4b4034bf865e06@o4511614147493888.ingest.us.sentry.io/4511614336172032',
+  // Mesma DSN do backend; separa por environment no painel.
+  environment: IS_TEST_BUILD ? 'mobile-test' : 'mobile-prod',
+  enabled: !__DEV__,
+  // ⚠️ Dado sensível: sem PII.
+  sendDefaultPii: false,
+  tracesSampleRate: 0.1,
+});
 
 function Root() {
   const { status } = useAuth();
@@ -20,7 +32,7 @@ function Root() {
   );
 }
 
-export default function App() {
+function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
@@ -32,3 +44,5 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+export default Sentry.wrap(App);

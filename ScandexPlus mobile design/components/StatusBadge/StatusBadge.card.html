@@ -1,0 +1,27 @@
+<!-- @dsCard group="Components — Mobile" name="StatusBadge" subtitle="Pill badge · soft tint or solid fill, with status dot" viewport="440x200" -->
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8" />
+<link rel="stylesheet" href="../../colors_and_type.css" />
+<style>
+  body { margin: 0; background: var(--sdx-m-bg, #F5F7FB); font-family: 'Inter', sans-serif; padding: 26px; }
+  .lbl { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--sdx-m-muted, #64748B); margin: 0 0 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 18px; }
+</style>
+</head><body>
+<div class="lbl">Soft</div><div id="soft" class="row"></div>
+<div class="lbl">Solid</div><div id="solid" class="row"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+  const { StatusBadge } = window.ScandexPlusDesignSystem_c9a9df;
+  const items = [
+    { label: 'Aberta', color: '#2563EB' }, { label: 'Em andamento', color: '#CA8A04' },
+    { label: 'Aguardando', color: '#EA580C' }, { label: 'Concluída', color: '#059669' },
+    { label: 'Cancelada', color: '#DC2626' },
+  ];
+  ReactDOM.createRoot(document.getElementById('soft')).render(<>{items.map((i,k)=><StatusBadge key={k} {...i} variant="soft" />)}</>);
+  ReactDOM.createRoot(document.getElementById('solid')).render(<>{items.map((i,k)=><StatusBadge key={k} {...i} variant="solid" />)}</>);
+</script>
+</body></html>

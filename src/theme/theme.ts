@@ -1,6 +1,6 @@
 // ScandexPRO Mobile — Design tokens
 // Fonte de verdade do visual. Portado de:
-//   ScandexPlus Mobile Design System/export/scandex-mobile-concept/mobile/ui.jsx
+//   design/scandexplus-mobile-design-system/export/scandex-mobile-concept/mobile/ui.jsx
 //   (que por sua vez deriva de ScandexGed/src/app/globals.css)
 
 export const T = {

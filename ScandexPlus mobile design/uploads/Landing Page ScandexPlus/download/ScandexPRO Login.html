@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>ScandexPRO™ — Entrar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #F6F7F9; font-family: 'Sora', system-ui, sans-serif; color: #0F1620; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  * { box-sizing: border-box; }
+  button, input { font-family: inherit; }
+  input:-webkit-autofill { -webkit-box-shadow: 0 0 0 1000px white inset; -webkit-text-fill-color: #0F1620; }
+  ::selection { background: #3B7BA8; color: white; }
+
+  @keyframes draw-arrow {
+    0%   { stroke-dashoffset: 100%; opacity: 0; }
+    20%  { opacity: 1; }
+    100% { stroke-dashoffset: 0; opacity: 1; }
+  }
+
+  /* Login button — solid white circle expanding from center on hover */
+  .sdx-login-btn__wash {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    transform: translate(-50%, -50%) scale(0);
+    pointer-events: none; z-index: 0;
+    transition: transform 1.1s cubic-bezier(.22,.65,.3,.99);
+  }
+  .sdx-login-btn:hover .sdx-login-btn__wash { transform: translate(-50%, -50%) scale(36); }
+  .sdx-login-btn:hover { color: #0F1620 !important; }
+  .sdx-login-btn:hover svg { stroke: #0F1620; }
+  @keyframes float-y {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-10px); }
+  }
+  @keyframes rotate-slow {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  @keyframes glow {
+    0%, 100% { opacity: 0.25; transform: scale(1); }
+    50%      { opacity: 0.45; transform: scale(1.08); }
+  }
+  @keyframes orbit-1 {
+    from { transform: rotate(0deg) translateX(180px) rotate(0deg); }
+    to   { transform: rotate(360deg) translateX(180px) rotate(-360deg); }
+  }
+  @keyframes orbit-2 {
+    from { transform: rotate(120deg) translateX(220px) rotate(-120deg); }
+    to   { transform: rotate(480deg) translateX(220px) rotate(-480deg); }
+  }
+  @keyframes orbit-3 {
+    from { transform: rotate(240deg) translateX(160px) rotate(-240deg); }
+    to   { transform: rotate(600deg) translateX(160px) rotate(-600deg); }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse {
+    0%,100% { transform: scale(1);   opacity: 1; }
+    50%     { transform: scale(1.6); opacity: 0.25; }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .reveal { animation: fadeUp .7s cubic-bezier(.2,.8,.2,1) both; }
+  .reveal-1 { animation-delay: .05s; }
+  .reveal-2 { animation-delay: .15s; }
+  .reveal-3 { animation-delay: .28s; }
+  .reveal-4 { animation-delay: .42s; }
+  .reveal-5 { animation-delay: .58s; }
+
+  /* corner brackets */
+  .bracket { position: absolute; width: 14px; height: 14px; }
+
+  /* line marquee */
+  @keyframes marquee {
+    0%   { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+  }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "primary": "#3B7BA8",
+  "accent": "#9CC8D6",
+  "showPattern": true,
+  "showScan": true
+}/*EDITMODE-END*/;
+
+// ────────────────────────────────────────────────────────────
+// Brand tokens — herdados da landing
+// ────────────────────────────────────────────────────────────
+const C = {
+  blue:      '#3B7BA8',
+  blueDeep:  '#2E6388',
+  blueLight: '#9CC8D6',
+  blueTint:  '#EAF2F6',
+  ink:       '#0F1620',
+  inkSoft:   '#5A6573',
+  inkMute:   '#8A95A3',
+  line:      '#E2E8EE',
+  lineSoft:  '#EEF1F4',
+  paper:     '#F6F7F9',
+  white:     '#FFFFFF',
+  ok:        '#3F9E7A',
+  err:       '#C2453E',
+};
+
+// ────────────────────────────────────────────────────────────
+// Brand assets
+// ────────────────────────────────────────────────────────────
+const Wordmark = ({ height = 22, variant = 'dark' }) => {
+  const w = height * (586/151);
+  return (
+    <img
+      src={variant === 'white' ? 'assets/logo-principal-white.png' : 'assets/logo-principal-cropped.png'}
+      alt="Scandex+"
+      style={{ height, width: w, objectFit: 'contain', display: 'inline-block', verticalAlign: 'middle' }}
+    />
+  );
+};
+
+const ArrowPlus = ({ size = 32, tone = 'blue', opacity = 1 }) => {
+  const filters = {
+    blue:  'none',
+    white: 'brightness(0) invert(1)',
+    light: 'brightness(0) saturate(100%) invert(82%) sepia(15%) saturate(450%) hue-rotate(155deg) brightness(95%) contrast(85%)',
+    ink:   'brightness(0)',
+    mute:  'opacity(.5)',
+  };
+  return (
+    <img
+      src={tone === 'blue' ? 'assets/arrow-plus-primary.png' : 'assets/arrow-plus-mask.png'}
+      alt=""
+      style={{
+        width: size, height: size * (219/652),
+        objectFit: 'contain', opacity,
+        filter: tone === 'blue' ? 'none' : filters[tone],
+        display: 'inline-block', verticalAlign: 'middle',
+      }}
+    />
+  );
+};
+
+const Pattern = ({ surface = 'light', opacity = 0.5, scale = 1 }) => {
+  const tileW = Math.round(720 / scale);
+  const tileH = Math.round(tileW * (3508/2481));
+  const isDark = surface === 'dark';
+  return (
+    <div aria-hidden="true" style={{
+      position: 'absolute', inset: 0, pointerEvents: 'none', opacity,
+      backgroundImage: 'url("assets/pattern.png")',
+      backgroundRepeat: 'repeat',
+      backgroundSize: `${tileW}px ${tileH}px`,
+      mixBlendMode: isDark ? 'screen' : 'multiply',
+      filter: isDark ? 'invert(1) brightness(1.4)' : 'none',
+    }}/>
+  );
+};
+
+// ────────────────────────────────────────────────────────────
+// Centerpiece — pure brand glyph, Apple/Nike-style
+// ────────────────────────────────────────────────────────────
+const BrandShowcase = ({ T }) => (
+  <div style={{
+    position: 'relative', width: 520, height: 520,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  }}>
+    {/* THE GLYPH — front and center, monumental, subtle breathing */}
+    <div style={{
+      position: 'relative', zIndex: 2,
+      animation: T.showScan ? 'float-y 6s ease-in-out infinite' : 'none',
+    }}>
+      <ArrowPlus size={420} tone="blue"/>
+    </div>
+  </div>
+);
+
+// ────────────────────────────────────────────────────────────
+// LEFT — pale blue panel: brand pattern + submarca centerpiece
+// ────────────────────────────────────────────────────────────
+const LeftPanel = ({ T }) => {
+  // Match the reference: very pale blue-gray
+  const PALE_BG = '#E2EBF1';
+  return (
+    <div style={{
+      position: 'relative',
+      flex: 1, background: PALE_BG,
+      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+      padding: '48px 64px', overflow: 'hidden',
+    }}>
+      {/* Pattern de fundo — setas em azul submarca, multiply blend */}
+      {T.showPattern && (
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.55 }}>
+          <Pattern surface="light" opacity={1} scale={1.6}/>
+        </div>
+      )}
+
+      {/* TOP-LEFT: eyebrow */}
+      <div className="reveal reveal-1" style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{
+          fontFamily: 'JetBrains Mono, monospace', fontSize: 11,
+          color: C.inkSoft,
+          textTransform: 'uppercase', letterSpacing: '0.18em',
+          display: 'flex', alignItems: 'center', gap: 12,
+        }}>
+          <span style={{ width: 28, height: 1, background: T.primary }}/>
+          Gestão eletrônica de documentos
+        </div>
+      </div>
+
+      {/* CENTER: submarca in brand blue, static, soft halo */}
+      <div style={{
+        position: 'absolute', inset: 0, display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
+        zIndex: 0, pointerEvents: 'none',
+      }}>
+        <div className="reveal reveal-3" style={{ position: 'relative' }}>
+          {/* subtle halo behind the mark */}
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 560, height: 560, borderRadius: '50%',
+            background: `radial-gradient(circle, ${PALE_BG} 0%, transparent 60%)`,
+            mixBlendMode: 'normal',
+          }}/>
+          {/* the mark — tinted to brand blue via CSS filter on the white asset */}
+          <img
+            src="assets/submarca-watermark-white.png"
+            alt="Scandex+ submarca"
+            style={{
+              position: 'relative',
+              width: 460, height: 460,
+              objectFit: 'contain',
+              opacity: 1,
+              // recolor white → brand blue #3B7BA8 using filter chain
+              filter: 'brightness(0) saturate(100%) invert(43%) sepia(31%) saturate(640%) hue-rotate(165deg) brightness(92%) contrast(89%) drop-shadow(0 0 40px rgba(59,123,168,0.25))',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* BOTTOM-LEFT: headline */}
+      <div className="reveal reveal-2" style={{ position: 'relative', zIndex: 1, maxWidth: 580 }}>
+        <h1 style={{
+          margin: 0,
+          fontFamily: 'Sora, system-ui', fontWeight: 700,
+          fontSize: 'clamp(42px, 4.4vw, 64px)',
+          lineHeight: 1.0, letterSpacing: '-0.045em', color: C.ink,
+        }}>
+          Gestão.<br/>
+          Memória.<br/>
+          Conformidade.<br/>
+          <span style={{
+            color: T.primary,
+            fontFamily: '"Fraunces", serif', fontStyle: 'italic', fontWeight: 400,
+          }}>
+            Sob controle.
+          </span>
+        </h1>
+        <p style={{
+          fontFamily: 'Sora, system-ui', fontSize: 14, lineHeight: 1.55,
+          color: C.inkSoft, marginTop: 22, maxWidth: 380, textWrap: 'pretty',
+        }}>
+          Sistema de Gestão Eletrônica de Documentos para a operação que
+          não pode parar — auditável, rastreável, conforme.
+        </p>
+      </div>
+
+      {/* BOTTOM-RIGHT: ScandexPRO® stamp */}
+      <div className="reveal reveal-2" style={{
+        position: 'absolute', bottom: 48, right: 64, zIndex: 1, textAlign: 'right',
+      }}>
+        <div style={{
+          fontFamily: 'Sora, system-ui', fontWeight: 700, fontSize: 28,
+          color: C.ink, letterSpacing: '-0.025em', lineHeight: 1,
+          display: 'inline-flex', alignItems: 'baseline', gap: 4,
+        }}>
+          <span>Scandex<span style={{ color: T.primary }}>PRO</span></span>
+          <span style={{ fontSize: 11, fontWeight: 500, color: C.inkMute, fontFamily: 'Sora, system-ui' }}>®</span>
+        </div>
+        <div style={{
+          fontFamily: 'JetBrains Mono, monospace', fontSize: 9.5, color: C.inkMute,
+          textTransform: 'uppercase', letterSpacing: '0.16em', marginTop: 6,
+        }}>
+          v3.7.4 · Gestão de Documentos
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ────────────────────────────────────────────────────────────
+// RIGHT — login form
+// ────────────────────────────────────────────────────────────
+const RightPanel = ({ T, onSubmit }) => {
+  const [user, setUser] = useState('');
+  const [pass, setPass] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+
+  const submit = (e) => {
+    e.preventDefault();
+    setErr('');
+    if (!user || !pass) { setErr('Preencha usuário e senha.'); return; }
+    setLoading(true);
+    setTimeout(() => { setLoading(false); onSubmit?.(); }, 900);
+  };
+
+  return (
+    <div style={{
+      width: 460, flexShrink: 0, background: 'white',
+      borderLeft: `1px solid ${C.line}`,
+      display: 'flex', flexDirection: 'column',
+      padding: '40px 56px',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* faint accent corner */}
+      <div style={{
+        position: 'absolute', top: -120, right: -120,
+        width: 280, height: 280, borderRadius: '50%',
+        background: `${T.accent}26`,
+        pointerEvents: 'none', filter: 'blur(20px)',
+      }}/>
+
+      {/* TOP — brand */}
+      <div className="reveal reveal-1" style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'center' }}>
+        <Wordmark height={44}/>
+      </div>
+
+      {/* CENTER — form */}
+      <div className="reveal reveal-2" style={{
+        position: 'relative', zIndex: 1,
+        flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center',
+      }}>
+        <div style={{
+          fontFamily: 'JetBrains Mono, monospace', fontSize: 10.5, color: T.primary,
+          textTransform: 'uppercase', letterSpacing: '0.18em', marginBottom: 14,
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ width: 18, height: 1, background: T.primary }}/>
+          Acesso ao sistema
+        </div>
+
+        <h2 style={{
+          margin: 0,
+          fontFamily: 'Sora, system-ui', fontWeight: 700,
+          fontSize: 38, lineHeight: 1, letterSpacing: '-0.035em', color: C.ink,
+        }}>
+          Bem-vindo de{' '}
+          <span style={{
+            fontFamily: '"Fraunces", serif', fontStyle: 'italic', fontWeight: 400,
+            color: T.primary,
+          }}>volta</span>.
+        </h2>
+        <p style={{
+          fontFamily: 'Sora, system-ui', fontSize: 14, lineHeight: 1.5,
+          color: C.inkSoft, marginTop: 12, marginBottom: 0,
+        }}>
+          Insira suas credenciais para acessar o ScandexPRO™.
+        </p>
+
+        <form onSubmit={submit} style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* USER */}
+          <Field
+            label="Usuário"
+            T={T}
+            input={
+              <input
+                type="text"
+                placeholder="seu.usuario"
+                value={user}
+                onChange={(e) => { setUser(e.target.value); setErr(''); }}
+                autoComplete="username"
+              />
+            }
+          />
+
+          {/* PASS */}
+          <Field
+            label="Senha"
+            T={T}
+            trailing={
+              <button type="button" onClick={() => setShowPass(!showPass)} title={showPass ? 'Esconder' : 'Mostrar'} style={{
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                padding: 4, color: C.inkMute, display: 'flex', alignItems: 'center',
+              }}>
+                <EyeIcon open={!showPass}/>
+              </button>
+            }
+            input={
+              <input
+                type={showPass ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={pass}
+                onChange={(e) => { setPass(e.target.value); setErr(''); }}
+                autoComplete="current-password"
+              />
+            }
+          />
+
+          {/* row: remember + forgot */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
+            <label style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+              fontFamily: 'Sora, system-ui', fontSize: 12.5, color: C.inkSoft,
+            }}>
+              <span style={{
+                width: 16, height: 16, borderRadius: 4,
+                border: `1.5px solid ${remember ? T.primary : C.line}`,
+                background: remember ? T.primary : 'white',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all .15s',
+              }}>
+                {remember && (
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                )}
+              </span>
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+              />
+              Manter conectado
+            </label>
+            <a href="#" style={{
+              fontFamily: 'Sora, system-ui', fontSize: 12.5, fontWeight: 500,
+              color: T.primary, textDecoration: 'none',
+              borderBottom: `1px solid ${T.primary}44`, paddingBottom: 1,
+            }}>Esqueci minha senha</a>
+          </div>
+
+          {err && (
+            <div style={{
+              padding: '10px 14px', borderRadius: 10,
+              background: `${C.err}10`, border: `1px solid ${C.err}40`,
+              fontFamily: 'Sora, system-ui', fontSize: 12.5, color: C.err,
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              {err}
+            </div>
+          )}
+
+          {/* Submit — solid white wash from center on hover */}
+          <button type="submit" disabled={loading} className="sdx-login-btn" style={{
+            marginTop: 4, padding: '16px 24px',
+            background: loading ? C.blueDeep : T.primary, color: 'white',
+            border: 'none', borderRadius: 12, cursor: loading ? 'wait' : 'pointer',
+            fontFamily: 'Sora, system-ui', fontSize: 15, fontWeight: 600,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            boxShadow: `0 10px 28px ${T.primary}33`,
+            position: 'relative', overflow: 'hidden', isolation: 'isolate',
+            letterSpacing: '-0.005em',
+            transition: 'color .25s ease',
+          }}
+          >
+            <span className="sdx-login-btn__wash" aria-hidden="true"/>
+
+            <span style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+              {loading ? (
+                <>
+                  <span style={{
+                    width: 16, height: 16, border: '2px solid rgba(255,255,255,0.4)',
+                    borderTopColor: 'white', borderRadius: '50%',
+                    animation: 'spin .7s linear infinite',
+                  }}/>
+                  Autenticando...
+                </>
+              ) : (
+                <>
+                  Entrar no sistema
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </>
+              )}
+            </span>
+          </button>
+        </form>
+      </div>
+
+      {/* BOTTOM — compliance + powered by */}
+      <div className="reveal reveal-3" style={{
+        position: 'relative', zIndex: 1, marginTop: 32,
+        display: 'flex', flexDirection: 'column', gap: 14,
+      }}>
+        {/* compliance chips */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+          {['LGPD', 'ISO 27001', 'Auditável'].map(t => (
+            <span key={t} style={{
+              fontFamily: 'JetBrains Mono, monospace', fontSize: 9.5, fontWeight: 500,
+              color: C.inkSoft, textTransform: 'uppercase', letterSpacing: '0.12em',
+              padding: '4px 10px', border: `1px solid ${C.line}`, borderRadius: 999,
+              background: 'white',
+            }}>{t}</span>
+          ))}
+        </div>
+
+        {/* powered by — bigger, prominent */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          fontFamily: 'Sora, system-ui', fontSize: 14, color: C.inkSoft,
+        }}>
+          <span style={{ fontStyle: 'italic', fontFamily: '"Fraunces", serif', fontWeight: 400 }}>powered by</span>
+          <Wordmark height={22}/>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Field input
+const Field = ({ label, input, trailing, T }) => {
+  const ref = useRef();
+  const [focus, setFocus] = useState(false);
+  // clone input to inject styles + focus handlers
+  const styled = React.cloneElement(input, {
+    ref,
+    onFocus: (e) => { setFocus(true); input.props.onFocus?.(e); },
+    onBlur:  (e) => { setFocus(false); input.props.onBlur?.(e); },
+    style: {
+      width: '100%', border: 'none', outline: 'none', background: 'transparent',
+      fontFamily: 'Sora, system-ui', fontSize: 14.5, fontWeight: 500,
+      color: C.ink, padding: '12px 0', letterSpacing: '-0.005em',
+      ...(input.props.style || {}),
+    },
+  });
+  const filled = !!input.props.value;
+  return (
+    <div>
+      <div style={{
+        fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: focus ? T.primary : C.inkMute,
+        textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 6,
+        transition: 'color .15s',
+      }}>{label}</div>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '0 14px',
+        background: 'white',
+        border: `1.5px solid ${focus ? T.primary : (filled ? C.line : C.line)}`,
+        borderRadius: 12,
+        boxShadow: focus ? `0 0 0 4px ${T.primary}1f` : 'none',
+        transition: 'all .15s',
+      }}
+      onClick={() => ref.current?.focus()}
+      >
+        {styled}
+        {trailing}
+      </div>
+    </div>
+  );
+};
+
+const SocialButton = ({ label, src, T }) => (
+  <button type="button" style={{
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    padding: '11px 14px', background: 'white',
+    border: `1px solid ${C.line}`, borderRadius: 10, cursor: 'pointer',
+    fontFamily: 'Sora, system-ui', fontSize: 13, fontWeight: 500, color: C.ink,
+    transition: 'all .15s',
+  }}
+  onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.primary; e.currentTarget.style.background = C.blueTint; }}
+  onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.line; e.currentTarget.style.background = 'white'; }}
+  >
+    <img src={src} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }}/>
+    {label}
+  </button>
+);
+
+const EyeIcon = ({ open }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    {open ? (
+      <>
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </>
+    ) : (
+      <>
+        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+        <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+        <line x1="1" y1="1" x2="23" y2="23"/>
+      </>
+    )}
+  </svg>
+);
+
+// ────────────────────────────────────────────────────────────
+// SHELL
+// ────────────────────────────────────────────────────────────
+function App() {
+  const [T, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <div style={{ display: 'flex', height: '100vh', minHeight: 720, background: C.paper }}>
+      <LeftPanel T={T}/>
+      <RightPanel T={T} onSubmit={() => alert('Login!')}/>
+
+      <TweaksPanel>
+        <TweakSection label="Identidade" />
+        <TweakColor label="Cor primária" value={T.primary}
+                    onChange={(v) => setTweak('primary', v)} />
+        <TweakColor label="Cor de acento" value={T.accent}
+                    onChange={(v) => setTweak('accent', v)} />
+
+        <TweakSection label="Decoração" />
+        <TweakToggle label="Pattern de fundo" value={T.showPattern}
+                     onChange={(v) => setTweak('showPattern', v)} />
+        <TweakToggle label="Scan animado" value={T.showScan}
+                     onChange={(v) => setTweak('showScan', v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

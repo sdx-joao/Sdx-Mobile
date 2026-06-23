@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Components" name="Document Status Indicators" subtitle="Status dot legend and surgery list with live states" viewport="700x240" -->
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { margin: 0; padding: 16px; background: #f8f9fb; font-family: 'Inter', sans-serif; }
+.label { font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; margin-bottom: 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; align-items: center; }
+.indicator {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; background: #fff; border-radius: 8px;
+  border: 1px solid hsl(214.3 31.8% 91.4%);
+  box-shadow: 0 1px 3px rgb(0 0 0/.08); font-size: 12px;
+}
+.dot {
+  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+  box-shadow: 0 2px 4px rgb(0 0 0/.2);
+}
+.d-available { background: #34d399; border: 2px solid #059669; }
+.d-absent    { background: #f87171; border: 2px solid #dc2626; }
+.d-missing   { background: #fb923c; border: 2px solid #ea580c; }
+.d-process   { background: #60a5fa; border: 2px solid #2563eb; }
+.d-altered   { background: #facc15; border: 2px solid #ca8a04; }
+.list { display: flex; flex-direction: column; gap: 6px; }
+.surgery-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; background: #fff; border-radius: 8px;
+  border: 1px solid hsl(214.3 31.8% 91.4%); min-width: 280px;
+  box-shadow: 0 1px 2px rgb(0 0 0/.05);
+}
+.date { font-size: 11px; color: #9ca3af; width: 72px; flex-shrink: 0; }
+.name { font-size: 12px; font-weight: 500; flex: 1; color: hsl(222.2,84%,4.9%); }
+.doc { font-size: 10px; color: #6b7280; }
+</style>
+</head><body>
+<div class="label">Status Indicators</div>
+<div class="row">
+  <div class="indicator"><div class="dot d-available"></div>Disponível</div>
+  <div class="indicator"><div class="dot d-absent"></div>Ausente</div>
+  <div class="indicator"><div class="dot d-missing"></div>Incompleto</div>
+  <div class="indicator"><div class="dot d-process"></div>Processando</div>
+  <div class="indicator"><div class="dot d-altered"></div>Alterado</div>
+</div>
+<div class="label">Surgery List (Document Status)</div>
+<div class="list">
+  <div class="surgery-row">
+    <div class="dot d-available"></div>
+    <div class="date">10/03/2024</div>
+    <div class="name">Exame de Fundo de Olho</div>
+    <div class="doc">PDF · 8 pgs</div>
+  </div>
+  <div class="surgery-row">
+    <div class="dot d-missing"></div>
+    <div class="date">01/01/2023</div>
+    <div class="name">Tomografia Incompleta</div>
+    <div class="doc">Img · 2/8 pgs</div>
+  </div>
+  <div class="surgery-row">
+    <div class="dot d-process"></div>
+    <div class="date">15/11/2023</div>
+    <div class="name">Exame Legado</div>
+    <div class="doc">Aguardando</div>
+  </div>
+  <div class="surgery-row">
+    <div class="dot d-absent"></div>
+    <div class="date">10/02/2023</div>
+    <div class="name">Consulta sem Documento</div>
+    <div class="doc">—</div>
+  </div>
+</div>
+</body></html>

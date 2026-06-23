@@ -1,5 +1,5 @@
 // ScandexPRO Mobile — Mock data (schema-fiel, pt-BR)
-// Portado de ScandexPlus Mobile Design System/.../mobile/data.jsx
+// Portado de design/scandexplus-mobile-design-system/.../mobile/data.jsx
 // Substituir pelos endpoints reais (/api/mobile/*) na fase de backend.
 
 import { STOCK_TONE, type Tone } from '../theme/theme';

@@ -1,0 +1,5 @@
+/**
+ * ScandexPlus Design System — root stylesheet
+ * Single entry point: consumers link this one file.
+ */
+@import url('colors_and_type.css');

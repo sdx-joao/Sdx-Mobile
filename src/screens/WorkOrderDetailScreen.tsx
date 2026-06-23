@@ -262,35 +262,33 @@ export function WorkOrderDetailScreen() {
       )}
 
       <SectionCard title={`Anexos (${attachments.length})`}>
-        <View pointerEvents="none" style={{ flexDirection: 'row', gap: 8, marginBottom: 10, opacity: 0.6 }}>
-          {(['Foto antes', 'Foto depois', 'Foto geral']).map((label) => (
-            <View
-              key={label}
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: attachments.length ? 12 : 10 }}>
+          {([
+            ['before', 'Foto antes'],
+            ['after', 'Foto depois'],
+            ['general', 'Foto geral'],
+          ] as Array<[PhotoAttachmentCategory, string]>).map(([category, label]) => (
+            <Pressable
+              key={category}
+              onPress={() => nav.navigate('WorkOrderAttachmentCapture', { id: wo.id, category })}
+              disabled={finished}
               style={{
                 flex: 1,
                 minHeight: 40,
                 borderRadius: 11,
                 borderWidth: 1,
-                borderColor: T.border,
-                backgroundColor: T.surfaceMuted,
+                borderColor: finished ? T.border : T.primary,
+                backgroundColor: finished ? T.surfaceMuted : `${T.primary}10`,
                 alignItems: 'center',
                 justifyContent: 'center',
                 paddingHorizontal: 8,
+                opacity: finished ? 0.45 : 1,
               }}
             >
               <Text style={{ color: T.primary, fontSize: 11.5, fontWeight: '800', textAlign: 'center' }}>{label}</Text>
-            </View>
+            </Pressable>
           ))}
         </View>
-        {!finished && (
-          <Pressable
-            onPress={() => nav.navigate('WorkOrderEdit', { id: wo.id })}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: attachments.length ? 12 : 0 }}
-          >
-            <Icon name="sliders" size={13} color={accent} />
-            <Text style={{ fontSize: 12, color: accent, fontWeight: '700' }}>Toque em Editar para adicionar fotos</Text>
-          </Pressable>
-        )}
         {attachments.length === 0 ? (
           <Text style={{ fontSize: 12.5, color: T.muted }}>Nenhum anexo registrado.</Text>
         ) : (

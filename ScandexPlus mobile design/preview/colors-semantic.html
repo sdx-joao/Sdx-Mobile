@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Colors" name="Semantic & Status Colors" subtitle="Document status indicators + feedback colors" viewport="700x200" -->
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { margin: 0; padding: 16px; background: #f8f9fb; font-family: 'Inter', sans-serif; }
+.row { display: flex; gap: 8px; margin-bottom: 10px; }
+.swatch { flex: 1; border-radius: 6px; padding: 12px 10px 8px; min-height: 64px; display: flex; flex-direction: column; justify-content: space-between; border: 2px solid transparent; }
+.swatch .name { font-size: 11px; font-weight: 600; }
+.swatch .desc { font-size: 9px; opacity: 0.8; margin-top: 3px; line-height: 1.3; }
+.label { font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; margin-bottom: 4px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; margin-bottom: 4px; }
+</style>
+</head><body>
+<div class="label">Document Status Indicators</div>
+<div class="row">
+  <div class="swatch" style="background:#d1fae5;border-color:#34d399">
+    <div class="dot" style="background:#34d399;border:2px solid #059669"></div>
+    <div class="name" style="color:#065f46">Available</div>
+    <div class="desc" style="color:#065f46">Documento no file server</div>
+  </div>
+  <div class="swatch" style="background:#fee2e2;border-color:#f87171">
+    <div class="dot" style="background:#f87171;border:2px solid #dc2626"></div>
+    <div class="name" style="color:#991b1b">Absent</div>
+    <div class="desc" style="color:#991b1b">Documento ausente</div>
+  </div>
+  <div class="swatch" style="background:#ffedd5;border-color:#fb923c">
+    <div class="dot" style="background:#fb923c;border:2px solid #ea580c"></div>
+    <div class="name" style="color:#9a3412">Missing Info</div>
+    <div class="desc" style="color:#9a3412">Páginas faltando</div>
+  </div>
+  <div class="swatch" style="background:#dbeafe;border-color:#60a5fa">
+    <div class="dot" style="background:#60a5fa;border:2px solid #2563eb"></div>
+    <div class="name" style="color:#1e3a8a">Processing</div>
+    <div class="desc" style="color:#1e3a8a">Aguardando file server</div>
+  </div>
+  <div class="swatch" style="background:#fef9c3;border-color:#facc15">
+    <div class="dot" style="background:#facc15;border:2px solid #ca8a04"></div>
+    <div class="name" style="color:#713f12">Altered</div>
+    <div class="desc" style="color:#713f12">Alterado após cadastro</div>
+  </div>
+</div>
+<div class="label">Feedback Colors</div>
+<div class="row">
+  <div class="swatch" style="background:#072AC8;color:#fff">
+    <div class="name">Primary</div><div class="desc">Ações principais</div>
+  </div>
+  <div class="swatch" style="background:#fee2e2;border-color:#f87171">
+    <div class="name" style="color:#991b1b">Destructive BG</div><div class="desc" style="color:#991b1b">Erros, deleção</div>
+  </div>
+  <div class="swatch" style="background:hsl(0 84.2% 60.2%);color:#fff">
+    <div class="name">Destructive</div><div class="desc">Botão de erro</div>
+  </div>
+  <div class="swatch" style="background:#FFD700;color:#713f12">
+    <div class="name">Gold Alert</div><div class="desc">Blink/ping states</div>
+  </div>
+</div>
+</body></html>

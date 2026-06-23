@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Prontuários (mobile)" description="Fluxo de Prontuários: busca de paciente, detalhes com histórico de cirurgias e visualizador de documento — montado com os componentes mobile do ScandexPlus." -->
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="./ds-base.js"></script>
+  <style>
+    body { margin: 0; background: radial-gradient(circle at 50% 0%, #1c2438, #0b0f1a); font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 30px 0; }
+    @keyframes sdxmSpin { to { transform: rotate(360deg); } }
+    .sdxm-track::-webkit-scrollbar { width: 0; }
+    .sdxm-field { font-size: 11px; font-weight: 700; color: #64748B; letter-spacing: .5px; text-transform: uppercase; }
+    .sdxm-plabel { font-size: 10.5px; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+    .sdxm-pval { font-size: 14.5px; color: #0F172A; font-weight: 600; line-height: 1.35; word-break: break-word; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 810px; background: #F5F7FB; border-radius: 40px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 40px 90px -20px rgba(15,23,42,.6), 0 0 0 6px #0c1326;">
+
+  <!-- ══════════ VIEW: BUSCA ══════════ -->
+  <sc-if value="{{ isSearch }}" hint-placeholder-val="{{ true }}">
+    <div style="height: 100%; display: flex; flex-direction: column;">
+      <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.BlueHeader" title="Buscar paciente" subtitle="Informe o prontuário (≥5 dígitos) ou um CPF válido." hint-size="100%,150px"></x-import>
+      <div class="sdxm-track" style="flex: 1; overflow: auto; padding: 18px 18px 24px; display: flex; flex-direction: column;">
+        <div class="sdxm-field" style="margin-bottom: 8px;">Aplicação</div>
+        <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.SegmentedControl" options="{{ apps }}" value="{{ app }}" on-change="{{ setApp }}" hint-size="100%,48px"></x-import>
+        <div class="sdxm-field" style="margin: 20px 0 8px;">Prontuário</div>
+        <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.SearchField" value="{{ pront }}" on-change="{{ setPront }}" input-mode="numeric" valid="{{ prontValid }}" clearable="{{ true }}" hint-size="100%,54px"></x-import>
+        <div style="display: flex; align-items: center; gap: 12px; margin: 16px 2px;">
+          <span style="flex: 1; height: 1px; background: #E2E8F2;"></span>
+          <span style="font-size: 12px; font-weight: 600; color: #94A3B8;">ou</span>
+          <span style="flex: 1; height: 1px; background: #E2E8F2;"></span>
+        </div>
+        <div class="sdxm-field" style="margin-bottom: 8px;">CPF</div>
+        <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.SearchField" value="{{ cpf }}" on-change="{{ setCpf }}" placeholder="000.000.000-00" input-mode="numeric" valid="{{ cpfValid }}" hint-size="100%,54px"></x-import>
+        <div style="margin-top: 24px;">
+          <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.MobileButton" variant="primary" full-width="{{ true }}" disabled="{{ searchDisabled }}" on-click="{{ buscar }}" hint-size="100%,52px">Buscar</x-import>
+        </div>
+        <div class="sdxm-field" style="margin: 26px 0 11px;">Buscas recentes</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <button onclick="{{ openMaria }}" style="display: inline-flex; align-items: center; gap: 7px; padding: 9px 13px; border-radius: 999px; border: 1px solid #E2E8F2; background: #fff; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: #334155;">123456</button>
+          <button onclick="{{ openMaria }}" style="display: inline-flex; align-items: center; gap: 7px; padding: 9px 13px; border-radius: 999px; border: 1px solid #E2E8F2; background: #fff; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: #334155;">884220</button>
+          <button onclick="{{ openMaria }}" style="display: inline-flex; align-items: center; gap: 7px; padding: 9px 13px; border-radius: 999px; border: 1px solid #E2E8F2; background: #fff; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: #334155;">100345</button>
+        </div>
+      </div>
+      <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.TabBar" items="{{ tabs }}" active="{{ tab }}" on-change="{{ onTab }}" hint-size="100%,72px"></x-import>
+    </div>
+  </sc-if>
+
+  <!-- ══════════ VIEW: DETALHES ══════════ -->
+  <sc-if value="{{ isDetails }}" hint-placeholder-val="{{ true }}">
+    <div style="height: 100%; display: flex; flex-direction: column;">
+      <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.BlueHeader" compact="{{ true }}" eyebrow="{{ patientEyebrow }}" title="{{ patient.name }}" on-back="{{ goSearch }}" hint-size="100%,140px"></x-import>
+      <div class="sdxm-track" style="flex: 1; overflow: auto; padding: 16px;">
+
+        <!-- Cartão do paciente -->
+        <div style="background: #fff; border: 1px solid #E2E8F2; border-radius: 18px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(15,23,42,.05);">
+          <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 18px;">
+            <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.Avatar" initials="{{ patientInitials }}" size="96" hint-size="96px,96px"></x-import>
+            <div style="margin-top: 9px; font-size: 12px; font-style: italic; color: #B7861F; font-weight: 600; letter-spacing: .4px;">{{ patient.barcodeBase }}</div>
+          </div>
+          <div style="margin-bottom: 16px;">
+            <div class="sdxm-plabel">Nome Completo</div>
+            <div class="sdxm-pval">{{ patient.name }}</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px 14px;">
+            <div><div class="sdxm-plabel">Idade</div><div class="sdxm-pval">{{ patient.age }}</div></div>
+            <div><div class="sdxm-plabel">Nascimento</div><div class="sdxm-pval">{{ patient.birthDate }}</div></div>
+            <div><div class="sdxm-plabel">CPF</div><div class="sdxm-pval">{{ patient.cpf }}</div></div>
+            <div><div class="sdxm-plabel">Tipo Sanguíneo</div><div class="sdxm-pval">{{ patient.bloodType }}</div></div>
+            <div><div class="sdxm-plabel">Prontuário</div><div class="sdxm-pval">{{ patient.prontuario }}</div></div>
+            <div><div class="sdxm-plabel">CEP</div><div class="sdxm-pval">{{ patient.cep }}</div></div>
+            <div style="grid-column: 1 / -1;"><div class="sdxm-plabel">Cartão SUS</div><div class="sdxm-pval">{{ patient.susNumber }}</div></div>
+            <div style="grid-column: 1 / -1;"><div class="sdxm-plabel">Endereço</div><div class="sdxm-pval">{{ patient.address }}</div></div>
+          </div>
+        </div>
+
+        <!-- Histórico de cirurgias -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin: 4px 2px 12px;">
+          <span style="font-size: 14px; font-weight: 800; color: #0F172A; letter-spacing: -0.2px;">Histórico de Cirurgias</span>
+          <span style="font-size: 12px; color: #64748B;">{{ totalLabel }}</span>
+        </div>
+        <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.SegmentedControl" options="{{ surgTabs }}" value="{{ surgTab }}" on-change="{{ setSurgTab }}" size="sm" hint-size="100%,44px"></x-import>
+
+        <div style="margin-top: 14px;">
+          <sc-for list="{{ surgeries }}" as="s" hint-placeholder-count="4">
+            <div style="background: #fff; border: 1px solid #E2E8F2; border-radius: 14px; padding: 14px; box-shadow: 0 1px 3px rgba(15,23,42,.05); margin-bottom: 10px;">
+              <div style="display: flex; align-items: flex-start; gap: 11px;">
+                <div style="padding-top: 3px;">
+                  <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.StatusDot" status="{{ s.docStatus }}" reported="{{ s.isReported }}" hint-size="20px,20px"></x-import>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <sc-if value="{{ s.prog }}" hint-placeholder-val="{{ false }}">
+                    <div style="display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700; letter-spacing: .2px; color: #072AC8;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+                      {{ s.dateLabel }}
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s.notProg }}" hint-placeholder-val="{{ true }}">
+                    <div style="display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700; letter-spacing: .2px; color: #64748B;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+                      {{ s.dateLabel }}
+                    </div>
+                  </sc-if>
+                  <div style="font-size: 14.5px; font-weight: 700; color: #0F172A; margin-top: 5px; line-height: 1.3;">{{ s.name }}</div>
+                  <div style="font-size: 12.5px; color: #64748B; margin-top: 2px;">{{ s.specialty }}</div>
+                  <sc-if value="{{ s.cancelled }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size: 12px; color: #DC2626; margin-top: 6px; display: flex; align-items: center; gap: 5px;">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      {{ s.cancellationReason }}
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 11px; border-top: 1px solid #F1F5FB;">
+                <div style="font-size: 11.5px; color: #94A3B8; font-weight: 600;">{{ s.docMeta }}</div>
+                <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.MobileButton" variant="{{ s.docBtnVariant }}" size="sm" disabled="{{ s.noDoc }}" on-click="{{ s.openDoc }}" hint-size="140px,40px">Ver Documento</x-import>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.TabBar" items="{{ tabs }}" active="{{ tab }}" on-change="{{ onTab }}" hint-size="100%,72px"></x-import>
+    </div>
+  </sc-if>
+
+  <!-- ══════════ VIEW: DOCUMENTO ══════════ -->
+  <sc-if value="{{ isDoc }}" hint-placeholder-val="{{ false }}">
+    <div style="height: 100%; display: flex; flex-direction: column; background: #0B1020;">
+      <!-- header compacto -->
+      <div style="background: linear-gradient(135deg, #072AC8, #051E9B); padding: 44px 14px 12px; display: flex; align-items: center; gap: 11px; flex-shrink: 0;">
+        <button onclick="{{ goDetails }}" style="width: 36px; height: 36px; border-radius: 10px; border: none; cursor: pointer; background: rgba(255,255,255,.16); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        </button>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 14.5px; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ surgery.name }}</div>
+          <div style="font-size: 11.5px; color: rgba(255,255,255,.72);">{{ docPatientLine }}</div>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button style="width: 36px; height: 36px; border-radius: 10px; border: none; cursor: pointer; background: rgba(255,255,255,.16); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
+          <button style="width: 36px; height: 36px; border-radius: 10px; border: none; cursor: pointer; background: rgba(255,255,255,.16); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg></button>
+        </div>
+      </div>
+      <!-- área do documento — página ocupa toda a vertical da view -->
+      <div style="flex: 1; overflow: auto; display: flex; align-items: stretch; justify-content: center; padding: 18px 16px; background: radial-gradient(120% 80% at 50% 0%, #161d33, #0B1020);">
+        <div ref="{{ zoomRef }}" style="width: 100%; display: flex; justify-content: center; transition: transform .18s ease; transform-origin: top center;">
+          <div style="width: 100%; max-width: 360px; background: #fff; border-radius: 5px; padding: 30px 28px; box-shadow: 0 10px 36px rgba(0,0,0,.45); position: relative; display: flex; flex-direction: column;">
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #1f2937; padding-bottom: 14px; margin-bottom: 20px;">
+              <div>
+                <div style="font-size: 13px; font-weight: 800; color: #1f2937; letter-spacing: .3px;">HOSPITAL DO OLHO — JCB</div>
+                <div style="font-size: 9px; color: #9ca3af; margin-top: 3px; letter-spacing: .5px;">PRONTUÁRIO CIRÚRGICO DIGITALIZADO</div>
+              </div>
+              <div style="width: 38px; height: 38px; border-radius: 8px; background: #eef2f7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/></svg>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 11px 16px; margin-bottom: 22px;">
+              <div><div style="height: 5px; width: 52%; background: #cbd5e1; border-radius: 2px; margin-bottom: 6px;"></div><div style="height: 8px; width: 84%; background: #1f2937; border-radius: 2px; opacity: .82;"></div></div>
+              <div><div style="height: 5px; width: 52%; background: #cbd5e1; border-radius: 2px; margin-bottom: 6px;"></div><div style="height: 8px; width: 84%; background: #1f2937; border-radius: 2px; opacity: .82;"></div></div>
+              <div><div style="height: 5px; width: 52%; background: #cbd5e1; border-radius: 2px; margin-bottom: 6px;"></div><div style="height: 8px; width: 84%; background: #1f2937; border-radius: 2px; opacity: .82;"></div></div>
+              <div><div style="height: 5px; width: 52%; background: #cbd5e1; border-radius: 2px; margin-bottom: 6px;"></div><div style="height: 8px; width: 84%; background: #1f2937; border-radius: 2px; opacity: .82;"></div></div>
+            </div>
+            <div style="height: 7px; width: 38%; background: #94a3b8; border-radius: 2px; margin-bottom: 16px;"></div>
+            <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+              <div style="height: 5px; width: 95%; background: #e2e8f0; border-radius: 2px;"></div>
+              <div style="height: 5px; width: 82%; background: #e2e8f0; border-radius: 2px;"></div>
+              <div style="height: 5px; width: 88%; background: #e2e8f0; border-radius: 2px;"></div>
+              <div style="height: 5px; width: 70%; background: #e2e8f0; border-radius: 2px;"></div>
+              <div style="height: 5px; width: 91%; background: #e2e8f0; border-radius: 2px;"></div>
+              <div style="height: 5px; width: 78%; background: #e2e8f0; border-radius: 2px;"></div>
+              <div style="height: 5px; width: 86%; background: #e2e8f0; border-radius: 2px;"></div>
+              <div style="height: 5px; width: 64%; background: #e2e8f0; border-radius: 2px;"></div>
+              <div style="height: 5px; width: 90%; background: #e2e8f0; border-radius: 2px;"></div>
+              <div style="height: 5px; width: 74%; background: #e2e8f0; border-radius: 2px;"></div>
+              <div style="height: 5px; width: 83%; background: #e2e8f0; border-radius: 2px;"></div>
+              <div style="height: 5px; width: 58%; background: #e2e8f0; border-radius: 2px;"></div>
+            </div>
+            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px dashed #e2e8f0; display: flex; align-items: flex-end; justify-content: space-between;">
+              <div style="height: 5px; width: 90px; background: #cbd5e1; border-radius: 2px;"></div>
+              <div style="font-size: 9px; color: #cbd5e1; font-weight: 600;">Pág. {{ page }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- controles flutuantes -->
+      <div style="position: relative; flex-shrink: 0; display: flex; justify-content: center; padding: 0 0 26px;">
+        <div style="display: flex; align-items: center; gap: 4px; background: rgba(17,24,42,.82); border: 1px solid rgba(255,255,255,.1); border-radius: 999px; padding: 6px; box-shadow: 0 12px 30px rgba(0,0,0,.45);">
+          <button onclick="{{ zoomOut }}" style="width: 38px; height: 38px; border-radius: 50%; border: none; cursor: pointer; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M8 11h6"/></svg></button>
+          <span style="min-width: 50px; text-align: center; font-size: 12.5px; font-weight: 700; color: #fff;">{{ zoomPct }}</span>
+          <button onclick="{{ zoomIn }}" style="width: 38px; height: 38px; border-radius: 50%; border: none; cursor: pointer; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/></svg></button>
+          <span style="width: 1px; height: 22px; background: rgba(255,255,255,.16); margin: 0 4px;"></span>
+          <button onclick="{{ resetDoc }}" style="width: 38px; height: 38px; border-radius: 50%; border: none; cursor: pointer; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg></button>
+          <button onclick="{{ prevPage }}" style="width: 38px; height: 38px; border-radius: 50%; border: none; cursor: pointer; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <span style="min-width: 42px; text-align: center; font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.85);">{{ pageLabel }}</span>
+          <button onclick="{{ nextPage }}" style="width: 38px; height: 38px; border-radius: 50%; border: none; cursor: pointer; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══════════ VIEW: PERFIL ══════════ -->
+  <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+    <div style="height: 100%; display: flex; flex-direction: column;">
+      <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.BlueHeader" title="Perfil" hint-size="100%,120px"></x-import>
+      <div class="sdxm-track" style="flex: 1; overflow: auto; padding: 18px 16px 24px;">
+
+        <!-- Cartão de identidade -->
+        <div style="background: #fff; border: 1px solid #E2E8F2; border-radius: 18px; padding: 22px 18px; box-shadow: 0 1px 3px rgba(15,23,42,.05); display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 18px;">
+          <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.Avatar" initials="{{ me.initials }}" size="84" hint-size="84px,84px"></x-import>
+          <div style="font-size: 18px; font-weight: 800; color: #0F172A; margin-top: 12px; letter-spacing: -0.3px; line-height: 1.25;">{{ me.name }}</div>
+          <div style="font-size: 13px; color: #64748B; margin-top: 6px;">{{ me.role }}</div>
+          <div style="margin-top: 12px;">
+            <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.StatusBadge" label="{{ me.crm }}" color="#072AC8" dot="{{ false }}" hint-size="120px,22px"></x-import>
+          </div>
+        </div>
+
+        <!-- Dados da conta -->
+        <div style="font-size: 11px; font-weight: 700; color: #64748B; letter-spacing: .5px; text-transform: uppercase; margin: 4px 2px 10px;">Conta</div>
+        <div style="background: #fff; border: 1px solid #E2E8F2; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(15,23,42,.05); margin-bottom: 18px;">
+          <div style="display: flex; align-items: center; gap: 13px; padding: 14px 16px;">
+            <span style="width: 38px; height: 38px; border-radius: 11px; background: #EEF2FE; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#072AC8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z" opacity="0"/><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg></span>
+            <div style="flex: 1; min-width: 0;"><div style="font-size: 11px; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;">E-mail</div><div style="font-size: 14px; font-weight: 600; color: #0F172A; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ me.email }}</div></div>
+          </div>
+          <div style="height: 1px; background: #F1F5FB; margin: 0 16px;"></div>
+          <div style="display: flex; align-items: center; gap: 13px; padding: 14px 16px;">
+            <span style="width: 38px; height: 38px; border-radius: 11px; background: #EEF2FE; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#072AC8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3M9 9v.01M9 13v.01M9 17v.01"/></svg></span>
+            <div style="flex: 1; min-width: 0;"><div style="font-size: 11px; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;">Unidade</div><div style="font-size: 14px; font-weight: 600; color: #0F172A; margin-top: 2px;">{{ me.unit }}</div></div>
+          </div>
+          <div style="height: 1px; background: #F1F5FB; margin: 0 16px;"></div>
+          <div style="display: flex; align-items: center; gap: 13px; padding: 14px 16px;">
+            <span style="width: 38px; height: 38px; border-radius: 11px; background: #EEF2FE; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#072AC8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg></span>
+            <div style="flex: 1; min-width: 0;"><div style="font-size: 11px; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;">Aplicação ativa</div><div style="font-size: 14px; font-weight: 600; color: #0F172A; margin-top: 2px;">{{ me.appLabel }}</div></div>
+          </div>
+        </div>
+
+        <!-- Preferências -->
+        <div style="font-size: 11px; font-weight: 700; color: #64748B; letter-spacing: .5px; text-transform: uppercase; margin: 4px 2px 10px;">Preferências</div>
+        <div style="background: #fff; border: 1px solid #E2E8F2; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(15,23,42,.05); margin-bottom: 22px;">
+          <button style="width: 100%; display: flex; align-items: center; gap: 13px; padding: 15px 16px; background: #fff; border: none; cursor: pointer; font-family: 'Inter', sans-serif; text-align: left;">
+            <span style="width: 38px; height: 38px; border-radius: 11px; background: #F1F5FB; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg></span>
+            <span style="flex: 1; font-size: 14.5px; font-weight: 600; color: #0F172A;">Notificações</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <div style="height: 1px; background: #F1F5FB; margin: 0 16px;"></div>
+          <button style="width: 100%; display: flex; align-items: center; gap: 13px; padding: 15px 16px; background: #fff; border: none; cursor: pointer; font-family: 'Inter', sans-serif; text-align: left;">
+            <span style="width: 38px; height: 38px; border-radius: 11px; background: #F1F5FB; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+            <span style="flex: 1; font-size: 14.5px; font-weight: 600; color: #0F172A;">Segurança e acesso</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <div style="height: 1px; background: #F1F5FB; margin: 0 16px;"></div>
+          <button style="width: 100%; display: flex; align-items: center; gap: 13px; padding: 15px 16px; background: #fff; border: none; cursor: pointer; font-family: 'Inter', sans-serif; text-align: left;">
+            <span style="width: 38px; height: 38px; border-radius: 11px; background: #F1F5FB; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></span>
+            <span style="flex: 1; font-size: 14.5px; font-weight: 600; color: #0F172A;">Ajuda e suporte</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </div>
+
+        <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.MobileButton" variant="outline" full-width="{{ true }}" on-click="{{ logout }}" hint-size="100%,52px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          <span style="color: #DC2626;">Sair da conta</span>
+        </x-import>
+
+        <div style="text-align: center; font-size: 11px; color: #94A3B8; margin-top: 18px;">ScandexPRO™ Mobile · v1.0</div>
+      </div>
+      <x-import component-from-global-scope="ScandexPlusDesignSystem_c9a9df.TabBar" items="{{ tabs }}" active="{{ tab }}" on-change="{{ onTab }}" hint-size="100%,72px"></x-import>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    view: 'search', app: 'surg', pront: '', cpf: '', tab: 'records',
+    surgTab: 'all', page: 1, zoom: 1, surgeryId: null,
+  };
+  zoomRef = React.createRef();
+
+  applyZoom() {
+    if (this.zoomRef.current) this.zoomRef.current.style.transform = `scale(${this.state.zoom})`;
+  }
+  componentDidMount() { this.applyZoom(); }
+  componentDidUpdate() { this.applyZoom(); }
+
+  patient() {
+    return {
+      prontuario: '123456', name: 'Maria Aparecida Nogueira da Silva', age: '64 anos', birthDate: '12/03/1961',
+      cpf: '472.118.965-04', susNumber: '706 0042 8815 0007', bloodType: 'O+',
+      cep: '60192-340', address: 'Rua das Acácias, 128 — Aldeota, Fortaleza/CE', barcodeBase: '123-4567-8901',
+    };
+  }
+
+  allSurgeries() {
+    return [
+      { id: 's1', date: '28/05/2025', name: 'Facectomia + LIO — OD', specialty: 'Catarata', status: 'performed', docType: 'pdf', pages: 6, docStatus: 'available', isReported: false, anexos: 2 },
+      { id: 's2', date: '18/06/2025', prog: true, name: 'Facectomia + LIO — OE', specialty: 'Catarata', status: 'scheduled', docType: null, pages: 1, docStatus: 'processing', isReported: false, anexos: 0 },
+      { id: 's3', date: '15/03/2025', name: 'Mapeamento de retina', specialty: 'Retina', status: 'performed', docType: 'image', pages: 3, docStatus: 'altered', isReported: false, anexos: 0 },
+      { id: 's4', date: '20/08/2024', name: 'Yag laser — capsulotomia', specialty: 'Catarata', status: 'performed', docType: 'pdf', pages: 4, docStatus: 'missing_info', isReported: true, anexos: 1 },
+      { id: 's5', date: '02/11/2024', name: 'Trabeculectomia — OE', specialty: 'Glaucoma', status: 'cancelled', cancellationReason: 'Paciente remarcou por motivos pessoais', docType: null, pages: 1, docStatus: 'absent', isReported: false, anexos: 0 },
+    ];
+  }
+
+  maskCPF(v) {
+    const d = v.replace(/\D/g, '').slice(0, 11);
+    if (d.length > 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+    if (d.length > 6) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
+    if (d.length > 3) return `${d.slice(0,3)}.${d.slice(3)}`;
+    return d;
+  }
+
+  renderVals() {
+    const all = this.allSurgeries();
+    const performed = all.filter(s => s.status !== 'cancelled');
+    const cancelled = all.filter(s => s.status === 'cancelled');
+    const filtered = this.state.surgTab === 'all' ? all : this.state.surgTab === 'performed' ? performed : cancelled;
+    const cur = all.find(s => s.id === this.state.surgeryId) || all[0];
+    const total = cur.pages || 1;
+    const p = this.patient();
+
+    const surgeries = filtered.map(s => {
+      const noDoc = s.docStatus === 'absent' || s.docStatus === 'processing';
+      const docMeta = s.docType ? `${s.docType.toUpperCase()}${s.pages ? ' · ' + s.pages + 'p' : ''}` + (s.anexos ? `  📎 ${s.anexos}` : '') : (s.anexos ? `📎 ${s.anexos}` : '');
+      return {
+        ...s,
+        cancelled: s.status === 'cancelled',
+        prog: !!s.prog,
+        notProg: !s.prog,
+        dateLabel: s.prog ? `Data Prog. ${s.date}` : s.date,
+        docMeta,
+        noDoc,
+        docBtnVariant: noDoc ? 'secondary' : 'outline',
+        openDoc: () => this.setState({ view: 'doc', surgeryId: s.id, page: 1, zoom: 1 }),
+      };
+    });
+
+    const prontDigits = this.state.pront.replace(/\D/g, '');
+    const cpfDigits = this.state.cpf.replace(/\D/g, '');
+    const prontValid = prontDigits.length >= 5;
+    const cpfValid = cpfDigits.length === 11;
+
+    return {
+      isProfile: this.state.tab === 'profile',
+      isSearch: this.state.tab !== 'profile' && this.state.view === 'search',
+      isDetails: this.state.tab !== 'profile' && this.state.view === 'details',
+      isDoc: this.state.tab !== 'profile' && this.state.view === 'doc',
+
+      // search
+      app: this.state.app, pront: this.state.pront, cpf: this.state.cpf, tab: this.state.tab,
+      prontValid, cpfValid, searchDisabled: !(prontValid || cpfValid),
+      apps: [{ key: 'surg', label: 'Cirurgias — HO' }, { key: 'legal', label: 'Jurídico — HO' }],
+      tabs: [
+        { key: 'home', label: 'Início', icon: 'home' },
+        { key: 'records', label: 'Prontuários', icon: 'file-text' },
+        { key: 'profile', label: 'Perfil', icon: 'user' },
+      ],
+      setApp: (k) => this.setState({ app: k }),
+      onTab: (k) => this.setState({ tab: k, view: (k === 'home' || k === 'records') ? 'search' : this.state.view }),
+      setPront: (v) => this.setState({ pront: String(v).replace(/[^\d]/g, '') }),
+      setCpf: (v) => this.setState({ cpf: this.maskCPF(String(v)) }),
+      buscar: () => this.setState({ view: 'details', surgTab: 'all' }),
+      openMaria: () => this.setState({ view: 'details', surgTab: 'all', tab: 'records' }),
+
+      // details
+      patient: p,
+      patientInitials: p.name.split(' ').filter(Boolean).map(w => w[0]).join('').replace(/[a-z]/g,'').slice(0,2) || p.name.slice(0,2),
+      patientEyebrow: `Prontuário ${p.prontuario}`,
+      totalLabel: `${all.length} registros`,
+      surgTab: this.state.surgTab,
+      surgTabs: [
+        { key: 'all', label: 'Todas', count: all.length },
+        { key: 'performed', label: 'Realizadas', count: performed.length },
+        { key: 'cancelled', label: 'Canceladas', count: cancelled.length },
+      ],
+      setSurgTab: (k) => this.setState({ surgTab: k }),
+      surgeries,
+      goSearch: () => this.setState({ view: 'search' }),
+
+      // profile
+      me: {
+        name: 'Dra. Helena Vasconcelos', initials: 'HV',
+        role: 'Cirurgiã Oftalmologista', crm: 'CRM-CE 18432',
+        email: 'helena.vasconcelos@ho-jcb.com.br', unit: 'Hospital do Olho — JCB',
+        appLabel: this.state.app === 'surg' ? 'Cirurgias — HO' : 'Jurídico — HO',
+      },
+      logout: () => this.setState({ tab: 'records', view: 'search' }),
+
+      // doc
+      surgery: cur,
+      zoomRef: this.zoomRef,
+      docPatientLine: `${p.name.split(' ').slice(0, 2).join(' ')} · Pront. ${p.prontuario}`,
+      page: this.state.page, zoom: this.state.zoom,
+      zoomPct: `${Math.round(this.state.zoom * 100)}%`,
+      pageLabel: `${this.state.page}/${total}`,
+      goDetails: () => this.setState({ view: 'details' }),
+      zoomIn: () => this.setState({ zoom: Math.min(2.4, +(this.state.zoom + 0.2).toFixed(2)) }),
+      zoomOut: () => this.setState({ zoom: Math.max(0.6, +(this.state.zoom - 0.2).toFixed(2)) }),
+      resetDoc: () => this.setState({ zoom: 1, page: 1 }),
+      prevPage: () => this.setState({ page: Math.max(1, this.state.page - 1) }),
+      nextPage: () => this.setState({ page: Math.min(total, this.state.page + 1) }),
+    };
+  }
+}
+</script>
+</body>
+</html>

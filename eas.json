@@ -25,7 +25,8 @@
       },
       "env": {
         "EXPO_PUBLIC_SDX_API_URL": "https://app.scandexplus.com.br",
-        "EXPO_PUBLIC_APP_ENV": "production"
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       },
       "channel": "production"
     },
@@ -35,7 +36,8 @@
       },
       "env": {
         "EXPO_PUBLIC_SDX_API_URL": "https://app-test.scandexplus.com.br",
-        "EXPO_PUBLIC_APP_ENV": "test"
+        "EXPO_PUBLIC_APP_ENV": "test",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       },
       "channel": "test"
     }

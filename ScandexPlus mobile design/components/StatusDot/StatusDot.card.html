@@ -1,0 +1,40 @@
+<!-- @dsCard group="Components — Mobile" name="StatusDot & Legend" subtitle="Document-status language · 5 colors + ⚠️ reported" viewport="440x300" -->
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8" />
+<link rel="stylesheet" href="../../colors_and_type.css" />
+<style>
+  body { margin: 0; background: var(--sdx-m-bg, #F5F7FB); font-family: 'Inter', sans-serif; padding: 26px; display: flex; gap: 22px; }
+  .panel { background: var(--sdx-m-surface, #fff); border: 1px solid var(--sdx-m-border, #E2E8F2); border-radius: 16px; padding: 18px; box-shadow: var(--sdx-m-shadow-card); }
+  .lbl { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--sdx-m-muted, #64748B); margin-bottom: 14px; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--sdx-m-surface-muted, #F1F5FB); }
+  .row:first-of-type { border-top: none; }
+  .nm { font-size: 13px; font-weight: 600; color: var(--sdx-m-text, #0F172A); }
+</style>
+</head><body>
+<div class="panel"><div class="lbl">Legenda</div><div id="legend"></div></div>
+<div class="panel" style="flex:1"><div class="lbl">Em uso na lista</div><div id="list"></div></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+  const { StatusDot, StatusLegend } = window.ScandexPlusDesignSystem_c9a9df;
+  ReactDOM.createRoot(document.getElementById('legend')).render(<StatusLegend />);
+  const rows = [
+    { d: '28/05/2025', n: 'Facectomia + LIO — OD', s: { status: 'available' } },
+    { d: '18/06/2025', n: 'Facectomia + LIO — OE', s: { status: 'processing' } },
+    { d: '15/03/2025', n: 'Mapeamento de retina', s: { status: 'altered' } },
+    { d: '20/08/2024', n: 'Yag laser — capsulotomia', s: { reported: true } },
+    { d: '02/11/2024', n: 'Trabeculectomia — OE', s: { status: 'absent' } },
+  ];
+  ReactDOM.createRoot(document.getElementById('list')).render(
+    <>{rows.map((r, i) => (
+      <div className="row" key={i}>
+        <StatusDot {...r.s} />
+        <div style={{ flex: 1 }}><div className="nm">{r.n}</div></div>
+        <div style={{ fontSize: 11.5, color: '#94A3B8' }}>{r.d}</div>
+      </div>
+    ))}</>
+  );
+</script>
+</body></html>

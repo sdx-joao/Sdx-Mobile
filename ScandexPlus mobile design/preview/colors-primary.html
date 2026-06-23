@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Colors" name="Primary & Accent Colors" subtitle="Brand blue #072AC8, teal #4DB6AC, and neutrals" viewport="700x200" -->
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { margin: 0; padding: 16px; background: #f8f9fb; font-family: 'Inter', sans-serif; }
+.row { display: flex; gap: 8px; margin-bottom: 10px; }
+.swatch { flex: 1; border-radius: 6px; padding: 14px 10px 10px; min-height: 72px; display: flex; flex-direction: column; justify-content: flex-end; }
+.swatch .name { font-size: 11px; font-weight: 600; }
+.swatch .hex  { font-size: 10px; opacity: 0.75; margin-top: 2px; }
+.label { font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; margin-bottom: 4px; }
+</style>
+</head><body>
+<div class="label">Brand Blue</div>
+<div class="row">
+  <div class="swatch" style="background:#072AC8;color:#fff">
+    <div class="name">Primary</div><div class="hex">#072AC8</div>
+  </div>
+  <div class="swatch" style="background:#3a57d9;color:#fff">
+    <div class="name">Primary Hover</div><div class="hex">#3A57D9</div>
+  </div>
+  <div class="swatch" style="background:hsl(230 93% 60%);color:#fff">
+    <div class="name">Dark Mode</div><div class="hex">hsl(230 93% 60%)</div>
+  </div>
+  <div class="swatch" style="background:rgba(7,42,200,0.12);color:#072AC8">
+    <div class="name">Primary/12</div><div class="hex">bg overlay</div>
+  </div>
+</div>
+<div class="label">Teal Accent</div>
+<div class="row">
+  <div class="swatch" style="background:#4DB6AC;color:#fff">
+    <div class="name">Accent</div><div class="hex">#4DB6AC</div>
+  </div>
+  <div class="swatch" style="background:hsl(174 43% 60%);color:#fff">
+    <div class="name">Dark Mode</div><div class="hex">hsl(174 43% 60%)</div>
+  </div>
+  <div class="swatch" style="background:hsl(174 43% 90%);color:#2a7a74">
+    <div class="name">Teal Muted</div><div class="hex">tint</div>
+  </div>
+  <div class="swatch" style="background:hsl(174 43% 30%);color:#fff">
+    <div class="name">Teal Deep</div><div class="hex">hsl(174 43% 30%)</div>
+  </div>
+</div>
+<div class="label">Neutrals</div>
+<div class="row">
+  <div class="swatch" style="background:#fff;color:#222;border:1px solid #e5e7eb">
+    <div class="name">White</div><div class="hex">#FFFFFF</div>
+  </div>
+  <div class="swatch" style="background:hsl(210 40% 96.1%);color:#374151">
+    <div class="name">Muted BG</div><div class="hex">hsl(210 40% 96.1%)</div>
+  </div>
+  <div class="swatch" style="background:hsl(214.3 31.8% 91.4%);color:#374151">
+    <div class="name">Border</div><div class="hex">hsl(214 32% 91%)</div>
+  </div>
+  <div class="swatch" style="background:hsl(215.4 16.3% 46.9%);color:#fff">
+    <div class="name">Muted FG</div><div class="hex">hsl(215 16% 47%)</div>
+  </div>
+  <div class="swatch" style="background:hsl(222.2 84% 4.9%);color:#fff">
+    <div class="name">Foreground</div><div class="hex">hsl(222 84% 5%)</div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Components" name="Form Inputs" subtitle="Text inputs, select, textarea, validation states" viewport="700x240" -->
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { margin: 0; padding: 16px; background: #f8f9fb; font-family: 'Inter', sans-serif; }
+.label { font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; margin-bottom: 6px; }
+.section { margin-bottom: 16px; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 13px; font-weight: 500; color: hsl(222.2,84%,4.9%); margin-bottom: 4px; }
+input, select, textarea {
+  width: 100%; box-sizing: border-box;
+  background: #e5e7eb; border: 1px solid #9ca3af;
+  color: #111827; border-radius: 6px;
+  padding: 8px 10px; font-size: 13px; font-family: 'Inter', sans-serif;
+  outline: none; transition: all 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  background: #f9fafb; border-color: #072AC8;
+  box-shadow: 0 0 0 2px rgba(7,42,200,0.15);
+}
+input::placeholder, textarea::placeholder { color: #9ca3af; font-style: italic; }
+.error input { border-color: hsl(0 84.2% 60.2%); }
+.error .msg { font-size: 11px; color: hsl(0 84.2% 60.2%); margin-top: 3px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+</style>
+</head><body>
+<div class="label">Form Inputs</div>
+<div class="row2">
+  <div class="field">
+    <label>Nome de Usuário</label>
+    <input type="text" placeholder="ex: nome" />
+  </div>
+  <div class="field">
+    <label>Senha</label>
+    <input type="password" placeholder="ex: senha" />
+  </div>
+  <div class="field">
+    <label>Número do Prontuário</label>
+    <input type="text" value="100111" />
+  </div>
+  <div class="field">
+    <label>CPF</label>
+    <input type="text" placeholder="000.000.000-00" />
+  </div>
+</div>
+<div class="section">
+  <div class="label">Validation State</div>
+  <div class="field error">
+    <label>CPF</label>
+    <input type="text" value="123.456" />
+    <div class="msg">CPF inválido. Verifique o número informado.</div>
+  </div>
+</div>
+<div class="section">
+  <div class="label">Select &amp; Textarea</div>
+  <div class="row2">
+    <div class="field">
+      <label>Tipo de Documento</label>
+      <select><option>Todos os Tipos</option><option>PDF</option><option>Imagem</option></select>
+    </div>
+    <div class="field">
+      <label>Observações</label>
+      <textarea rows="2" placeholder="Descreva o problema..."></textarea>
+    </div>
+  </div>
+</div>
+</body></html>

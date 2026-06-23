@@ -1,4 +1,4 @@
-import { API_BASE_URL, ApiError, apiFetch } from './client';
+import { API_BASE_URL, ApiError, IS_TEST_BUILD, apiFetch } from './client';
 import type { WorkOrder, WorkOrderPriority, WorkOrderStatus, InventoryItem, Movement, TimelineEvent } from '../data/mock';
 import type { MobileUser } from '../auth/types';
 
@@ -185,6 +185,9 @@ export async function uploadWorkOrderAttachment(
   const form = new FormData();
   form.append('category', input.category);
   if (input.comment) form.append('comment', input.comment);
+  if (IS_TEST_BUILD && input.type.startsWith('image/')) {
+    form.append('retentionTag', 'test-photo-4h');
+  }
   form.append('file', {
     uri: input.uri,
     name: input.name,

@@ -61,4 +61,5 @@ Offline fica para fase posterior.
 
 Veja:
 
+- `docs/README.md`
 - `docs/IMPLEMENTATION_PLAN.md`

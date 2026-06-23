@@ -1,0 +1,121 @@
+<!-- @dsCard group="Brand" name="Tela de Loading" subtitle="Splash estilizada com a logo Scandex — boot do app" viewport="390x844" -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ScandexPRO — Carregando</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --sdx-blue: #0728CA;
+      --sdx-blue-dark: #051E9B;
+      --sdx-blue-deep: #06165F;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      background: #06165F;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .splash {
+      position: relative;
+      width: 100%; height: 100vh; overflow: hidden;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: radial-gradient(120% 90% at 50% 18%, var(--sdx-blue) 0%, var(--sdx-blue-dark) 52%, var(--sdx-blue-deep) 100%);
+      color: #fff;
+    }
+
+    /* orbit rings */
+    .ring {
+      position: absolute; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.07);
+      animation: ringSpin 26s linear infinite;
+    }
+    .ring.r1 { width: 460px; height: 460px; }
+    .ring.r2 { width: 320px; height: 320px; border-color: rgba(255,255,255,.09); animation-duration: 20s; animation-direction: reverse; }
+    .ring-dot {
+      position: absolute; top: -4px; left: 50%; width: 8px; height: 8px;
+      border-radius: 50%; background: rgba(255,255,255,.55); transform: translateX(-50%);
+    }
+
+    /* logo + halo */
+    .logo-wrap {
+      position: relative; display: flex; align-items: center; justify-content: center;
+      margin-bottom: 32px;
+    }
+    .halo {
+      position: absolute; width: 108px; height: 108px; border-radius: 31px;
+      background: rgba(255,255,255,.16);
+      animation: pulseRing 2.1s ease-out infinite;
+    }
+    .halo.h2 { animation-delay: 1.05s; background: rgba(255,255,255,.10); }
+    .tile {
+      position: relative; width: 100px; height: 100px; border-radius: 29px; background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 16px 40px -12px rgba(0,0,0,.55);
+      animation: tileFloat 3s ease-in-out infinite;
+    }
+    .tile img { width: 74px; height: 74px; object-fit: contain; }
+
+    .title { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+    .title sup { font-size: 11px; font-weight: 600; opacity: .7; }
+    .subtitle { margin-top: 8px; font-size: 13.5px; color: rgba(255,255,255,.62); }
+
+    .bar { width: 176px; height: 4px; border-radius: 999px; background: rgba(255,255,255,.16); overflow: hidden; margin-top: 34px; }
+    .bar > span { display: block; height: 100%; width: 42%; border-radius: 999px; background: rgba(255,255,255,.95); animation: progress 1.25s ease-in-out infinite; }
+    .status { margin-top: 14px; font-size: 12px; color: rgba(255,255,255,.5); letter-spacing: .3px; }
+
+    .footer { position: absolute; bottom: 42px; display: flex; align-items: center; gap: 9px; }
+    .footer .pb { font-size: 12px; font-style: italic; color: rgba(255,255,255,.6); }
+    .footer .lockup { display: inline-flex; align-items: center; gap: 6px; background: #fff; border-radius: 999px; padding: 5px 13px 5px 6px; }
+    .footer .lockup img { width: 21px; height: 21px; object-fit: contain; }
+    .footer .lockup b { font-size: 12.5px; font-weight: 800; color: #2B2B2B; letter-spacing: -.2px; }
+    .footer .lockup b i { color: #3E8FBE; font-style: normal; }
+
+    @keyframes pulseRing { 0% { transform: scale(.85); opacity: .7; } 70% { transform: scale(1.6); opacity: 0; } 100% { opacity: 0; } }
+    @keyframes tileFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+    @keyframes progress { 0% { transform: translateX(-130%); } 100% { transform: translateX(330%); } }
+    @keyframes ringSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .halo, .tile, .bar > span, .ring { animation: none; }
+    }
+  </style>
+  <template id="__bundler_thumbnail">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" rx="22" fill="#0728CA"/>
+      <circle cx="50" cy="44" r="20" fill="#2B2B2B"/>
+      <text x="50" y="48" font-family="sans-serif" font-size="11" font-weight="800" fill="#fff" text-anchor="middle">sdx</text>
+      <rect x="32" y="72" width="36" height="4" rx="2" fill="rgba(255,255,255,.5)"/>
+    </svg>
+  </template>
+</head>
+<body>
+  <div class="splash">
+    <div class="ring r1"><span class="ring-dot"></span></div>
+    <div class="ring r2"><span class="ring-dot"></span></div>
+
+    <div class="logo-wrap">
+      <span class="halo"></span>
+      <span class="halo h2"></span>
+      <div class="tile"><img src="uploads/secundaria.png" alt="Scandex" /></div>
+    </div>
+
+    <div class="title">ScandexPRO<sup>™</sup></div>
+    <div class="subtitle">Gestão de serviços e inventário</div>
+
+    <div class="bar"><span></span></div>
+    <div class="status">Carregando…</div>
+
+    <div class="footer">
+      <span class="pb">powered by</span>
+      <span class="lockup"><img src="uploads/secundaria.png" alt="" /><b>scandex<i>+</i></b></span>
+    </div>
+  </div>
+</body>
+</html>
