@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { apiFetch } from '../api/client';
+import { apiFetch, setUnauthorizedHandler } from '../api/client';
 import { clearToken, getToken, markDeviceRegistered, saveToken } from './token-store';
 import type { LoginResponse, MobileUser } from './types';
 
@@ -49,6 +49,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
+  async function clearSession() {
+    await clearToken();
+    setToken(null);
+    setUser(null);
+    setStatus('unauthenticated');
+  }
+
   // Bootstrap: reusa o token salvo e revalida em /api/mobile/me
   useEffect(() => {
     (async () => {
@@ -67,6 +74,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus('unauthenticated');
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      void clearSession();
+    });
+    return () => setUnauthorizedHandler(null);
   }, []);
 
   async function signIn(username: string, password: string) {
@@ -108,10 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
-    await clearToken();
-    setToken(null);
-    setUser(null);
-    setStatus('unauthenticated');
+    await clearSession();
   }
 
   const value = useMemo<AuthContextValue>(

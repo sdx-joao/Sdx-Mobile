@@ -20,6 +20,16 @@ export class ApiError extends Error {
   }
 }
 
+let unauthorizedHandler: (() => void | Promise<void>) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void | Promise<void>) | null) {
+  unauthorizedHandler = handler;
+}
+
+export function notifyUnauthorized() {
+  void unauthorizedHandler?.();
+}
+
 type FetchOptions = Omit<RequestInit, 'body'> & {
   body?: unknown;
   token?: string | null;
@@ -60,6 +70,9 @@ export async function apiFetch<T = unknown>(
   const payload = isJson ? await res.json().catch(() => null) : null;
 
   if (!res.ok) {
+    if (res.status === 401 && token) {
+      notifyUnauthorized();
+    }
     const message =
       (payload && (payload.message || payload.error)) || `Erro ${res.status}`;
     throw new ApiError(message, res.status, payload?.code);

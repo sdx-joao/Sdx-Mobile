@@ -1,4 +1,4 @@
-import { API_BASE_URL, ApiError, IS_TEST_BUILD, apiFetch } from './client';
+import { API_BASE_URL, ApiError, IS_TEST_BUILD, apiFetch, notifyUnauthorized } from './client';
 import type { WorkOrder, WorkOrderPriority, WorkOrderStatus, InventoryItem, Movement, TimelineEvent } from '../data/mock';
 import type { MobileUser } from '../auth/types';
 
@@ -204,6 +204,7 @@ export async function uploadWorkOrderAttachment(
   });
   const payload = await res.json().catch(() => null);
   if (!res.ok) {
+    if (res.status === 401 && token) notifyUnauthorized();
     throw new ApiError((payload && (payload.message || payload.error)) || `Erro ${res.status}`, res.status, payload?.code);
   }
   return payload as { message: string; attachmentId: string };
