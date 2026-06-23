@@ -1,0 +1,72 @@
+# Codemagic — build do AAB do Sdx-Mobile (Expo managed) sem usar a cota do EAS.
+# Dois workflows: TESTE (backend app-test, cinza) e PRODUCAO (backend app real).
+#
+# Pre-requisito (UI do Codemagic -> Code signing identities -> Android keystores):
+#   Suba o keystore do EAS do Sdx-Mobile com reference name "sdxmobile_keystore"
+#   (o MESMO keystore dos builds anteriores, p/ a Play aceitar como atualizacao).
+
+definitions:
+  scripts:
+    - &deps
+      name: Instalar dependencias
+      script: npm ci
+    - &prebuild
+      name: Expo prebuild (android)
+      script: npx expo prebuild --platform android --no-install
+    - &build
+      name: Build AAB assinado
+      script: |
+        cd android
+        ./gradlew bundleRelease \
+          -Pandroid.injected.signing.store.file="$CM_KEYSTORE_PATH" \
+          -Pandroid.injected.signing.store.password="$CM_KEYSTORE_PASSWORD" \
+          -Pandroid.injected.signing.key.alias="$CM_KEY_ALIAS" \
+          -Pandroid.injected.signing.key.password="$CM_KEY_PASSWORD"
+  artifacts: &artifacts
+    - android/app/build/outputs/bundle/release/*.aab
+  publishing: &publishing
+    email:
+      recipients:
+        - silvaoliveiraj@gmail.com
+      notify:
+        success: true
+        failure: true
+
+workflows:
+  sdx-mobile-test:
+    name: Sdx-Mobile — Android AAB (TESTE / app-test)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      node: 20.18.0
+      android_signing:
+        - sdxmobile_keystore
+      vars:
+        EXPO_PUBLIC_SDX_API_URL: "https://app-test.scandexplus.com.br"
+        EXPO_PUBLIC_APP_ENV: "test"
+        SENTRY_DISABLE_AUTO_UPLOAD: "true"
+    scripts:
+      - *deps
+      - *prebuild
+      - *build
+    artifacts: *artifacts
+    publishing: *publishing
+
+  sdx-mobile-prod:
+    name: Sdx-Mobile — Android AAB (PRODUCAO / app)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      node: 20.18.0
+      android_signing:
+        - sdxmobile_keystore
+      vars:
+        EXPO_PUBLIC_SDX_API_URL: "https://app.scandexplus.com.br"
+        EXPO_PUBLIC_APP_ENV: "production"
+        SENTRY_DISABLE_AUTO_UPLOAD: "true"
+    scripts:
+      - *deps
+      - *prebuild
+      - *build
+    artifacts: *artifacts
+    publishing: *publishing
