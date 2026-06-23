@@ -12,7 +12,7 @@ import { IS_TEST_BUILD } from './src/api/client';
 Sentry.init({
   dsn: 'https://f970f6013e4d7cae4d4b4034bf865e06@o4511614147493888.ingest.us.sentry.io/4511614336172032',
   // Mesma DSN do backend; separa por environment no painel.
-  environment: IS_TEST_BUILD ? 'mobile-test' : 'mobile-prod',
+  environment: IS_TEST_BUILD ? 'servus-test' : 'servus-prod',
   enabled: !__DEV__,
   // ⚠️ Dado sensível: sem PII.
   sendDefaultPii: false,

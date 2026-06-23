@@ -1,6 +1,7 @@
-# SDX Mobile - Contexto para Codex
+# Servus-SDX - Contexto para Codex
 
-Aplicativo Android/mobile do ecossistema SDX.
+Aplicativo Android/mobile de **Ordens de Servico** do ecossistema SDX
+(ex-"SDX Mobile" / repo `Sdx-Mobile`; package mantido `com.sdxpro.mobile`).
 
 Este repositorio deve evoluir separado do SDX-Pro principal. O SDX-Pro continua sendo o backend central; este app consumira APIs mobile-friendly para ordens de servico, anexos/fotos, catalogos e sincronizacao futura.
 

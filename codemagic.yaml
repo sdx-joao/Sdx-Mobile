@@ -1,9 +1,10 @@
-# Codemagic — build do AAB do Sdx-Mobile (Expo managed) sem usar a cota do EAS.
+# Codemagic — build do AAB do Servus-SDX (Expo managed) sem usar a cota do EAS.
+# (ex-Sdx-Mobile; package mantido com.sdxpro.mobile p/ a Play aceitar como atualizacao.)
 # Dois workflows: TESTE (backend app-test, cinza) e PRODUCAO (backend app real).
 #
 # Pre-requisito (UI do Codemagic -> Code signing identities -> Android keystores):
-#   Suba o keystore do EAS do Sdx-Mobile com reference name "sdxmobile_keystore"
-#   (o MESMO keystore dos builds anteriores, p/ a Play aceitar como atualizacao).
+#   O keystore continua com reference name "sdxmobile_keystore" (o MESMO de sempre,
+#   nao renomear na UI senao o build quebra).
 
 definitions:
   scripts:
@@ -33,8 +34,8 @@ definitions:
         failure: true
 
 workflows:
-  sdx-mobile-test:
-    name: Sdx-Mobile — Android AAB (TESTE / app-test)
+  servus-test:
+    name: Servus-SDX — Android AAB (TESTE / app-test)
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
@@ -55,8 +56,8 @@ workflows:
     artifacts: *artifacts
     publishing: *publishing
 
-  sdx-mobile-prod:
-    name: Sdx-Mobile — Android AAB (PRODUCAO / app)
+  servus-prod:
+    name: Servus-SDX — Android AAB (PRODUCAO / app)
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
