@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
@@ -15,6 +17,8 @@ import {
   type WorkOrderAttachmentCategory,
 } from '../api/mobile';
 import { useResource } from '../api/use-resource';
+import { buildWorkOrderPrintHtml } from '../api/work-order-pdf-html';
+import { API_BASE_URL } from '../api/client';
 import type { RootStackParamList } from '../navigation/types';
 
 const FLOW: WorkOrderStatus[] = ['open', 'in_progress', 'waiting', 'delivered', 'completed'];
@@ -31,7 +35,6 @@ const ATTACHMENT_LABELS: Record<WorkOrderAttachmentCategory, string> = {
   document: 'Documento',
   general: 'Geral',
 };
-type PhotoAttachmentCategory = 'before' | 'after' | 'general';
 
 function formatBytes(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 KB';
@@ -58,6 +61,7 @@ export function WorkOrderDetailScreen() {
   const [savingStatus, setSavingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [expectedCompletionHours, setExpectedCompletionHours] = useState(4);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     if (wo) setStatus(wo.status);
@@ -109,6 +113,28 @@ export function WorkOrderDetailScreen() {
     }
   };
 
+  // Gera o PDF da OS (mesmo layout da impressão de produção) e abre o
+  // compartilhamento nativo. Usado nas OS finalizadas. A assinatura desenhada
+  // não fica disponível aqui (é capturada no fluxo de finalização), então o
+  // PDF sai sem a imagem da assinatura — o restante do conteúdo é idêntico.
+  const shareOrderPdf = async () => {
+    if (!wo || sharing) return;
+    setSharing(true);
+    try {
+      const html = buildWorkOrderPrintHtml(wo, timeline ?? [], '', wo.requestedByName || '', API_BASE_URL);
+      const { uri } = await Print.printToFileAsync({ html });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `OS ${wo.code}`, UTI: 'com.adobe.pdf' });
+      } else {
+        Alert.alert('Compartilhar indisponível', 'Este dispositivo não suporta compartilhamento de arquivos.');
+      }
+    } catch (e) {
+      Alert.alert('Erro ao gerar PDF', e instanceof Error ? e.message : 'Não foi possível gerar o PDF da OS.');
+    } finally {
+      setSharing(false);
+    }
+  };
+
   return (
     <DetailScaffold
       onBack={() => nav.goBack()}
@@ -143,6 +169,30 @@ export function WorkOrderDetailScreen() {
         </View>
       }
     >
+      {/* OS finalizada: botão para gerar o PDF e compartilhar. */}
+      {finished && (
+        <Pressable
+          onPress={shareOrderPdf}
+          disabled={sharing}
+          style={{
+            marginBottom: 6,
+            height: 48,
+            borderRadius: 12,
+            backgroundColor: T.primary,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            opacity: sharing ? 0.6 : 1,
+          }}
+        >
+          {sharing ? <ActivityIndicator color="#fff" /> : <Icon name="send" size={16} color="#fff" />}
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>
+            {sharing ? 'Gerando PDF…' : 'Compartilhar OS (PDF)'}
+          </Text>
+        </Pressable>
+      )}
+
       {/* Status e prazo — exibidos, mas só editáveis pela tela de Edição */}
       {!finished && (
       <SectionCard title="Status e prazo">
@@ -262,33 +312,17 @@ export function WorkOrderDetailScreen() {
       )}
 
       <SectionCard title={`Anexos (${attachments.length})`}>
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: attachments.length ? 12 : 10 }}>
-          {([
-            ['before', 'Foto antes'],
-            ['after', 'Foto depois'],
-            ['general', 'Foto geral'],
-          ] as Array<[PhotoAttachmentCategory, string]>).map(([category, label]) => (
-            <Pressable
-              key={category}
-              onPress={() => nav.navigate('WorkOrderAttachmentCapture', { id: wo.id, category })}
-              disabled={finished}
-              style={{
-                flex: 1,
-                minHeight: 40,
-                borderRadius: 11,
-                borderWidth: 1,
-                borderColor: finished ? T.border : T.primary,
-                backgroundColor: finished ? T.surfaceMuted : `${T.primary}10`,
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingHorizontal: 8,
-                opacity: finished ? 0.45 : 1,
-              }}
-            >
-              <Text style={{ color: T.primary, fontSize: 11.5, fontWeight: '800', textAlign: 'center' }}>{label}</Text>
-            </Pressable>
-          ))}
-        </View>
+        {/* Captura de fotos só pela tela de Edição — aqui os anexos são só
+            leitura. Aponta o usuário pro fluxo de Editar. */}
+        {!finished && (
+          <Pressable
+            onPress={() => nav.navigate('WorkOrderEdit', { id: wo.id })}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: attachments.length ? 12 : 10 }}
+          >
+            <Icon name="camera" size={13} color={accent} />
+            <Text style={{ fontSize: 12, color: accent, fontWeight: '700' }}>Toque em Editar para adicionar fotos</Text>
+          </Pressable>
+        )}
         {attachments.length === 0 ? (
           <Text style={{ fontSize: 12.5, color: T.muted }}>Nenhum anexo registrado.</Text>
         ) : (
