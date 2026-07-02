@@ -8,28 +8,38 @@ import {
 } from 'react';
 import { apiFetch, setUnauthorizedHandler } from '../api/client';
 import { clearToken, getToken, markDeviceRegistered, saveToken } from './token-store';
-import type { LoginResponse, MobileUser } from './types';
+import type { LoginResponse, MobileCapabilities, MobileUser } from './types';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
+const DEFAULT_CAPABILITIES: MobileCapabilities = {
+  canManageWorkOrders: false,
+  canDelegateWorkOrders: false,
+  canViewAllWorkOrders: true,
+};
+
 // Shape consumido pelas telas (Home/Perfil)
 export type SessionUser = {
+  id: string;
   name: string;
   dept: string;
   unit: string;
   role: string;
   username: string;
   avatarUrl: string | null;
+  capabilities: MobileCapabilities;
 };
 
 function toSessionUser(u: MobileUser): SessionUser {
   return {
+    id: u.id,
     name: u.fullName || u.username,
     dept: u.department || u.role,
     unit: '',
     role: u.role,
     username: u.username,
     avatarUrl: u.avatarUrl ?? null,
+    capabilities: u.capabilities ?? DEFAULT_CAPABILITIES,
   };
 }
 

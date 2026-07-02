@@ -20,21 +20,28 @@ function SourceMark({ source }: { source: WorkOrder['source'] }) {
 }
 
 // ── Cartão de OS ────────────────────────────────────────────────────────────
+// Cor da delegação (concept "encaminhamento"): índigo, distinto de prioridade/status.
+const DELEGATION_COLOR = '#6D28D9';
+
 export function WOCard({
   wo,
   onOpen,
   onEdit,
   accent = T.primary,
+  delegatedToMe = false,
 }: {
   wo: WorkOrder;
   onOpen: (wo: WorkOrder) => void;
   onEdit?: (wo: WorkOrder) => void;
   accent?: string;
+  /** Realça o card quando a OS foi delegada para o usuário logado. */
+  delegatedToMe?: boolean;
 }) {
   const st = WO_STATUS[wo.status];
   const pr = WO_PRIORITY[wo.priority];
   const finished = wo.status === 'completed' || wo.status === 'delivered' || wo.status === 'cancelled';
   const overdue = !!wo.expectedCompletionAt && new Date(wo.expectedCompletionAt) < new Date() && !finished;
+  const delegated = !!wo.delegatedToName;
 
   // Chip "Aberta" pulsa sutilmente para chamar atenção das OS sem atendimento.
   const isOpen = wo.status === 'open';
@@ -55,8 +62,10 @@ export function WOCard({
     <Pressable
       onPress={() => onOpen(wo)}
       style={{
-        backgroundColor: T.surface, borderWidth: 1, borderColor: T.border,
-        borderLeftWidth: 3, borderLeftColor: pr.color, borderRadius: 14, padding: 14, marginBottom: 10,
+        backgroundColor: delegatedToMe ? `${DELEGATION_COLOR}0C` : T.surface,
+        borderWidth: 1, borderColor: delegatedToMe ? `${DELEGATION_COLOR}55` : T.border,
+        borderLeftWidth: 3, borderLeftColor: delegatedToMe ? DELEGATION_COLOR : pr.color,
+        borderRadius: 14, padding: 14, marginBottom: 10,
         ...cardShadow,
       }}
     >
@@ -64,6 +73,12 @@ export function WOCard({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: accent, letterSpacing: 0.2 }}>{wo.code}</Text>
           <SourceMark source={wo.source} />
+          {delegatedToMe && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 2, paddingHorizontal: 6, borderRadius: 6, backgroundColor: `${DELEGATION_COLOR}18` }}>
+              <Icon name="send" size={10} color={DELEGATION_COLOR} />
+              <Text style={{ fontSize: 10, fontWeight: '800', color: DELEGATION_COLOR }}>Delegada a você</Text>
+            </View>
+          )}
         </View>
         {isOpen ? (
           <Animated.View style={{ opacity: pulse }}><Badge tone={st} /></Animated.View>
@@ -71,6 +86,16 @@ export function WOCard({
           <Badge tone={st} />
         )}
       </View>
+      {delegated && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+          <Icon name="send" size={12} color={DELEGATION_COLOR} />
+          <Text numberOfLines={1} style={{ fontSize: 11.5, color: DELEGATION_COLOR, fontWeight: '600', flexShrink: 1 }}>
+            {delegatedToMe
+              ? `Encaminhada por ${wo.delegatedByName || 'equipe'}`
+              : `Delegada a ${wo.delegatedToName}`}
+          </Text>
+        </View>
+      )}
       <Text style={{ fontSize: 14.5, fontWeight: '600', color: T.text, marginBottom: 3, lineHeight: 19 }}>{wo.serviceType}</Text>
       <Text style={{ fontSize: 12.5, color: T.faint, marginBottom: 10 }}>{wo.category}</Text>
       <View style={{ gap: 5 }}>

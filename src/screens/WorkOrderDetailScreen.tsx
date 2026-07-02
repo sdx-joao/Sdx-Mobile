@@ -35,6 +35,7 @@ const ATTACHMENT_LABELS: Record<WorkOrderAttachmentCategory, string> = {
   document: 'Documento',
   general: 'Geral',
 };
+const DELEGATION_COLOR = '#6D28D9';
 
 function formatBytes(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 KB';
@@ -45,7 +46,8 @@ function formatBytes(bytes: number) {
 export function WorkOrderDetailScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'WorkOrderDetail'>>();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const canDelegate = !!user?.capabilities?.canDelegateWorkOrders;
   const loader = useCallback(async () => {
     const [detail, attachments] = await Promise.all([
       getWorkOrder(token, route.params.id),
@@ -189,6 +191,48 @@ export function WorkOrderDetailScreen() {
           {sharing ? <ActivityIndicator color="#fff" /> : <Icon name="send" size={16} color="#fff" />}
           <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>
             {sharing ? 'Gerando PDF…' : 'Compartilhar OS (PDF)'}
+          </Text>
+        </Pressable>
+      )}
+
+      {/* Delegação: quem encaminhou a OS e o recado anexo. */}
+      {wo.delegatedToName && (
+        <View style={{
+          marginBottom: 12, borderRadius: 14, borderWidth: 1,
+          borderColor: `${DELEGATION_COLOR}44`, backgroundColor: `${DELEGATION_COLOR}0C`, padding: 14,
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+            <Icon name="send" size={15} color={DELEGATION_COLOR} />
+            <Text style={{ fontSize: 13, fontWeight: '800', color: DELEGATION_COLOR }}>Delegação</Text>
+          </View>
+          <Text style={{ fontSize: 13, color: T.text, lineHeight: 19 }}>
+            Encaminhada para <Text style={{ fontWeight: '700' }}>{wo.delegatedToName}</Text>
+            {wo.delegatedByName ? <Text> por <Text style={{ fontWeight: '700' }}>{wo.delegatedByName}</Text></Text> : null}
+            {wo.delegatedAt ? <Text style={{ color: T.faint }}>{` · ${fmtDate(wo.delegatedAt)} ${fmtTime(wo.delegatedAt)}`}</Text> : null}
+          </Text>
+          {!!wo.delegationMessage && (
+            <Text style={{
+              marginTop: 9, fontSize: 13, color: T.textSoft, lineHeight: 20,
+              backgroundColor: '#fff', borderRadius: 10, padding: 11, borderWidth: 1, borderColor: `${DELEGATION_COLOR}22`,
+            }}>
+              “{wo.delegationMessage}”
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* Ação de delegar (só quem tem permissão e OS não finalizada). */}
+      {!finished && canDelegate && (
+        <Pressable
+          onPress={() => nav.navigate('WorkOrderDelegate', { id: wo.id, code: wo.code })}
+          style={{
+            marginBottom: 12, height: 46, borderRadius: 12, borderWidth: 1, borderColor: DELEGATION_COLOR,
+            backgroundColor: `${DELEGATION_COLOR}0E`, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+        >
+          <Icon name="send" size={16} color={DELEGATION_COLOR} />
+          <Text style={{ fontSize: 14, fontWeight: '800', color: DELEGATION_COLOR }}>
+            {wo.delegatedToName ? 'Redelegar OS' : 'Delegar OS'}
           </Text>
         </Pressable>
       )}

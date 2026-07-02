@@ -67,7 +67,7 @@ export function updateMyProfile(
 
 export type AppNotification = {
   id: string;
-  type: 'os_moved' | 'os_assigned' | 'os_escalated' | 'os_new_in_department' | string;
+  type: 'os_moved' | 'os_assigned' | 'os_delegated' | 'os_escalated' | 'os_new_in_department' | string;
   workOrderId: string | null;
   workOrderCode: string | null;
   title: string;
@@ -93,14 +93,45 @@ export function markNotificationsRead(token: string | null, ids?: string[]) {
 
 export async function getWorkOrders(
   token: string | null,
-  opts: { status?: string; q?: string } = {},
+  opts: { status?: string; q?: string; includeHidden?: boolean } = {},
 ): Promise<WorkOrder[]> {
   const params = new URLSearchParams();
   if (opts.status && opts.status !== 'all') params.set('status', opts.status);
   if (opts.q) params.set('q', opts.q);
+  if (opts.includeHidden) params.set('includeHidden', '1');
   const qs = params.toString();
   const res = await apiFetch<{ orders: WorkOrder[] }>(`/api/mobile/work-orders${qs ? `?${qs}` : ''}`, { token });
   return res.orders ?? [];
+}
+
+export type DelegatableUser = {
+  id: string;
+  username: string;
+  fullName: string | null;
+  department: string | null;
+};
+
+/** Usuários que podem receber uma delegação (só quem pode delegar acessa). */
+export async function getDelegatableUsers(
+  token: string | null,
+  opts: { department?: string } = {},
+): Promise<DelegatableUser[]> {
+  const qs = opts.department ? `?department=${encodeURIComponent(opts.department)}` : '';
+  const res = await apiFetch<{ users: DelegatableUser[] }>(`/api/mobile/work-orders/users${qs}`, { token });
+  return res.users ?? [];
+}
+
+/** Delega/encaminha a OS a um usuário, com mensagem opcional. */
+export function delegateWorkOrder(
+  token: string | null,
+  id: string,
+  toUserId: string,
+  message?: string,
+) {
+  return apiFetch<{ ok: true; delegatedTo: { id: string; name: string } }>(
+    `/api/mobile/work-orders/${id}/delegate`,
+    { method: 'POST', token, body: { toUserId, message: message ?? null } },
+  );
 }
 
 export function getWorkOrder(token: string | null, id: string) {

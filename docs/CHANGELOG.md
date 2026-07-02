@@ -9,6 +9,61 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## v10 (versionCode 10) — Delegação de OS + Histórico no app
+
+**Status:** commitado em `main`, aguardando deploy do backend (SDX-Pro) + migration
+e build `servus-prod` no Codemagic.
+
+> ⚠️ **Dependência de backend**: este release depende do SDX-Pro atualizado e da
+> migration `database/work_order_delegation_migration.sql` aplicada no banco
+> `sdx_work_orders`. Sem isso, delegar/histórico não funcionam. Fazer o deploy
+> web **antes** de publicar o app.
+
+### 1. Histórico de OS
+- Botão **Histórico** ao lado de "Nova OS" no topo de Ordens de Serviço
+  (`ModuleScreen` ganhou `secondaryAction`).
+- Nova tela `WorkOrderHistoryScreen`: lista OS finalizadas
+  (concluídas/entregues/canceladas), incluindo as que saíram do fluxo diário
+  (`includeHidden=1`). Read-only, com busca e filtro por status.
+
+### 2. Delegação de OS (conceito separado do técnico responsável)
+- Nova tela `WorkOrderDelegateScreen`: escolhe destinatário (`/api/mobile/work-orders/users`)
+  + mensagem opcional, chama `POST /api/mobile/work-orders/:id/delegate`.
+- Botão **Delegar/Redelegar** no detalhe da OS, gated por
+  `capabilities.canDelegateWorkOrders` (vindo de `/api/mobile/me`).
+- `WOCard` realça em índigo quando a OS foi **delegada a você**
+  (borda + badge "Delegada a você") e mostra quem encaminhou.
+- Detalhe da OS exibe bloco de **Delegação** com destinatário, autor e recado.
+- Só quem tem a permissão delega — no app e no Electron.
+
+### 3. Notificações in-app
+- Novo tipo `os_delegated` ("OS encaminhada para você"), ícone `send` na central.
+- Quem **delegou** passa a ser notificado de qualquer movimentação/conclusão da OS.
+- (Push real de dispositivo fica para uma fase 2 — hoje é a central in-app por polling.)
+
+### 4. Visibilidade
+- Nova permissão `canViewAllWorkOrders` (**default `true` — todos veem tudo**).
+  Quando `false`, o usuário só enxerga OS ligadas a ele (delegadas, atribuídas,
+  criadas ou solicitadas), tanto na lista quanto no detalhe.
+
+### Arquivos tocados (app)
+- `src/data/mock.ts`, `src/auth/types.ts`, `src/auth/auth-context.tsx`,
+  `src/api/mobile.ts`, `src/components/cards.tsx`, `src/components/ui.tsx`,
+  `src/screens/WorkOrdersScreen.tsx`, `src/screens/WorkOrderDetailScreen.tsx`,
+  `src/screens/WorkOrderHistoryScreen.tsx` (novo),
+  `src/screens/WorkOrderDelegateScreen.tsx` (novo),
+  `src/screens/NotificationsScreen.tsx`, `src/navigation/{types,RootNavigator}.tsx`,
+  `app.json` (versionCode 9 → 10).
+
+### Backend correspondente (repo ScandexGed/SDX-Pro)
+- Migration `work_order_delegation_migration.sql` (colunas de delegação).
+- Permissões `canDelegateWorkOrders` / `canViewAllWorkOrders` em `src/types/index.ts`.
+- Endpoints `POST /api/(mobile/)work-orders/:id/delegate`, `GET /api/mobile/work-orders/users`.
+- `/api/mobile/me` expõe `capabilities`. Filtro de visibilidade nas listas.
+- UI de delegação na página web `/work-orders` (reflete no Electron).
+
+---
+
 ## v9 (versionCode 9) — Produção no banco real + ajustes de OS e ícone
 
 **Status:** commitado em `main`, aguardando build `servus-prod` no Codemagic.

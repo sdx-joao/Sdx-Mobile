@@ -13,6 +13,7 @@ import type { RootStackParamList } from '../navigation/types';
 const TYPE_ICON: Record<string, string> = {
   os_moved: 'shuffle',
   os_assigned: 'user',
+  os_delegated: 'send',
   os_escalated: 'flame',
   os_new_in_department: 'clipboard',
 };

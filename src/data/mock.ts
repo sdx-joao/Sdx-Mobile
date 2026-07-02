@@ -36,6 +36,13 @@ export type WorkOrder = {
   expectedCompletionAt: string | null;
   finishedAt?: string | null;
   escalationCount: number;
+  // Delegação (encaminhamento da OS a um usuário específico).
+  delegatedToUserId?: string | null;
+  delegatedToName?: string | null;
+  delegatedByUserId?: string | null;
+  delegatedByName?: string | null;
+  delegationMessage?: string | null;
+  delegatedAt?: string | null;
   attendanceNotes: string | null;
   resolutionStatus: WorkOrderResolution | null;
   resolutionNotes?: string | null;

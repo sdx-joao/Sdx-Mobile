@@ -262,6 +262,7 @@ function HeaderBell() {
 // Tela de módulo (lista): header azul + CTA + corpo rolável
 export function ModuleScreen({
   title, subtitle, onNew, newLabel, newIcon = 'plus', accent = T.primary, children, contentStyle, refreshControl,
+  secondaryAction,
 }: {
   title: string;
   subtitle?: string;
@@ -272,6 +273,8 @@ export function ModuleScreen({
   children: ReactNode;
   contentStyle?: ViewStyle;
   refreshControl?: ReactElement<RefreshControlProps>;
+  /** Botão secundário ao lado do "Novo" (ex.: Histórico). */
+  secondaryAction?: { label: string; icon?: string; onPress: () => void };
 }) {
   const keyboardHeight = useKeyboardHeight();
   return (
@@ -284,17 +287,34 @@ export function ModuleScreen({
           </View>
           <HeaderBell />
         </View>
-        {onNew && (
-          <Pressable
-            onPress={onNew}
-            style={{
-              marginTop: 16, height: 44, borderRadius: 12, backgroundColor: '#fff',
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-          >
-            <Icon name={newIcon} size={18} color={accent} />
-            <Text style={{ color: accent, fontSize: 14, fontWeight: '700' }}>{newLabel}</Text>
-          </Pressable>
+        {(onNew || secondaryAction) && (
+          <View style={{ marginTop: 16, flexDirection: 'row', gap: 10 }}>
+            {onNew && (
+              <Pressable
+                onPress={onNew}
+                style={{
+                  flex: 1, height: 44, borderRadius: 12, backgroundColor: '#fff',
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}
+              >
+                <Icon name={newIcon} size={18} color={accent} />
+                <Text style={{ color: accent, fontSize: 14, fontWeight: '700' }}>{newLabel}</Text>
+              </Pressable>
+            )}
+            {secondaryAction && (
+              <Pressable
+                onPress={secondaryAction.onPress}
+                style={{
+                  paddingHorizontal: 16, height: 44, borderRadius: 12,
+                  backgroundColor: 'rgba(255,255,255,.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,.35)',
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+                }}
+              >
+                <Icon name={secondaryAction.icon || 'clock'} size={17} color="#fff" />
+                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>{secondaryAction.label}</Text>
+              </Pressable>
+            )}
+          </View>
         )}
       </BlueHeader>
       <View style={{ flex: 1, paddingBottom: keyboardHeight }}>

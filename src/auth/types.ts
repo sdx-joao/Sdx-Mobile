@@ -1,3 +1,9 @@
+export type MobileCapabilities = {
+  canManageWorkOrders: boolean;
+  canDelegateWorkOrders: boolean;
+  canViewAllWorkOrders: boolean;
+};
+
 export type MobileUser = {
   id: string;
   username: string;
@@ -10,6 +16,7 @@ export type MobileUser = {
   registeredSince?: string | null;
   workOrderPrinterName?: string | null;
   avatarUrl?: string | null;
+  capabilities?: MobileCapabilities | null;
 };
 
 export type LoginResponse = {
