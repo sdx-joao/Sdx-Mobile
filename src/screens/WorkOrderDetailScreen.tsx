@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
@@ -125,8 +126,21 @@ export function WorkOrderDetailScreen() {
     try {
       const html = buildWorkOrderPrintHtml(wo, timeline ?? [], '', wo.requestedByName || '', API_BASE_URL);
       const { uri } = await Print.printToFileAsync({ html });
+      // printToFileAsync gera um nome temporário aleatório; renomeia para o
+      // código da OS antes de compartilhar (o nome exibido = nome do arquivo).
+      const safeName = (wo.code || 'ordem-servico').replace(/[^\w.-]+/g, '_');
+      const dest = `${FileSystem.cacheDirectory}${safeName}.pdf`;
+      let shareUri = uri;
+      try {
+        await FileSystem.deleteAsync(dest, { idempotent: true });
+        await FileSystem.copyAsync({ from: uri, to: dest });
+        shareUri = dest;
+      } catch {
+        // Se a cópia falhar por algum motivo, compartilha o arquivo original.
+        shareUri = uri;
+      }
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `OS ${wo.code}`, UTI: 'com.adobe.pdf' });
+        await Sharing.shareAsync(shareUri, { mimeType: 'application/pdf', dialogTitle: `OS ${wo.code}`, UTI: 'com.adobe.pdf' });
       } else {
         Alert.alert('Compartilhar indisponível', 'Este dispositivo não suporta compartilhamento de arquivos.');
       }

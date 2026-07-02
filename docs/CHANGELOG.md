@@ -19,6 +19,20 @@ e build `servus-prod` no Codemagic.
 > `sdx_work_orders`. Sem isso, delegar/histórico não funcionam. Fazer o deploy
 > web **antes** de publicar o app.
 
+### 0. Correções de PDF/impressão (compartilhar OS + logos)
+- **Nome do arquivo**: ao compartilhar a OS em PDF, o arquivo saía com nome
+  temporário aleatório. Agora é renomeado para o **código da OS**
+  (`OS-AAAA-NNNNNN.pdf`) via `expo-file-system` antes do compartilhamento.
+- **Assinatura no meio da folha**: o layout do PDF do app não ancorava a
+  assinatura no rodapé. Portado o padrão da impressão do Electron — `.main-page`
+  vira flex com `min-height:272mm` e o rodapé de assinatura usa `margin-top:auto`
+  → **as 3 formas (Electron, impressão, app) ficam idênticas**.
+- **Logos sumindo no Electron/impressão** (repo ScandexGed): a print page
+  (`work-orders/[id]/print`) usava `next/image` nos logos do Hospital do Olho e
+  da Prefeitura; a URL otimizada `/_next/image` quebra na impressão headless do
+  Electron. Trocado por `<img>` puro (igual à submarca e ao app) → logos voltam.
+- Dependência nova no app: `expo-file-system@~19.0.23` (SDK 54).
+
 ### 1. Histórico de OS
 - Botão **Histórico** ao lado de "Nova OS" no topo de Ordens de Serviço
   (`ModuleScreen` ganhou `secondaryAction`).

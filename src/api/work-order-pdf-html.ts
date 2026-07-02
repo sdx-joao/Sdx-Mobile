@@ -65,7 +65,8 @@ const CSS = `
 @page { size: A4; margin: 6mm 6mm 5mm; }
 *{box-sizing:border-box}
 body{margin:0;padding:0;background:#fff}
-.os-print{position:relative;font-family:Arial,system-ui,-apple-system,sans-serif;color:#111827;background:#fff;width:100%;padding:0;margin:0}
+.os-print{position:relative;font-family:Arial,system-ui,-apple-system,sans-serif;color:#111827;background:#fff;width:100%;padding:16px 16px 24px;margin:0}
+.os-print .main-page{display:flex;flex-direction:column;min-height:272mm;box-sizing:border-box}
 .os-print .field-highlight{background:#EEF2FF}
 .os-print .field-highlight .label{color:#0728CA}
 .os-print .field-highlight .value{font-weight:800}
@@ -87,7 +88,8 @@ body{margin:0;padding:0;background:#fff}
 .os-print th,.os-print td{border:1px solid #9CA3AF;padding:4px 6px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
 .os-print th{background:#374151;color:#fff;font-size:7.8px;text-transform:uppercase;letter-spacing:.35px;font-weight:800}
 .os-print tr:nth-child(even) td{background:#F3F4F6}
-.os-print .print-signature-footer{margin-top:16px;padding-top:10mm;background:#fff}
+.os-print .main-page > .print-signature-footer{margin-top:auto;padding-top:6mm;background:#fff}
+.os-print .print-signature-footer{margin-top:16px;padding-top:6mm;background:#fff}
 .os-print .signature-row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .os-print .sign-box{position:relative;border-top:1.3px solid #374151;padding-top:3px;text-align:center;font-size:7.9px;color:#4b5563;text-transform:uppercase;letter-spacing:.35px;font-weight:700;line-height:1.15}
 .os-print .signature-image{position:absolute;left:50%;bottom:calc(100% + 1mm);transform:translateX(-50%);display:block;height:50px;max-width:96%}
@@ -149,6 +151,7 @@ export function buildWorkOrderPrintHtml(
 
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${CSS}</style></head><body>
   <div class="os-print">
+    <div class="main-page">
     <div class="header">
       <div class="logo-box"><img src="${baseUrl}/images/ho-logo.png" alt="Hospital do Olho" onerror="this.style.display='none'"/></div>
       <div><h1>Ordem de Serviço</h1><p class="code">${esc(wo.code)}</p></div>
@@ -171,7 +174,8 @@ export function buildWorkOrderPrintHtml(
       </div>
       <div class="footer-brand"><img src="${baseUrl}/images/submarca.png" alt="" onerror="this.style.display='none'"/></div>
       <div class="document-meta">Documento emitido em ${fmtDt(new Date().toISOString())} · ${valueOrNA(wo.unitName)}</div>
-      <div class="page-meta"><span>${esc(wo.code)}</span><span>Página 1 de 1</span></div>
+      <div class="page-meta"><span>${esc(wo.code)}</span></div>
+    </div>
     </div>
   </div>
   </body></html>`;
