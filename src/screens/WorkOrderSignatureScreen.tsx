@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, KeyboardAvoidingView, PanResponder, Platform,
 import * as ScreenOrientation from 'expo-screen-orientation';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 import Svg, { Path } from 'react-native-svg';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,7 +11,8 @@ import { Icon } from '../components/Icon';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
 import { getWorkOrder, updateWorkOrderStatus } from '../api/mobile';
-import { API_BASE_URL, IS_TEST_BUILD } from '../api/client';
+import { IS_TEST_BUILD } from '../api/client';
+import { loadPrintLogos } from '../api/print-logos';
 import { buildWorkOrderPrintHtml } from '../api/work-order-pdf-html';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -68,10 +70,22 @@ function svgMarkup(strokes: Point[][], width: number, height: number) {
 // compartilhamento — usado no build de teste.
 async function shareWorkOrderPdf(token: string | null, id: string, signatureSvg: string, signerName: string) {
   const { workOrder: wo, timeline } = await getWorkOrder(token, id);
-  const html = buildWorkOrderPrintHtml(wo, timeline ?? [], signatureSvg, signerName, API_BASE_URL);
+  const logos = await loadPrintLogos();
+  const html = buildWorkOrderPrintHtml(wo, timeline ?? [], signatureSvg, signerName, logos);
   const { uri } = await Print.printToFileAsync({ html });
+  // Renomeia para o código da OS antes de compartilhar (nome exibido = arquivo).
+  const safeName = (wo.code || 'ordem-servico').replace(/[^\w.-]+/g, '_');
+  const dest = `${FileSystem.cacheDirectory}${safeName}.pdf`;
+  let shareUri = uri;
+  try {
+    await FileSystem.deleteAsync(dest, { idempotent: true });
+    await FileSystem.copyAsync({ from: uri, to: dest });
+    shareUri = dest;
+  } catch {
+    shareUri = uri;
+  }
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `OS ${wo.code}`, UTI: 'com.adobe.pdf' });
+    await Sharing.shareAsync(shareUri, { mimeType: 'application/pdf', dialogTitle: `OS ${wo.code}`, UTI: 'com.adobe.pdf' });
   }
 }
 

@@ -19,7 +19,7 @@ import {
 } from '../api/mobile';
 import { useResource } from '../api/use-resource';
 import { buildWorkOrderPrintHtml } from '../api/work-order-pdf-html';
-import { API_BASE_URL } from '../api/client';
+import { loadPrintLogos } from '../api/print-logos';
 import type { RootStackParamList } from '../navigation/types';
 
 const FLOW: WorkOrderStatus[] = ['open', 'in_progress', 'waiting', 'delivered', 'completed'];
@@ -124,7 +124,8 @@ export function WorkOrderDetailScreen() {
     if (!wo || sharing) return;
     setSharing(true);
     try {
-      const html = buildWorkOrderPrintHtml(wo, timeline ?? [], '', wo.requestedByName || '', API_BASE_URL);
+      const logos = await loadPrintLogos();
+      const html = buildWorkOrderPrintHtml(wo, timeline ?? [], '', wo.requestedByName || '', logos);
       const { uri } = await Print.printToFileAsync({ html });
       // printToFileAsync gera um nome temporário aleatório; renomeia para o
       // código da OS antes de compartilhar (o nome exibido = nome do arquivo).

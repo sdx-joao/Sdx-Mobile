@@ -4,6 +4,7 @@
 // página de impressão (página principal — anexos/fotos ficam fora do escopo).
 
 import type { TimelineEvent, WorkOrder, WorkOrderPriority, WorkOrderResolution, WorkOrderStatus } from '../data/mock';
+import type { PrintLogos } from './print-logos';
 
 const NA = 'Não se aplica';
 
@@ -106,7 +107,7 @@ export function buildWorkOrderPrintHtml(
   timeline: TimelineEvent[],
   signatureSvg: string,
   signerName: string,
-  baseUrl: string,
+  logos: PrintLogos,
 ): string {
   const fields: Array<{ label: string; value: string; highlight?: boolean }> = [
     { label: 'Unidade', value: valueOrNA(wo.unitName) },
@@ -153,9 +154,9 @@ export function buildWorkOrderPrintHtml(
   <div class="os-print">
     <div class="main-page">
     <div class="header">
-      <div class="logo-box"><img src="${baseUrl}/images/ho-logo.png" alt="Hospital do Olho" onerror="this.style.display='none'"/></div>
+      <div class="logo-box"><img src="${logos.hoLogo}" alt="Hospital do Olho" onerror="this.style.display='none'"/></div>
       <div><h1>Ordem de Serviço</h1><p class="code">${esc(wo.code)}</p></div>
-      <div class="logo-box"><img src="${baseUrl}/images/prefeitura-duque-caxias.png" alt="" onerror="this.style.display='none'"/></div>
+      <div class="logo-box"><img src="${logos.prefLogo}" alt="" onerror="this.style.display='none'"/></div>
     </div>
     <section><h3>Identificação</h3><div class="field-grid">${fieldGrid}</div></section>
     <section><h3>Solicitação</h3><div class="box">${valueOrNA(wo.technicianRequest)}</div></section>
@@ -172,7 +173,7 @@ export function buildWorkOrderPrintHtml(
         </div>
         <div class="sign-box">Assinatura do técnico responsável<br/>${valueOrNA(wo.responsibleTechnicianName)}</div>
       </div>
-      <div class="footer-brand"><img src="${baseUrl}/images/submarca.png" alt="" onerror="this.style.display='none'"/></div>
+      <div class="footer-brand"><img src="${logos.submarca}" alt="" onerror="this.style.display='none'"/></div>
       <div class="document-meta">Documento emitido em ${fmtDt(new Date().toISOString())} · ${valueOrNA(wo.unitName)}</div>
       <div class="page-meta"><span>${esc(wo.code)}</span></div>
     </div>

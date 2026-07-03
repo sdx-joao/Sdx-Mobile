@@ -9,14 +9,27 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
-## v10 (versionCode 11) — Delegação de OS + Histórico no app
+## v10 (versionCode 12) — Delegação de OS + Histórico no app
 
 **Status:** commitado em `main`, aguardando deploy do backend (SDX-Pro) + migration
 e build `servus-prod` no Codemagic.
 
-> ℹ️ **versionCode**: o 10 já havia sido consumido na Play Console (upload
-> rejeitado com "código de versão 10 já foi usado"), então este release foi
-> buildado como **versionCode 11**. O nome lógico da feature continua "v10".
+> ℹ️ **versionCode**: os códigos 10 e 11 já foram consumidos na Play Console
+> (10 rejeitado; 11 usado no build de teste que expôs o bug das logos), então
+> este release vai como **versionCode 12**. O nome lógico da feature continua "v10".
+
+### 0.1 Logos embutidas no PDF do app (base64)
+- **Bug**: no PDF gerado pelo app, as logos (Hospital do Olho, Prefeitura,
+  submarca) não apareciam. Causa: o app baixava `https://app.scandexplus.com.br/images/*`,
+  mas o **domínio público responde 403** nesses paths (proxy/WAF) — o `onerror`
+  então escondia os `<img>`. (No Electron funciona porque ele usa o IP interno,
+  que serve 200.)
+- **Correção**: as 3 logos agora são **empacotadas no app** (`assets/print/*.png`)
+  e convertidas para **data URI base64** em runtime (`src/api/print-logos.ts`,
+  via `expo-asset` + `expo-file-system`). `buildWorkOrderPrintHtml` passou a
+  receber as logos (não mais a `baseUrl`). Sem rede, sem timing → sempre renderiza.
+- Aplicado nos dois geradores de PDF do app: compartilhar (detalhe) e pós-assinatura.
+- Deps novas: `expo-asset@~12.0.13` (+ `expo-file-system` já adicionado).
 
 > ⚠️ **Dependência de backend**: este release depende do SDX-Pro atualizado e da
 > migration `database/work_order_delegation_migration.sql` aplicada no banco
