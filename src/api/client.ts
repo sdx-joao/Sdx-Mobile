@@ -51,6 +51,9 @@ export async function apiFetch<T = unknown>(
       signal: controller.signal,
       headers: {
         Accept: 'application/json',
+        // Identifica o app pro backend: single-session mobile é POR APP, então
+        // o login do Servus não derruba a sessão do Prontus (e vice-versa).
+        'X-Sdx-App': 'servus',
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
