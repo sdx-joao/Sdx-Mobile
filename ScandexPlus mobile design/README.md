@@ -34,6 +34,7 @@ Em um projeto consumidor, vincule **um** arquivo de estilo e o bundle de compone
 - **Fundo** `#F5F7FB` · **Superfície** `#FFFFFF` · **Borda** `#E2E8F2`.
 - Texto `#0F172A` · suave `#334155` · muted `#64748B` · faint `#94A3B8`.
 - **Perigo** `#DC2626`.
+- **Delegação (índigo)** `#6D28D9` — cor do conceito "OS encaminhada". Fundo tingido `#F1ECFB`, borda `#C9B6F0`. Distinta de status/prioridade. Tokens `--sdx-m-delegation*`.
 - Suporte a **dark mode** via classe `.dark`.
 
 ### Tipografia
@@ -72,6 +73,7 @@ Camada de tokens otimizada para toque, coesa com a web:
 | `Icon` | Conjunto curado de ícones traço (Lucide-style). `name`, `size`, `color`. |
 | `MobileButton` | Botão touch-first. `variant` (primary/secondary/outline/ghost/danger), `size`, `fullWidth`, `loading`. Primary = gradiente azul, 52px. |
 | `MobileCard` | Superfície branca, raio 16, sombra suave. `variant` (elevated/flat), `accent` (borda esquerda). |
+| `DelegationBanner` | Sinalização índigo de OS delegada. `variant` (card = tira compacta / detail = bloco com recado), `toName`, `byName`, `message`, `toMe`. |
 | `BlueHeader` | Header em gradiente, cantos inferiores arredondados. Slots: `title`, `subtitle`, `eyebrow`, `onBack`, `action`, `brand`. |
 | `SegmentedControl` | Seletor/abas. `options` (`{key,label,count?}`), ativo em azul. |
 | `SearchField` | Campo de texto/busca com ícone, anel de foco e estado `valid` (✓ verde). `clearable`. |
@@ -85,6 +87,29 @@ Camada de tokens otimizada para toque, coesa com a web:
 - Header azul arredondado embaixo; cards brancos raio 16; botão primário gradiente 52px.
 - Stack navegável (Busca → Detalhes → Documento); abas em segmented control.
 - Teclado nunca tapa campo/botão; pull-to-refresh em listas; toasts para feedback.
+
+### Padrão: Ordens de Serviço — Delegação, Histórico e Visibilidade
+
+Introduzido no módulo de OS (app Servus-SDX + web/Electron). Ver preview
+**"OS — Delegação & Histórico"** e o componente **DelegationBanner**.
+
+- **Delegar** = encaminhar uma OS a um usuário, com **mensagem** e identidade de
+  quem delegou. Conceito **separado** do técnico responsável. Cor índigo `#6D28D9`.
+  - **Card na lista** delegado a você: borda-esquerda índigo, fundo `#F1ECFB`,
+    badge **"Delegada a você"** + linha "Encaminhada por {nome}" (`DelegationBanner variant="card"`).
+  - **Detalhe**: bloco **Delegação** com destinatário, autor e o recado
+    (`DelegationBanner variant="detail"`), + botão **Delegar / Redelegar** (índigo)
+    para quem tem permissão.
+  - **Sheet de delegação**: lista de usuários (radio, item ativo em índigo) +
+    campo de mensagem + CTA **Delegar** índigo.
+- **Histórico**: botão secundário no header (branco translúcido, borda 35%) ao
+  lado do CTA "Nova OS" → tela de OS finalizadas (consulta).
+- **Visibilidade por permissão**: `canViewAllWorkOrders` (default ligado) mostra
+  o quadro geral; sem ela, o usuário só vê OS ligadas a ele. `canDelegateWorkOrders`
+  controla quem pode delegar. Botões/ações somem quando a permissão falta.
+- **PDF da OS** (compartilhar/imprimir): 3 formas idênticas (app, Electron,
+  impressão) — logos no cabeçalho, assinatura ancorada no rodapé. No app as
+  logos são **embutidas** (o domínio público bloqueia `/images`).
 
 ---
 

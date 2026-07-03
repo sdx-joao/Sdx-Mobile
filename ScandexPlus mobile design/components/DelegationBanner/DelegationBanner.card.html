@@ -1,0 +1,76 @@
+<!-- @dsCard group="Components — Mobile" name="DelegationBanner" subtitle="OS delegada · tira no card + bloco no detalhe (índigo)" viewport="440x520" -->
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8" />
+<link rel="stylesheet" href="../../colors_and_type.css" />
+<style>
+  body { margin: 0; background: var(--sdx-m-bg, #F5F7FB); font-family: 'Inter', sans-serif; padding: 26px; display: flex; justify-content: center; }
+  .col { width: 348px; display: flex; flex-direction: column; gap: 14px; }
+  .lbl { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--sdx-m-faint, #94A3B8); }
+  .code { font-size: 13px; font-weight: 700; color: var(--sdx-m-primary, #072AC8); }
+  .ttl { font-size: 14.5px; font-weight: 600; color: var(--sdx-m-text, #0F172A); }
+  .sub { font-size: 12.5px; color: var(--sdx-m-muted, #64748B); }
+</style>
+</head><body>
+<div id="root" class="col"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel">
+  // Auto-contido (o componente ainda não está no _ds_bundle.js pré-buildado).
+  // Fonte canônica: ./DelegationBanner.jsx
+  const SendIcon = ({ size = 13, color = 'currentColor' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', flexShrink: 0 }}>
+      <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  );
+  const IN = 'var(--sdx-m-delegation, #6D28D9)';
+  const SOFT = 'var(--sdx-m-delegation-soft, #F1ECFB)';
+  const BORD = 'var(--sdx-m-delegation-border, #C9B6F0)';
+
+  const DelegationBanner = ({ variant = 'card', toName, byName, message, toMe = false, style = {} }) => {
+    if (variant === 'card') return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: IN, fontFamily: "'Inter',sans-serif", ...style }}>
+        <SendIcon size={12} color={IN} />
+        <span style={{ fontSize: 11.5, fontWeight: 600 }}>{toMe ? `Encaminhada por ${byName}` : `Delegada a ${toName}`}</span>
+      </div>
+    );
+    return (
+      <div style={{ border: `1px solid ${BORD}`, background: SOFT, borderRadius: 16, padding: 14, fontFamily: "'Inter',sans-serif", ...style }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+          <SendIcon size={15} color={IN} /><span style={{ fontSize: 13, fontWeight: 800, color: IN }}>Delegação</span>
+        </div>
+        <div style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--sdx-m-text,#0F172A)' }}>
+          Encaminhada para <strong>{toName}</strong>{byName ? <> por <strong>{byName}</strong></> : null}
+        </div>
+        {message ? <div style={{ marginTop: 9, fontSize: 13, lineHeight: 1.5, fontStyle: 'italic', background: '#fff', borderRadius: 10, padding: 11, border: `1px solid ${BORD}`, color: 'var(--sdx-m-text-soft,#334155)' }}>“{message}”</div> : null}
+      </div>
+    );
+  };
+
+  // Card de OS "delegada a você": borda-esquerda índigo + fundo levemente tingido + badge.
+  const DelegatedCard = () => (
+    <div style={{ background: SOFT, border: `1px solid ${BORD}`, borderLeft: `3px solid ${IN}`, borderRadius: 16, padding: 14, boxShadow: '0 1px 3px rgba(15,23,42,.06), 0 6px 16px -8px rgba(15,23,42,.12)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+        <span className="code">OS-2026-000418</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 6px', borderRadius: 6, background: 'rgba(109,40,217,.12)' }}>
+          <SendIcon size={10} color={IN} /><span style={{ fontSize: 10, fontWeight: 800, color: IN }}>Delegada a você</span>
+        </span>
+      </div>
+      <DelegationBanner variant="card" toMe byName="Ana Ferreira" style={{ marginBottom: 8 }} />
+      <div className="ttl">Manutenção corretiva</div>
+      <div className="sub">Centro Cirúrgico · HO — JCB</div>
+    </div>
+  );
+
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <>
+      <div className="lbl">Card na lista — delegada a você</div>
+      <DelegatedCard />
+      <div className="lbl">Bloco no detalhe</div>
+      <DelegationBanner variant="detail" toName="Carlos Andrade" byName="Ana Ferreira"
+        message="Priorizar — verificar o cabo HDMI antes de trocar a placa." />
+    </>
+  );
+</script>
+</body></html>

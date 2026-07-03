@@ -67,6 +67,12 @@
   --sdx-m-danger-soft:    #FEE2E2;   /* @kind color */
   --sdx-m-success:        #059669;   /* @kind color */
 
+  /* Delegação de OS — índigo (conceito "encaminhamento", distinto de status/prioridade) */
+  --sdx-m-delegation:        #6D28D9;   /* @kind color */
+  --sdx-m-delegation-strong: #5B21B6;   /* @kind color */
+  --sdx-m-delegation-soft:   #F1ECFB;   /* @kind color — fundo do card/banner delegado (~5% índigo) */
+  --sdx-m-delegation-border: #C9B6F0;   /* @kind color — borda do card delegado (~33% índigo) */
+
   /* Gradiente do header (BlueHeader) */
   --sdx-m-header:         linear-gradient(135deg, #072AC8, #051E9B);  /* @kind color */
 

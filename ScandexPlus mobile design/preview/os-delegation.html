@@ -1,0 +1,66 @@
+<!-- @dsCard group="Components" name="OS — Delegação & Histórico" subtitle="Botão Histórico no header, ação Delegar e sheet de encaminhamento" viewport="760x360" -->
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8" />
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  :root { --in: var(--sdx-m-delegation, #6D28D9); --soft: var(--sdx-m-delegation-soft, #F1ECFB); --bord: var(--sdx-m-delegation-border, #C9B6F0); }
+  body { margin: 0; background: var(--sdx-m-bg, #F5F7FB); font-family: 'Inter', sans-serif; padding: 22px; display: flex; gap: 22px; justify-content: center; align-items: flex-start; }
+  .phone { width: 320px; }
+  .lbl { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--sdx-m-faint, #94A3B8); margin: 0 0 8px; }
+  /* Header azul com CTA + botão secundário Histórico */
+  .header { background: var(--sdx-m-header, linear-gradient(135deg,#072AC8,#051E9B)); border-radius: 0 0 22px 22px; padding: 16px; box-shadow: var(--sdx-m-shadow-header, 0 6px 18px -8px rgba(7,40,202,.5)); }
+  .header h2 { color: #fff; font-size: 20px; font-weight: 800; margin: 0; }
+  .header .sub { color: rgba(255,255,255,.78); font-size: 12px; margin-top: 4px; }
+  .actions { display: flex; gap: 10px; margin-top: 16px; }
+  .cta { flex: 1; height: 44px; border-radius: 12px; background: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--sdx-m-primary, #072AC8); font-weight: 700; font-size: 14px; }
+  .hist { padding: 0 16px; height: 44px; border-radius: 12px; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.35); display: flex; align-items: center; gap: 7px; color: #fff; font-weight: 700; font-size: 14px; }
+  /* Sheet de delegação */
+  .sheet { background: #fff; border: 1px solid var(--sdx-m-border, #E2E8F2); border-radius: 16px; padding: 16px; box-shadow: var(--sdx-m-shadow-card, 0 6px 16px -8px rgba(15,23,42,.12)); }
+  .sheet h3 { margin: 0 0 12px; font-size: 15px; font-weight: 800; color: var(--sdx-m-text, #0F172A); display: flex; align-items: center; gap: 7px; }
+  .flabel { font-size: 12.5px; font-weight: 600; color: var(--sdx-m-text-soft, #334155); margin: 0 0 6px; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; border: 1px solid var(--sdx-m-border, #E2E8F2); margin-bottom: 8px; }
+  .row.sel { border-color: var(--in); background: var(--soft); }
+  .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--sdx-m-border, #E2E8F2); flex-shrink: 0; }
+  .row.sel .radio { border-color: var(--in); display: flex; align-items: center; justify-content: center; }
+  .row.sel .radio::after { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--in); }
+  .rname { font-size: 14px; font-weight: 600; color: var(--sdx-m-text, #0F172A); }
+  .rdept { font-size: 12px; color: var(--sdx-m-faint, #94A3B8); }
+  .ta { border: 1px solid var(--sdx-m-border, #E2E8F2); border-radius: 12px; padding: 11px; font-size: 13px; color: var(--sdx-m-muted, #64748B); min-height: 56px; }
+  .submit { margin-top: 14px; height: 50px; border-radius: 14px; background: var(--in); color: #fff; font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  svg { display: block; flex-shrink: 0; }
+</style>
+</head><body>
+  <div class="phone">
+    <p class="lbl">Ordens de Serviço — header</p>
+    <div class="header">
+      <h2>Ordens de Serviço</h2>
+      <div class="sub">7 ativas · 42 carregadas</div>
+      <div class="actions">
+        <div class="cta">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#072AC8" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nova OS
+        </div>
+        <div class="hist">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+          Histórico
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phone">
+    <p class="lbl">Delegar OS — sheet</p>
+    <div class="sheet">
+      <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6D28D9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Delegar OS-2026-000418</h3>
+      <p class="flabel">Encaminhar para</p>
+      <div class="row sel"><div class="radio"></div><div><div class="rname">Carlos Andrade</div><div class="rdept">Suporte TI</div></div></div>
+      <div class="row"><div class="radio"></div><div><div class="rname">Júlia Tavares</div><div class="rdept">Redes</div></div></div>
+      <p class="flabel" style="margin-top:12px">Mensagem (opcional)</p>
+      <div class="ta">Priorizar — verificar o cabo HDMI antes de trocar a placa.</div>
+      <div class="submit">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Delegar
+      </div>
+    </div>
+  </div>
+</body></html>
