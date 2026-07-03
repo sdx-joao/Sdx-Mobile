@@ -9,10 +9,14 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
-## v10 (versionCode 10) — Delegação de OS + Histórico no app
+## v10 (versionCode 11) — Delegação de OS + Histórico no app
 
 **Status:** commitado em `main`, aguardando deploy do backend (SDX-Pro) + migration
 e build `servus-prod` no Codemagic.
+
+> ℹ️ **versionCode**: o 10 já havia sido consumido na Play Console (upload
+> rejeitado com "código de versão 10 já foi usado"), então este release foi
+> buildado como **versionCode 11**. O nome lógico da feature continua "v10".
 
 > ⚠️ **Dependência de backend**: este release depende do SDX-Pro atualizado e da
 > migration `database/work_order_delegation_migration.sql` aplicada no banco
