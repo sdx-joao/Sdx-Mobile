@@ -14,6 +14,7 @@ export type RootStackParamList = {
   WorkOrderHistory: undefined;
   WorkOrderDelegate: { id: string; code?: string };
   WorkOrderAttachmentCapture: { id: string; category?: 'before' | 'after' | 'general' };
+  WorkOrderPhotoViewer: { id: string; startId?: string };
   NewWorkOrder: undefined;
   InventoryDetail: { id: string };
   Scan: undefined;

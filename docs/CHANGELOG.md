@@ -9,6 +9,38 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## v11 (versionCode 13) — Anexos: upload, visualizador e fotos no PDF
+
+**Status:** commitado em `main`. Depende do backend SDX-Pro com o novo endpoint
+mobile de arquivo de anexo (deploy feito). Build `servus-prod` no Codemagic.
+
+### 1. Corrige erro ao anexar foto
+- A foto da câmera (>1MB) era **rejeitada pelo túnel/proxy** do domínio público
+  (Cloudflare Tunnel → container) — POST grande retornava 502 antes de chegar no
+  app. Agora a foto é **redimensionada (máx. 1600px) + comprimida** (`expo-image-manipulator`,
+  ~300–600KB) antes do upload → passa folgado e sobe rápido em rede instável.
+- ⚠️ Causa de infra: o Cloudflare/túnel limita uploads grandes e bloqueia
+  `/images` (403). Vale rever o limite no Cloudflare, mas a compressão resolve
+  o caso da foto.
+
+### 2. Visualizador de fotos
+- Novo endpoint mobile **`GET /api/mobile/work-orders/attachments/[id]/file`**
+  (bearer) — o web usa sessão por cookie, que o app não tem. `mapAttachment.url`
+  passou a apontar pra ele.
+- Detalhe da OS: anexos de imagem viram **grade de miniaturas** tocáveis;
+  documentos continuam em lista.
+- Nova tela `WorkOrderPhotoViewerScreen`: galeria **fullscreen** com swipe entre
+  as fotos, contador, legenda (categoria · data · comentário) e pinch-zoom (iOS).
+
+### 3. Fotos no PDF da OS
+- `buildWorkOrderPrintHtml` agora recebe `photos` e gera **páginas de foto**
+  (2 por página, com legenda), no mesmo padrão da impressão do Electron.
+- As fotos são baixadas autenticadas e **embutidas em base64** (`work-order-photos.ts`),
+  aplicado no compartilhar (detalhe) e no pós-assinatura.
+- Deps novas: `expo-image-manipulator@~14.0.8`.
+
+---
+
 ## v10 (versionCode 12) — Delegação de OS + Histórico no app
 
 **Status:** commitado em `main`, aguardando deploy do backend (SDX-Pro) + migration

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -20,6 +20,8 @@ import {
 import { useResource } from '../api/use-resource';
 import { buildWorkOrderPrintHtml } from '../api/work-order-pdf-html';
 import { loadPrintLogos } from '../api/print-logos';
+import { loadWorkOrderPhotos } from '../api/work-order-photos';
+import { API_BASE_URL } from '../api/client';
 import type { RootStackParamList } from '../navigation/types';
 
 const FLOW: WorkOrderStatus[] = ['open', 'in_progress', 'waiting', 'delivered', 'completed'];
@@ -124,8 +126,8 @@ export function WorkOrderDetailScreen() {
     if (!wo || sharing) return;
     setSharing(true);
     try {
-      const logos = await loadPrintLogos();
-      const html = buildWorkOrderPrintHtml(wo, timeline ?? [], '', wo.requestedByName || '', logos);
+      const [logos, photos] = await Promise.all([loadPrintLogos(), loadWorkOrderPhotos(token, wo.id)]);
+      const html = buildWorkOrderPrintHtml(wo, timeline ?? [], '', wo.requestedByName || '', logos, photos);
       const { uri } = await Print.printToFileAsync({ html });
       // printToFileAsync gera um nome temporário aleatório; renomeia para o
       // código da OS antes de compartilhar (o nome exibido = nome do arquivo).
@@ -384,39 +386,59 @@ export function WorkOrderDetailScreen() {
         )}
         {attachments.length === 0 ? (
           <Text style={{ fontSize: 12.5, color: T.muted }}>Nenhum anexo registrado.</Text>
-        ) : (
-          <View style={{ gap: 9 }}>
-            {attachments.map((attachment: WorkOrderAttachment) => (
-              <View
-                key={attachment.id}
-                style={{
-                  flexDirection: 'row',
-                  gap: 10,
-                  borderWidth: 1,
-                  borderColor: T.border,
-                  borderRadius: 12,
-                  padding: 10,
-                  backgroundColor: T.surfaceMuted,
-                }}
-              >
-                <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon name={attachment.mimeType.startsWith('image/') ? 'camera' : 'download'} size={16} color={T.primary} />
+        ) : (() => {
+          const images = attachments.filter((a) => a.mimeType.startsWith('image/'));
+          const docs = attachments.filter((a) => !a.mimeType.startsWith('image/'));
+          const imgHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
+          return (
+            <>
+              {/* Fotos: grade de miniaturas — toque abre o visualizador em tela cheia */}
+              {images.length > 0 && (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: docs.length ? 12 : 0 }}>
+                  {images.map((att) => (
+                    <Pressable
+                      key={att.id}
+                      onPress={() => nav.navigate('WorkOrderPhotoViewer', { id: wo.id, startId: att.id })}
+                      style={{ width: 76, height: 76, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted }}
+                    >
+                      <Image
+                        source={{ uri: `${API_BASE_URL}${att.url}`, headers: imgHeaders }}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                      />
+                    </Pressable>
+                  ))}
                 </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '700', color: T.text }}>
-                    {attachment.originalFileName || `Anexo ${attachment.id}`}
-                  </Text>
-                  <Text style={{ marginTop: 2, fontSize: 11.5, color: T.muted }}>
-                    {ATTACHMENT_LABELS[attachment.category] || attachment.category} · {formatBytes(attachment.fileSize)}
-                  </Text>
-                  {!!attachment.comment && (
-                    <Text numberOfLines={2} style={{ marginTop: 4, fontSize: 12, color: T.textSoft }}>{attachment.comment}</Text>
-                  )}
+              )}
+              {/* Documentos (não-imagem): linhas */}
+              {docs.length > 0 && (
+                <View style={{ gap: 9 }}>
+                  {docs.map((attachment) => (
+                    <View
+                      key={attachment.id}
+                      style={{ flexDirection: 'row', gap: 10, borderWidth: 1, borderColor: T.border, borderRadius: 12, padding: 10, backgroundColor: T.surfaceMuted }}
+                    >
+                      <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+                        <Icon name="download" size={16} color={T.primary} />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '700', color: T.text }}>
+                          {attachment.originalFileName || `Anexo ${attachment.id}`}
+                        </Text>
+                        <Text style={{ marginTop: 2, fontSize: 11.5, color: T.muted }}>
+                          {ATTACHMENT_LABELS[attachment.category] || attachment.category} · {formatBytes(attachment.fileSize)}
+                        </Text>
+                        {!!attachment.comment && (
+                          <Text numberOfLines={2} style={{ marginTop: 4, fontSize: 12, color: T.textSoft }}>{attachment.comment}</Text>
+                        )}
+                      </View>
+                    </View>
+                  ))}
                 </View>
-              </View>
-            ))}
-          </View>
-        )}
+              )}
+            </>
+          );
+        })()}
       </SectionCard>
 
       {timeline && timeline.length > 0 && (

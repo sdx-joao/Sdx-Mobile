@@ -11,6 +11,7 @@ import { WorkOrderEditScreen } from '../screens/WorkOrderEditScreen';
 import { WorkOrderHistoryScreen } from '../screens/WorkOrderHistoryScreen';
 import { WorkOrderDelegateScreen } from '../screens/WorkOrderDelegateScreen';
 import { WorkOrderAttachmentCaptureScreen } from '../screens/WorkOrderAttachmentCaptureScreen';
+import { WorkOrderPhotoViewerScreen } from '../screens/WorkOrderPhotoViewerScreen';
 import { NewWorkOrderScreen } from '../screens/NewWorkOrderScreen';
 import { InventoryDetailScreen } from '../screens/InventoryDetailScreen';
 import { ScanScreen } from '../screens/ScanScreen';
@@ -41,6 +42,7 @@ export function RootNavigator() {
       <Stack.Screen name="WorkOrderHistory" component={WorkOrderHistoryScreen} />
       <Stack.Screen name="WorkOrderDelegate" component={WorkOrderDelegateScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="WorkOrderAttachmentCapture" component={WorkOrderAttachmentCaptureScreen} options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="WorkOrderPhotoViewer" component={WorkOrderPhotoViewerScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="InventoryDetail" component={InventoryDetailScreen} />
       <Stack.Screen name="NewWorkOrder" component={NewWorkOrderScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="Scan" component={ScanScreen} options={{ presentation: 'fullScreenModal' }} />

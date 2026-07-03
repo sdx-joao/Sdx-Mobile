@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
@@ -30,13 +31,21 @@ export function WorkOrderAttachmentCaptureScreen() {
     setSaving(true);
     try {
       const photo = await cameraRef.current?.takePictureAsync({
-        quality: 0.72,
+        quality: 0.85,
         skipProcessing: false,
         shutterSound: false,
       });
       if (!photo?.uri) throw new Error('Não foi possível capturar a foto.');
+      // Redimensiona (máx. 1600px) + comprime antes de subir. Foto de câmera
+      // crua passa de 1MB e o proxy/túnel do servidor derruba uploads grandes;
+      // comprimida fica ~300–600KB e sobe rápido em rede instável.
+      const compressed = await manipulateAsync(
+        photo.uri,
+        [{ resize: { width: 1600 } }],
+        { compress: 0.6, format: SaveFormat.JPEG },
+      );
       await uploadWorkOrderAttachment(token, route.params.id, {
-        uri: photo.uri,
+        uri: compressed.uri,
         name: `os-${route.params.id}-${category}-${Date.now()}.jpg`,
         type: 'image/jpeg',
         category,

@@ -13,6 +13,7 @@ import { useAuth } from '../auth/auth-context';
 import { getWorkOrder, updateWorkOrderStatus } from '../api/mobile';
 import { IS_TEST_BUILD } from '../api/client';
 import { loadPrintLogos } from '../api/print-logos';
+import { loadWorkOrderPhotos } from '../api/work-order-photos';
 import { buildWorkOrderPrintHtml } from '../api/work-order-pdf-html';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -70,8 +71,8 @@ function svgMarkup(strokes: Point[][], width: number, height: number) {
 // compartilhamento — usado no build de teste.
 async function shareWorkOrderPdf(token: string | null, id: string, signatureSvg: string, signerName: string) {
   const { workOrder: wo, timeline } = await getWorkOrder(token, id);
-  const logos = await loadPrintLogos();
-  const html = buildWorkOrderPrintHtml(wo, timeline ?? [], signatureSvg, signerName, logos);
+  const [logos, photos] = await Promise.all([loadPrintLogos(), loadWorkOrderPhotos(token, id)]);
+  const html = buildWorkOrderPrintHtml(wo, timeline ?? [], signatureSvg, signerName, logos, photos);
   const { uri } = await Print.printToFileAsync({ html });
   // Renomeia para o código da OS antes de compartilhar (nome exibido = arquivo).
   const safeName = (wo.code || 'ordem-servico').replace(/[^\w.-]+/g, '_');

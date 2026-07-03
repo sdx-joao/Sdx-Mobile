@@ -6,7 +6,17 @@
 import type { TimelineEvent, WorkOrder, WorkOrderPriority, WorkOrderResolution, WorkOrderStatus } from '../data/mock';
 import type { PrintLogos } from './print-logos';
 
+export type PrintPhoto = {
+  dataUri: string;
+  category: string;
+  comment: string | null;
+  createdAt: string;
+};
+
 const NA = 'Não se aplica';
+const ATTACH_CAT_LABEL: Record<string, string> = {
+  before: 'Antes', after: 'Depois', document: 'Documento', general: 'Geral',
+};
 
 type Tone = { fg: string; bg: string; border: string };
 
@@ -100,6 +110,15 @@ body{margin:0;padding:0;background:#fff}
 .os-print .footer-brand img{display:block;width:auto;height:26px;object-fit:contain}
 .os-print .document-meta{margin-top:0;text-align:center;font-size:7.4px;font-weight:700;color:#64748b;letter-spacing:.25px}
 .os-print .page-meta{margin-top:0;display:flex;align-items:center;justify-content:space-between;font-size:7.3px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.35px}
+.os-print .photo-page{page-break-before:always;break-before:page;padding-top:2px}
+.os-print .photo-page-title{display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid #6B7280;padding:4px 0 7px;margin-bottom:8px}
+.os-print .photo-page-title h2{margin:0;color:#1F2937;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.6px}
+.os-print .photo-grid{display:grid;grid-template-columns:1fr;grid-template-rows:repeat(2,86mm);gap:7px}
+.os-print .photo-card{border:1px solid #9CA3AF;border-radius:5px;overflow:hidden;display:flex;flex-direction:column;background:#fff}
+.os-print .photo-frame{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;background:#F3F4F6;border-bottom:1px solid #D1D5DB}
+.os-print .photo-frame img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block}
+.os-print .photo-caption{flex:0 0 auto;padding:4px 6px;font-size:8.8px;line-height:1.18;color:#111827;max-height:26mm;overflow:hidden}
+.os-print .photo-caption strong{display:block;color:#374151;font-size:8px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
 `;
 
 export function buildWorkOrderPrintHtml(
@@ -108,6 +127,7 @@ export function buildWorkOrderPrintHtml(
   signatureSvg: string,
   signerName: string,
   logos: PrintLogos,
+  photos: PrintPhoto[] = [],
 ): string {
   const fields: Array<{ label: string; value: string; highlight?: boolean }> = [
     { label: 'Unidade', value: valueOrNA(wo.unitName) },
@@ -150,6 +170,17 @@ export function buildWorkOrderPrintHtml(
     ? `<section><h3>Observação do atendimento</h3><div class="box">${valueOrNA(wo.attendanceNotes)}</div></section>`
     : '';
 
+  // Páginas de foto (2 por página), no mesmo padrão da impressão do Electron.
+  const photoChunks: PrintPhoto[][] = [];
+  for (let i = 0; i < photos.length; i += 2) photoChunks.push(photos.slice(i, i + 2));
+  const photoPages = photoChunks.map((chunk, pageIdx) => `
+    <section class="photo-page">
+      <div class="photo-page-title"><h2>Fotos do serviço executado${photoChunks.length > 1 ? ` · ${pageIdx + 1}/${photoChunks.length}` : ''}</h2><span class="code">${esc(wo.code)}</span></div>
+      <div class="photo-grid">
+        ${chunk.map(p => `<div class="photo-card"><div class="photo-frame"><img src="${p.dataUri}" alt=""/></div><div class="photo-caption"><strong>${esc(ATTACH_CAT_LABEL[p.category] || p.category)} · ${fmtDt(p.createdAt)}</strong>${p.comment ? esc(p.comment) : ''}</div></div>`).join('')}
+      </div>
+    </section>`).join('');
+
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${CSS}</style></head><body>
   <div class="os-print">
     <div class="main-page">
@@ -178,6 +209,7 @@ export function buildWorkOrderPrintHtml(
       <div class="page-meta"><span>${esc(wo.code)}</span></div>
     </div>
     </div>
+    ${photoPages}
   </div>
   </body></html>`;
 }
