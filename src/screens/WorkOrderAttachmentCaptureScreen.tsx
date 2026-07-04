@@ -30,22 +30,20 @@ export function WorkOrderAttachmentCaptureScreen() {
     if (saving) return;
     setSaving(true);
     try {
-      const photo = await cameraRef.current?.takePictureAsync({
-        quality: 0.85,
-        skipProcessing: false,
-        shutterSound: false,
-      });
+      const photo = await cameraRef.current?.takePictureAsync({ quality: 0.6, skipProcessing: false });
       if (!photo?.uri) throw new Error('Não foi possível capturar a foto.');
-      // Redimensiona (máx. 1600px) + comprime antes de subir. Foto de câmera
-      // crua passa de 1MB e o proxy/túnel do servidor derruba uploads grandes;
-      // comprimida fica ~300–600KB e sobe rápido em rede instável.
-      const compressed = await manipulateAsync(
-        photo.uri,
-        [{ resize: { width: 1600 } }],
-        { compress: 0.6, format: SaveFormat.JPEG },
-      );
+      // Redimensiona (máx. 1440px) + comprime antes de subir (fica ~300–500KB).
+      // Se a compressão falhar por qualquer motivo, sobe a original mesmo —
+      // não trava o anexo (o upload aguenta bem abaixo de 1,5MB).
+      let uploadUri = photo.uri;
+      try {
+        const compressed = await manipulateAsync(photo.uri, [{ resize: { width: 1440 } }], { compress: 0.5, format: SaveFormat.JPEG });
+        if (compressed?.uri) uploadUri = compressed.uri;
+      } catch {
+        // segue com a foto original
+      }
       await uploadWorkOrderAttachment(token, route.params.id, {
-        uri: compressed.uri,
+        uri: uploadUri,
         name: `os-${route.params.id}-${category}-${Date.now()}.jpg`,
         type: 'image/jpeg',
         category,

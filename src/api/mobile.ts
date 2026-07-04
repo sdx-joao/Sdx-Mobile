@@ -1,3 +1,4 @@
+import * as FileSystem from 'expo-file-system/legacy';
 import { API_BASE_URL, ApiError, IS_TEST_BUILD, apiFetch, notifyUnauthorized } from './client';
 import type { WorkOrder, WorkOrderPriority, WorkOrderStatus, InventoryItem, Movement, TimelineEvent } from '../data/mock';
 import type { MobileUser } from '../auth/types';
@@ -213,28 +214,26 @@ export async function uploadWorkOrderAttachment(
     comment?: string;
   },
 ) {
-  const form = new FormData();
-  form.append('category', input.category);
-  if (input.comment) form.append('comment', input.comment);
-  if (IS_TEST_BUILD && input.type.startsWith('image/')) {
-    form.append('retentionTag', 'test-photo-4h');
-  }
-  form.append('file', {
-    uri: input.uri,
-    name: input.name,
-    type: input.type,
-  } as unknown as Blob);
+  // FileSystem.uploadAsync é bem mais confiável que fetch()+FormData no RN Android
+  // (que costuma falhar com "Network request failed" ao anexar arquivos).
+  const parameters: Record<string, string> = { category: input.category };
+  if (input.comment) parameters.comment = input.comment;
+  if (IS_TEST_BUILD && input.type.startsWith('image/')) parameters.retentionTag = 'test-photo-4h';
 
-  const res = await fetch(`${API_BASE_URL}/api/mobile/work-orders/${id}/attachments`, {
-    method: 'POST',
+  const res = await FileSystem.uploadAsync(`${API_BASE_URL}/api/mobile/work-orders/${id}/attachments`, input.uri, {
+    httpMethod: 'POST',
+    uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+    fieldName: 'file',
+    mimeType: input.type,
+    parameters,
     headers: {
       Accept: 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: form,
   });
-  const payload = await res.json().catch(() => null);
-  if (!res.ok) {
+
+  const payload = (() => { try { return JSON.parse(res.body || 'null'); } catch { return null; } })();
+  if (res.status < 200 || res.status >= 300) {
     if (res.status === 401 && token) notifyUnauthorized();
     throw new ApiError((payload && (payload.message || payload.error)) || `Erro ${res.status}`, res.status, payload?.code);
   }
