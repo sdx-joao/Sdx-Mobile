@@ -49,7 +49,7 @@ export type WorkOrder = {
   materials: WorkOrderMaterial[];
 };
 
-export type TimelineEvent = { at: string; label: string; by: string; tone: WorkOrderStatus };
+export type TimelineEvent = { at: string; title?: string; label: string; by: string; tone: WorkOrderStatus };
 
 export type TechnicalSpec = { key: string; value: string };
 

@@ -449,9 +449,12 @@ export function WorkOrderDetailScreen() {
                 <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: WO_STATUS[ev.tone].solid, marginTop: 4 }} />
                 {i < timeline.length - 1 && <View style={{ width: 2, flex: 1, backgroundColor: T.border, marginVertical: 2 }} />}
               </View>
-              <View style={{ paddingBottom: i < timeline.length - 1 ? 14 : 0 }}>
-                <Text style={{ fontSize: 13, color: T.text, fontWeight: '500' }}>{ev.label}</Text>
-                <Text style={{ fontSize: 11.5, color: T.faint, marginTop: 1 }}>{ev.at} · {ev.by}</Text>
+              <View style={{ flex: 1, paddingBottom: i < timeline.length - 1 ? 14 : 0 }}>
+                {!!ev.title && (
+                  <Text style={{ fontSize: 13.5, color: T.text, fontWeight: '800' }}>{ev.title}</Text>
+                )}
+                <Text style={{ fontSize: 13, color: T.textSoft, marginTop: ev.title ? 1 : 0 }}>{ev.label}</Text>
+                <Text style={{ fontSize: 11.5, color: T.faint, marginTop: 2 }}>{ev.at} · {ev.by}</Text>
               </View>
             </View>
           ))}
