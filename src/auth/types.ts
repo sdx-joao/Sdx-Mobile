@@ -17,6 +17,8 @@ export type MobileUser = {
   workOrderPrinterName?: string | null;
   avatarUrl?: string | null;
   capabilities?: MobileCapabilities | null;
+  /** Mapa efetivo de permissões { key: boolean } (novo sistema). */
+  permissions?: Record<string, boolean> | null;
 };
 
 export type LoginResponse = {

@@ -29,6 +29,7 @@ export type SessionUser = {
   username: string;
   avatarUrl: string | null;
   capabilities: MobileCapabilities;
+  permissions: Record<string, boolean>;
 };
 
 function toSessionUser(u: MobileUser): SessionUser {
@@ -41,6 +42,7 @@ function toSessionUser(u: MobileUser): SessionUser {
     username: u.username,
     avatarUrl: u.avatarUrl ?? null,
     capabilities: u.capabilities ?? DEFAULT_CAPABILITIES,
+    permissions: u.permissions ?? {},
   };
 }
 

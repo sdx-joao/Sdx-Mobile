@@ -138,7 +138,8 @@ function isDeliveryOrCollectionService(value: string) {
 export function WorkOrderEditScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'WorkOrderEdit'>>();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const canUploadPhotos = user?.permissions?.canUploadWorkOrderPhotos !== false;
   const loader = useCallback(async () => {
     const [detail, options, requesters] = await Promise.all([
       getWorkOrder(token, route.params.id),
@@ -542,7 +543,7 @@ export function WorkOrderEditScreen() {
         </View>
       </SectionCard>
 
-      {!locked && (
+      {!locked && canUploadPhotos && (
         <SectionCard title="Fotos">
           <Text style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>Capture fotos do atendimento. Elas aparecem nos anexos da OS.</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>

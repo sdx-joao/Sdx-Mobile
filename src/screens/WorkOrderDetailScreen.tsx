@@ -51,6 +51,7 @@ export function WorkOrderDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'WorkOrderDetail'>>();
   const { token, user } = useAuth();
   const canDelegate = !!user?.capabilities?.canDelegateWorkOrders;
+  const canUploadPhotos = user?.permissions?.canUploadWorkOrderPhotos !== false;
   const loader = useCallback(async () => {
     const [detail, attachments] = await Promise.all([
       getWorkOrder(token, route.params.id),
@@ -375,7 +376,7 @@ export function WorkOrderDetailScreen() {
       <SectionCard title={`Anexos (${attachments.length})`}>
         {/* Captura de fotos só pela tela de Edição — aqui os anexos são só
             leitura. Aponta o usuário pro fluxo de Editar. */}
-        {!finished && (
+        {!finished && canUploadPhotos && (
           <Pressable
             onPress={() => nav.navigate('WorkOrderEdit', { id: wo.id })}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: attachments.length ? 12 : 10 }}
