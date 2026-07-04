@@ -9,7 +9,10 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
-## v11 (versionCode 13) — Anexos: upload, visualizador e fotos no PDF
+## v11 (versionCode 14) — Anexos: upload, visualizador e fotos no PDF
+
+> ℹ️ **versionCode**: 13 já havia sido consumido na Play Console; buildar como
+> **14**. Inclui também logos embutidas reduzidas (ho-logo 331KB→29KB) para o PDF.
 
 **Status:** commitado em `main`. Depende do backend SDX-Pro com o novo endpoint
 mobile de arquivo de anexo (deploy feito). Build `servus-prod` no Codemagic.
