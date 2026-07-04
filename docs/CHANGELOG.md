@@ -9,19 +9,18 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
-## v12.1 (versionCode 16) — Corrige de vez o anexo de foto
+## v12.1 (versionCode 16) — Anexo de foto: robustez (a causa real era o banco)
 
-- O anexo de foto **nunca** funcionou (0 anexos `upload_source=mobile` no banco) e
-  dava erro **logo após tirar a foto**. Duas causas prováveis atacadas:
-  1. **Upload via `fetch()`+FormData** (notório por falhar com "Network request
-     failed" no RN Android) → trocado por **`FileSystem.uploadAsync`** (multipart),
-     bem mais confiável para envio de arquivos.
-  2. **Compressão (`manipulateAsync`)** podia lançar erro e travar tudo → agora
-     roda em try/catch com **fallback pra foto original**; captura em qualidade
-     0.6 + resize 1440/compress 0.5.
-- Diagnóstico de infra: o proxy só derruba corpos **> ~1,5MB** (testado: 300KB–1,5MB
-  passam), então a foto comprimida (~400KB) passa sem problema — a falha era
-  client-side, não o Cloudflare.
+- **Causa raiz (backend, não o app):** a coluna `work_order_attachment.upload_source`
+  era `ENUM('web','qr')` e o endpoint mobile gravava `'mobile'` → o INSERT falhava
+  e o backend retornava **500 "Erro ao enviar arquivo."** (a mensagem que aparecia
+  no app). Corrigido por migration (`work_order_attachment_mobile_source_migration.sql`,
+  aplicada em produção) — o **anexo passa a funcionar até no build atual**, sem rebuild.
+- Melhorias de robustez no app (mantidas, embora não fossem a causa):
+  - Upload via **`FileSystem.uploadAsync`** (multipart) no lugar de `fetch()`+FormData
+    — mais confiável para arquivos no RN Android.
+  - **Compressão com fallback**: se `manipulateAsync` falhar, sobe a foto original
+    (captura 0.6 + resize 1440/compress 0.5). Foto fica ~400KB.
 - versionCode 15 → 16.
 
 ---
