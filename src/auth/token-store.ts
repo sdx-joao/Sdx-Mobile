@@ -3,6 +3,17 @@ import * as SecureStore from 'expo-secure-store';
 const TOKEN_KEY = 'sdx.auth.token';
 const REGISTERED_KEY = 'sdx.auth.registered'; // trava do auto-cadastro de teste (1 por aparelho)
 const REGISTERED_USER_KEY = 'sdx.auth.registered_username';
+const BIOMETRIC_KEY = 'sdx.auth.biometric'; // '1' = desbloqueio por biometria ligado
+
+/** Preferência de desbloqueio por biometria (por aparelho). */
+export async function getBiometricEnabled(): Promise<boolean> {
+  return (await SecureStore.getItemAsync(BIOMETRIC_KEY)) === '1';
+}
+
+export async function setBiometricPref(enabled: boolean): Promise<void> {
+  if (enabled) await SecureStore.setItemAsync(BIOMETRIC_KEY, '1');
+  else await SecureStore.deleteItemAsync(BIOMETRIC_KEY);
+}
 
 export async function saveToken(token: string): Promise<void> {
   await SecureStore.setItemAsync(TOKEN_KEY, token);

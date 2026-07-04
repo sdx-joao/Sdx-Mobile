@@ -7,10 +7,11 @@ import {
   type ReactNode,
 } from 'react';
 import { apiFetch, setUnauthorizedHandler } from '../api/client';
-import { clearToken, getToken, markDeviceRegistered, saveToken } from './token-store';
+import { clearToken, getToken, getBiometricEnabled, markDeviceRegistered, saveToken, setBiometricPref } from './token-store';
+import { authenticateBiometric, isBiometricAvailable } from './biometrics';
 import type { LoginResponse, MobileCapabilities, MobileUser } from './types';
 
-type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
+type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'locked';
 
 const DEFAULT_CAPABILITIES: MobileCapabilities = {
   canManageWorkOrders: false,
@@ -47,9 +48,14 @@ type AuthContextValue = {
   status: AuthStatus;
   user: SessionUser | null;
   token: string | null;
+  biometricEnabled: boolean;
   signIn: (username: string, password: string) => Promise<void>;
   signUp: (username: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Desbloqueia a tela de biometria. Retorna true se autenticou. */
+  unlock: () => Promise<boolean>;
+  /** Liga/desliga o desbloqueio por biometria (confirma com uma leitura ao ligar). */
+  setBiometric: (enabled: boolean) => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -58,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<SessionUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
 
   async function clearSession() {
     await clearToken();
@@ -78,13 +85,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const me = await apiFetch<MobileUser>('/api/mobile/me', { token: stored });
         setToken(stored);
         setUser(toSessionUser(me));
-        setStatus('authenticated');
+        // Se a biometria está ligada e disponível, entra travado (LockScreen pede a digital).
+        const bioOn = await getBiometricEnabled();
+        setBiometricEnabled(bioOn);
+        setStatus(bioOn && (await isBiometricAvailable()) ? 'locked' : 'authenticated');
       } catch {
         await clearToken();
         setStatus('unauthenticated');
       }
     })();
   }, []);
+
+  const unlock = async (): Promise<boolean> => {
+    const ok = await authenticateBiometric('Desbloquear o Servus');
+    if (ok) setStatus('authenticated');
+    return ok;
+  };
+
+  const setBiometric = async (enabled: boolean): Promise<boolean> => {
+    if (enabled) {
+      if (!(await isBiometricAvailable())) return false;
+      // Confirma com uma leitura antes de ligar (evita ligar sem funcionar).
+      if (!(await authenticateBiometric('Confirmar biometria'))) return false;
+      await setBiometricPref(true);
+      setBiometricEnabled(true);
+      return true;
+    }
+    await setBiometricPref(false);
+    setBiometricEnabled(false);
+    return true;
+  };
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
@@ -136,8 +166,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, token, signIn, signUp, signOut }),
-    [status, user, token],
+    () => ({ status, user, token, biometricEnabled, signIn, signUp, signOut, unlock, setBiometric }),
+    [status, user, token, biometricEnabled],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

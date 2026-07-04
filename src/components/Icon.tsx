@@ -3,6 +3,8 @@ import Svg, { Path } from 'react-native-svg';
 // Ícones estilo Lucide (stroke paths) — portados do conceito (ui.jsx)
 export const ICONS: Record<string, string> = {
   home: 'M3 9.5L12 3l9 6.5M5 9.5V20a1 1 0 001 1h12a1 1 0 001-1V9.5',
+  lock: 'M5 11a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2H5z M7 11V7a5 5 0 0110 0v4',
+  fingerprint: 'M12 6a7 7 0 017 7c0 1.6-.1 3.2-.5 4.7 M5 13a7 7 0 019-6.7 M4.6 17.6c.6-1.5.9-3 .9-4.6 M12 10a3 3 0 00-3 3c0 2 .4 3.6 1 5.2 M15.4 13.4c.1 2.6-.4 4.2-1 5.8',
   clipboard:
     'M9 4h6a1 1 0 011 1v1h1a2 2 0 012 2v11a2 2 0 01-2 2H7a2 2 0 01-2-2V8a2 2 0 012-2h1V5a1 1 0 011-1zM9 4a1 1 0 001 1h4a1 1 0 001-1',
   package:

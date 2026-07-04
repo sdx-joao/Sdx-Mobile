@@ -9,6 +9,29 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## v12 (versionCode 15) — Logos no PDF (definitivo) + biometria
+
+### 1. Logos no PDF — corrigido de vez
+- No build de produção as logos **não apareciam** mesmo com o código de embutir
+  (v14): a leitura do asset via `expo-asset` + `FileSystem` em runtime devolvia
+  base64 vazio → logo não renderizava (sobrava o ícone de imagem quebrada).
+- Agora as 3 logos são **embutidas como constante base64 no bundle**
+  (`src/api/print-logos-data.ts`, geradas de `assets/print/*.png`). Zero leitura
+  de asset/rede em runtime → renderiza sempre. Logos reduzidas (240px, ~90KB
+  no total) → PDF leve.
+
+### 2. Desbloqueio por biometria
+- `expo-local-authentication`: novo status `locked` no auth-context. Se o
+  desbloqueio estiver ligado e o aparelho tiver biometria, o app abre numa
+  **tela de bloqueio** (`LockScreen`) que pede a digital/rosto.
+- Toggle **"Desbloqueio por biometria"** no Perfil (só aparece se o aparelho
+  suportar) — ao ligar, confirma com uma leitura; preferência salva no
+  secure-store por aparelho.
+- Fallback pro PIN/senha do aparelho; opção "Sair da conta" na tela de bloqueio.
+- `app.json`: plugin `expo-local-authentication` (permissão) + versionCode 14 → 15.
+
+---
+
 ## v11 (versionCode 14) — Anexos: upload, visualizador e fotos no PDF
 
 > ℹ️ **versionCode**: 13 já havia sido consumido na Play Console; buildar como

@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
@@ -8,13 +8,38 @@ import { BlueHeader } from '../components/ui';
 import { Wordmark } from '../components/Brand';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
+import { biometricLabel, isBiometricAvailable } from '../auth/biometrics';
 import { getNotifications } from '../api/mobile';
 import type { RootStackParamList } from '../navigation/types';
 
 export function ProfileScreen() {
-  const { user, token, signOut } = useAuth();
+  const { user, token, signOut, biometricEnabled, setBiometric } = useAuth();
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [unread, setUnread] = useState(0);
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioLabel, setBioLabel] = useState('biometria');
+  const [bioBusy, setBioBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const ok = await isBiometricAvailable();
+      if (!active) return;
+      setBioAvailable(ok);
+      if (ok) setBioLabel(await biometricLabel());
+    })();
+    return () => { active = false; };
+  }, []);
+
+  const toggleBiometric = async (value: boolean) => {
+    if (bioBusy) return;
+    setBioBusy(true);
+    const ok = await setBiometric(value);
+    if (!ok && value) {
+      Alert.alert('Não foi possível ativar', `Confirme a ${bioLabel} do aparelho para ativar o desbloqueio.`);
+    }
+    setBioBusy(false);
+  };
 
   // Atualiza o contador de não lidas sempre que a aba Perfil ganha foco.
   useFocusEffect(
@@ -66,6 +91,23 @@ export function ProfileScreen() {
             </Pressable>
           ))}
         </View>
+
+        {bioAvailable && (
+          <View style={{ backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 14, padding: 15, flexDirection: 'row', alignItems: 'center', gap: 13, marginBottom: 18 }}>
+            <Icon name="fingerprint" size={19} color={T.muted} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontSize: 14, color: T.text, fontWeight: '600' }}>Desbloqueio por biometria</Text>
+              <Text style={{ fontSize: 11.5, color: T.faint, marginTop: 2 }}>Pede sua {bioLabel} ao abrir o app.</Text>
+            </View>
+            <Switch
+              value={biometricEnabled}
+              onValueChange={toggleBiometric}
+              disabled={bioBusy}
+              trackColor={{ true: T.primary, false: '#CBD5E1' }}
+              thumbColor="#fff"
+            />
+          </View>
+        )}
 
         <Pressable
           onPress={signOut}
