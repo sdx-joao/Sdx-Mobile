@@ -128,7 +128,13 @@ export function WorkOrderDetailScreen() {
     setSharing(true);
     try {
       const [logos, photos] = await Promise.all([loadPrintLogos(), loadWorkOrderPhotos(token, wo.id)]);
-      const html = buildWorkOrderPrintHtml(wo, timeline ?? [], '', wo.requestedByName || '', logos, photos);
+      // Se a OS já foi assinada, copia a assinatura digital salva para o PDF
+      // (injetada como <img> na área de assinatura de todas as folhas).
+      const sig = data?.signature;
+      const signatureHtml = sig?.signatureDataUrl
+        ? `<img src="${sig.signatureDataUrl}" style="height:50px;max-width:100%;object-fit:contain"/>`
+        : '';
+      const html = buildWorkOrderPrintHtml(wo, timeline ?? [], signatureHtml, sig?.signerName || wo.requestedByName || '', logos, photos);
       const { uri } = await Print.printToFileAsync({ html });
       // printToFileAsync gera um nome temporário aleatório; renomeia para o
       // código da OS antes de compartilhar (o nome exibido = nome do arquivo).

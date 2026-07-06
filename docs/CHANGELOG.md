@@ -9,6 +9,26 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## (próximo build) — PDF da OS: assinatura em toda folha + copia a assinatura salva
+
+**Status:** commitado em `main`. Precisa de rebuild `servus-prod` + depende do
+backend (deploy feito): GET `/api/mobile/work-orders/[id]` agora devolve a
+assinatura digital salva.
+
+- **Rodapé de assinatura em TODAS as folhas** (principal + páginas de foto):
+  antes só a folha principal tinha o campo. `buildWorkOrderPrintHtml` repete o
+  rodapé em cada página de foto (photo-page vira flex `min-height:272mm`, rodapé
+  ancorado no fim via `margin-top:auto`).
+- **Assinatura condicional**: a imagem e o texto "Assinado digitalmente" só
+  aparecem quando há assinatura (antes o texto vinha sempre, mesmo sem assinar).
+- **Compartilhar copia a assinatura salva**: ao compartilhar/reimprimir uma OS já
+  assinada, o app injeta a assinatura digital salva (vinda do GET) como `<img>`
+  no PDF — antes saía sem assinatura.
+- Arquivos: `src/api/work-order-pdf-html.ts`, `src/api/mobile.ts`,
+  `src/screens/WorkOrderDetailScreen.tsx`.
+
+---
+
 ## v12.1 (versionCode 16) — Anexo de foto: robustez (a causa real era o banco)
 
 - **Causa raiz (backend, não o app):** a coluna `work_order_attachment.upload_source`

@@ -110,7 +110,8 @@ body{margin:0;padding:0;background:#fff}
 .os-print .footer-brand img{display:block;width:auto;height:26px;object-fit:contain}
 .os-print .document-meta{margin-top:0;text-align:center;font-size:7.4px;font-weight:700;color:#64748b;letter-spacing:.25px}
 .os-print .page-meta{margin-top:0;display:flex;align-items:center;justify-content:space-between;font-size:7.3px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.35px}
-.os-print .photo-page{page-break-before:always;break-before:page;padding-top:2px}
+.os-print .photo-page{page-break-before:always;break-before:page;padding-top:2px;display:flex;flex-direction:column;min-height:272mm;box-sizing:border-box}
+.os-print .photo-page > .print-signature-footer{margin-top:auto}
 .os-print .photo-page-title{display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid #6B7280;padding:4px 0 7px;margin-bottom:8px}
 .os-print .photo-page-title h2{margin:0;color:#1F2937;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.6px}
 .os-print .photo-grid{display:grid;grid-template-columns:1fr;grid-template-rows:repeat(2,86mm);gap:7px}
@@ -170,7 +171,28 @@ export function buildWorkOrderPrintHtml(
     ? `<section><h3>Observação do atendimento</h3><div class="box">${valueOrNA(wo.attendanceNotes)}</div></section>`
     : '';
 
-  // Páginas de foto (2 por página), no mesmo padrão da impressão do Electron.
+  // Rodapé de assinatura — reutilizado em TODAS as folhas (principal + fotos).
+  // A imagem da assinatura e o texto "Assinado digitalmente" só aparecem quando
+  // há assinatura (signatureSvg preenchido); no compartilhar de OS já assinada,
+  // a assinatura salva é passada aqui (copiada). Sem assinatura, mostra só a
+  // linha do campo (para assinatura manual).
+  const hasSig = !!signatureSvg && signatureSvg.trim().length > 0;
+  const signatureFooter = `
+    <div class="print-signature-footer">
+      <div class="signature-row">
+        <div class="sign-box">
+          ${hasSig ? `<div class="signature-image">${signatureSvg}</div>` : ''}
+          Assinatura do solicitante<br/>${valueOrNA(signerName || wo.requestedByName)}
+          ${hasSig ? `<span class="signature-meta">Assinado digitalmente${wo.finishedAt ? ` em ${fmtDt(wo.finishedAt)}` : ''}</span>` : ''}
+        </div>
+        <div class="sign-box">Assinatura do técnico responsável<br/>${valueOrNA(wo.responsibleTechnicianName)}</div>
+      </div>
+      <div class="footer-brand"><img src="${logos.submarca}" alt="" onerror="this.style.display='none'"/></div>
+      <div class="document-meta">Documento emitido em ${fmtDt(new Date().toISOString())} · ${valueOrNA(wo.unitName)}</div>
+      <div class="page-meta"><span>${esc(wo.code)}</span></div>
+    </div>`;
+
+  // Páginas de foto (2 por página) — cada uma com o rodapé de assinatura no fim.
   const photoChunks: PrintPhoto[][] = [];
   for (let i = 0; i < photos.length; i += 2) photoChunks.push(photos.slice(i, i + 2));
   const photoPages = photoChunks.map((chunk, pageIdx) => `
@@ -179,6 +201,7 @@ export function buildWorkOrderPrintHtml(
       <div class="photo-grid">
         ${chunk.map(p => `<div class="photo-card"><div class="photo-frame"><img src="${p.dataUri}" alt=""/></div><div class="photo-caption"><strong>${esc(ATTACH_CAT_LABEL[p.category] || p.category)} · ${fmtDt(p.createdAt)}</strong>${p.comment ? esc(p.comment) : ''}</div></div>`).join('')}
       </div>
+      ${signatureFooter}
     </section>`).join('');
 
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${CSS}</style></head><body>
@@ -195,19 +218,7 @@ export function buildWorkOrderPrintHtml(
     <section><h3>Solução adotada</h3><div class="box">${valueOrNA(wo.resolutionNotes)}</div></section>
     ${materials}
     ${history}
-    <div class="print-signature-footer">
-      <div class="signature-row">
-        <div class="sign-box">
-          <div class="signature-image">${signatureSvg}</div>
-          Assinatura do solicitante<br/>${valueOrNA(signerName || wo.requestedByName)}
-          <span class="signature-meta">Assinado digitalmente em ${fmtDt(new Date().toISOString())}</span>
-        </div>
-        <div class="sign-box">Assinatura do técnico responsável<br/>${valueOrNA(wo.responsibleTechnicianName)}</div>
-      </div>
-      <div class="footer-brand"><img src="${logos.submarca}" alt="" onerror="this.style.display='none'"/></div>
-      <div class="document-meta">Documento emitido em ${fmtDt(new Date().toISOString())} · ${valueOrNA(wo.unitName)}</div>
-      <div class="page-meta"><span>${esc(wo.code)}</span></div>
-    </div>
+    ${signatureFooter}
     </div>
     ${photoPages}
   </div>

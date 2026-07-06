@@ -136,7 +136,11 @@ export function delegateWorkOrder(
 }
 
 export function getWorkOrder(token: string | null, id: string) {
-  return apiFetch<{ workOrder: WorkOrder; timeline: TimelineEvent[] }>(`/api/mobile/work-orders/${id}`, { token });
+  return apiFetch<{
+    workOrder: WorkOrder;
+    timeline: TimelineEvent[];
+    signature: { signatureDataUrl: string; signerName?: string | null; signedAt?: string | null } | null;
+  }>(`/api/mobile/work-orders/${id}`, { token });
 }
 
 export async function getWorkOrderAttachments(token: string | null, id: string): Promise<WorkOrderAttachment[]> {
