@@ -300,7 +300,7 @@ export function WorkOrderEditScreen() {
           })),
       });
       if (shouldFinalizeWithSignature) {
-        nav.replace('WorkOrderSignature', { id: order.id, status: finalStatus, signerName: requestedByName });
+        nav.replace('WorkOrderSignature', { id: order.id, status: finalStatus, signerName: requestedByName, resolutionNotes });
         return;
       }
       Alert.alert('OS atualizada', `${order.code} foi salva com sucesso.`);

@@ -143,6 +143,23 @@ export function getWorkOrder(token: string | null, id: string) {
   }>(`/api/mobile/work-orders/${id}`, { token });
 }
 
+/**
+ * HTML canônico da OS gerado pelo SERVIDOR (mesmo molde da impressão de produção
+ * / estação). Usado para gerar o PDF de compartilhamento — garante que o PDF do
+ * app é IDÊNTICO ao impresso, com marca d'água, assinatura embutida e origem.
+ * Já inclui a assinatura salva no servidor (se a OS foi assinada).
+ */
+export async function getWorkOrderPrintHtml(token: string | null, id: string): Promise<string> {
+  const res = await fetch(`${API_BASE_URL}/api/mobile/work-orders/${id}/print-html`, {
+    headers: { Accept: 'text/html', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  });
+  if (!res.ok) {
+    if (res.status === 401 && token) notifyUnauthorized();
+    throw new ApiError(`Erro ${res.status} ao gerar o PDF da OS.`, res.status);
+  }
+  return res.text();
+}
+
 export async function getWorkOrderAttachments(token: string | null, id: string): Promise<WorkOrderAttachment[]> {
   const res = await apiFetch<{ attachments: WorkOrderAttachment[] }>(`/api/mobile/work-orders/${id}/attachments`, { token });
   return res.attachments ?? [];

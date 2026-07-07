@@ -10,11 +10,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
-import { getWorkOrder, updateWorkOrderStatus } from '../api/mobile';
+import { getWorkOrder, getWorkOrderPrintHtml, updateWorkOrderStatus } from '../api/mobile';
 import { IS_TEST_BUILD } from '../api/client';
-import { loadPrintLogos } from '../api/print-logos';
-import { loadWorkOrderPhotos } from '../api/work-order-photos';
-import { buildWorkOrderPrintHtml } from '../api/work-order-pdf-html';
 import type { RootStackParamList } from '../navigation/types';
 
 type Point = { x: number; y: number };
@@ -67,12 +64,12 @@ function svgMarkup(strokes: Point[][], width: number, height: number) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${paths}</svg>`;
 }
 
-// Gera um PDF da OS (layout idêntico ao da impressão de produção) e abre o
-// compartilhamento — usado no build de teste.
-async function shareWorkOrderPdf(token: string | null, id: string, signatureSvg: string, signerName: string) {
-  const { workOrder: wo, timeline } = await getWorkOrder(token, id);
-  const [logos, photos] = await Promise.all([loadPrintLogos(), loadWorkOrderPhotos(token, id)]);
-  const html = buildWorkOrderPrintHtml(wo, timeline ?? [], signatureSvg, signerName, logos, photos);
+// Gera um PDF da OS (molde ÚNICO, vindo do servidor) e abre o compartilhamento —
+// usado no build de teste. A assinatura já foi salva no servidor antes daqui, então
+// o HTML canônico já vem com a assinatura embutida.
+async function shareWorkOrderPdf(token: string | null, id: string) {
+  const { workOrder: wo } = await getWorkOrder(token, id);
+  const html = await getWorkOrderPrintHtml(token, id);
   const { uri } = await Print.printToFileAsync({ html });
   // Renomeia para o código da OS antes de compartilhar (nome exibido = arquivo).
   const safeName = (wo.code || 'ordem-servico').replace(/[^\w.-]+/g, '_');
@@ -154,17 +151,22 @@ export function WorkOrderSignatureScreen() {
     }
     setSaving(true);
     try {
+      // Preserva a "Solução adotada" digitada (vinda do fluxo de conclusão) e só
+      // acrescenta a nota da assinatura no FINAL — antes ela sobrescrevia o texto.
+      const typedNotes = (route.params.resolutionNotes || '').trim();
+      const signatureNote = 'OS concluída com assinatura coletada no app.';
+      const resolutionNotes = typedNotes ? `${typedNotes}\n\n${signatureNote}` : signatureNote;
       await updateWorkOrderStatus(token, route.params.id, route.params.status, {
         signatureDataUrl: svgDataUrl(strokes, padSize.width, padSize.height),
         signerName: signerName.trim(),
-        resolutionNotes: 'OS concluída com assinatura coletada no app mobile.',
+        resolutionNotes,
       });
       // Volta o telefone para a vertical já ao salvar (junto com o compartilhamento).
       await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => undefined);
       if (IS_TEST_BUILD) {
         // Ambiente de teste: gera o PDF da OS no aparelho e abre o compartilhamento.
         try {
-          await shareWorkOrderPdf(token, route.params.id, svgMarkup(strokes, padSize.width, padSize.height), signerName.trim());
+          await shareWorkOrderPdf(token, route.params.id);
         } catch (pdfErr) {
           Alert.alert('OS concluída', 'OS salva, mas não foi possível gerar/compartilhar o PDF.');
           console.warn('Falha ao gerar/compartilhar PDF da OS:', pdfErr);

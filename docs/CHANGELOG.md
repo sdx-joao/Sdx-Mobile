@@ -9,7 +9,28 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
-## (próximo build) — PDF da OS: assinatura em toda folha + copia a assinatura salva
+## (próximo build) — OS com molde ÚNICO do servidor + solução adotada preservada
+
+**Status:** commitado em `main`. Precisa de rebuild `servus-prod`. Depende do
+backend (deploy): novo GET `/api/mobile/work-orders/[id]/print-html` (HTML
+canônico) e enum `work_order.source` com `'mobile'` (migration aplicada).
+
+- **Compartilhar puxa o HTML do servidor** (`getWorkOrderPrintHtml` → novo
+  endpoint) em vez de montar o layout no app. Fim do 2º molde: o PDF do app fica
+  **idêntico** à impressão de produção/estação — mesma marca d'água Scandex,
+  histórico com coluna Status, assinatura digital embutida e origem. Removidos os
+  usos de `buildWorkOrderPrintHtml`/`loadPrintLogos`/`loadWorkOrderPhotos` no
+  share (`WorkOrderDetailScreen`, `WorkOrderSignatureScreen`).
+- **"Solução adotada" não é mais sobrescrita**: a tela de assinatura preservava só
+  a frase `OS concluída com assinatura coletada no app mobile.`, apagando o texto
+  digitado. Agora o texto digitado (vindo do fluxo de conclusão via novo param
+  `resolutionNotes`) é mantido e a nota da assinatura vai no **final**.
+- **Origem "App"**: OS criada pelo app grava `source='mobile'` no backend (antes
+  ia como `web`); rótulo "App" em todas as renderizações.
+
+---
+
+## PDF da OS: assinatura em toda folha + copia a assinatura salva
 
 **Status:** commitado em `main`. Precisa de rebuild `servus-prod` + depende do
 backend (deploy feito): GET `/api/mobile/work-orders/[id]` agora devolve a

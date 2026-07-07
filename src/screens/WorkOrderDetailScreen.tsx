@@ -13,14 +13,12 @@ import { useAuth } from '../auth/auth-context';
 import {
   getWorkOrder,
   getWorkOrderAttachments,
+  getWorkOrderPrintHtml,
   updateWorkOrderStatus,
   type WorkOrderAttachment,
   type WorkOrderAttachmentCategory,
 } from '../api/mobile';
 import { useResource } from '../api/use-resource';
-import { buildWorkOrderPrintHtml } from '../api/work-order-pdf-html';
-import { loadPrintLogos } from '../api/print-logos';
-import { loadWorkOrderPhotos } from '../api/work-order-photos';
 import { API_BASE_URL } from '../api/client';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -103,7 +101,7 @@ export function WorkOrderDetailScreen() {
   const persistStatus = async (next: WorkOrderStatus) => {
     if (next === status || savingStatus) return;
     if (next === 'completed' || next === 'delivered') {
-      nav.navigate('WorkOrderSignature', { id: wo.id, status: next, signerName: wo.requestedByName });
+      nav.navigate('WorkOrderSignature', { id: wo.id, status: next, signerName: wo.requestedByName, resolutionNotes: wo.resolutionNotes ?? undefined });
       return;
     }
     setSavingStatus(true);
@@ -127,14 +125,10 @@ export function WorkOrderDetailScreen() {
     if (!wo || sharing) return;
     setSharing(true);
     try {
-      const [logos, photos] = await Promise.all([loadPrintLogos(), loadWorkOrderPhotos(token, wo.id)]);
-      // Se a OS já foi assinada, copia a assinatura digital salva para o PDF
-      // (injetada como <img> na área de assinatura de todas as folhas).
-      const sig = data?.signature;
-      const signatureHtml = sig?.signatureDataUrl
-        ? `<img src="${sig.signatureDataUrl}" style="height:50px;max-width:100%;object-fit:contain"/>`
-        : '';
-      const html = buildWorkOrderPrintHtml(wo, timeline ?? [], signatureHtml, sig?.signerName || wo.requestedByName || '', logos, photos);
+      // Molde ÚNICO: puxa o HTML canônico do servidor (mesmo builder da estação /
+      // impressão de produção) — marca d'água, assinatura salva embutida e origem
+      // já vêm prontas. Sem 2º layout local pra divergir.
+      const html = await getWorkOrderPrintHtml(token, wo.id);
       const { uri } = await Print.printToFileAsync({ html });
       // printToFileAsync gera um nome temporário aleatório; renomeia para o
       // código da OS antes de compartilhar (o nome exibido = nome do arquivo).
