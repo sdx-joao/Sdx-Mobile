@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { DetailScaffold, FieldLabel, PrimaryButton, SectionCard } from '../components/ui';
 import { SuggestedInput } from '../components/SuggestedInput';
+import { Icon } from '../components/Icon';
 import { RequesterPicker } from '../components/RequesterPicker';
 import { T, WO_PRIORITY } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
@@ -83,7 +84,7 @@ function findRequesterForDepartment(department: string, requesters: WorkOrderReq
 
 export function NewWorkOrderScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const optionsLoader = useCallback(async () => {
     const [options, requesters] = await Promise.all([
       getOptions(token, WORK_ORDER_OPTION_KINDS),
@@ -181,7 +182,14 @@ export function NewWorkOrderScreen() {
             <View style={{ flex: 1 }}><SuggestedInput label="Setor" required value={department} onChangeText={selectDepartment} placeholder="Setor" options={optionsByKind.get('work_order_department') ?? []} /></View>
           </View>
           <SuggestedInput label="Equipe técnica" value={technicalTeam} onChangeText={setTechnicalTeam} placeholder="Ex.: TI INTERNO" options={optionsByKind.get('work_order_technical_team') ?? []} />
-          <SuggestedInput label="Técnico responsável" value={responsibleTechnicianName} onChangeText={setResponsibleTechnicianName} placeholder="Nome do técnico" options={optionsByKind.get('work_order_responsible_technician') ?? []} />
+          <View>
+            <FieldLabel>Técnico responsável</FieldLabel>
+            <View style={{ height: 46, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Icon name="lock" size={13} color={T.muted} />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{user?.name || '—'}</Text>
+            </View>
+            <Text style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>Fixado no seu login — a OS é aberta em seu nome.</Text>
+          </View>
         </View>
       </SectionCard>
 

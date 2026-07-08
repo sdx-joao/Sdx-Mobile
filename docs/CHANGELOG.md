@@ -9,7 +9,20 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
-## (próximo build) — Conclusão da OS: assinatura do técnico + documento do solicitante
+## versionCode 18 — Técnico fixo no login + solução adotada só na conclusão
+
+- **Técnico responsável fixado no login** (`NewWorkOrderScreen`): campo read-only
+  mostrando o usuário logado; a OS é sempre aberta em nome dele. O backend força
+  `responsible_technician_name`/`responsible_technician_user_id` = usuário da
+  sessão (evita abrir OS em nome de terceiros) — e isso também alimenta o CPF do
+  técnico no molde.
+- **Solução adotada + Hora final só aparecem ao declarar "Concluída/Resolvida"**
+  (`WorkOrderEditScreen`): os demais status andam sozinhos pelo scheduler; o
+  usuário só abre, muda prioridade e conclui.
+
+---
+
+## Conclusão da OS: assinatura do técnico + documento do solicitante
 
 **Status:** commitado em `main`. Precisa de rebuild `servus-prod`. Depende do
 backend (deployado): 2ª assinatura + documento no `work_order_signature` /

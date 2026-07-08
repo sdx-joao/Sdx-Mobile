@@ -492,27 +492,33 @@ export function WorkOrderEditScreen() {
           ) : (
             <Text style={{ color: T.muted, fontSize: 12.5 }}>Sem observação registrada para esta OS.</Text>
           )}
-          <View><FieldLabel>Solução adotada</FieldLabel><Input value={resolutionNotes} onChangeText={setResolutionNotes} placeholder="Solução executada" multiline /></View>
-          <View>
-            <FieldLabel>Hora final</FieldLabel>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ flex: 1 }}>
-                <Input
-                  value={finishedAtText}
-                  onChangeText={(value) => setFinishedAtText(maskDateTimeInput(value))}
-                  placeholder="DD/MM/AAAA HH:mm"
-                  keyboardType="numeric"
-                />
+          {/* Solução adotada + hora final só aparecem ao declarar a OS como
+              Concluída (Resolvida) — os demais status andam sozinhos. */}
+          {resolutionStatus === 'resolved' && (
+            <>
+              <View><FieldLabel>Solução adotada</FieldLabel><Input value={resolutionNotes} onChangeText={setResolutionNotes} placeholder="Solução executada" multiline /></View>
+              <View>
+                <FieldLabel>Hora final</FieldLabel>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Input
+                      value={finishedAtText}
+                      onChangeText={(value) => setFinishedAtText(maskDateTimeInput(value))}
+                      placeholder="DD/MM/AAAA HH:mm"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <Pressable
+                    onPress={() => setFinishedAtText(toDateTimeInput(new Date().toISOString()))}
+                    hitSlop={8}
+                    style={{ height: 44, paddingHorizontal: 14, borderRadius: 11, borderWidth: 1, borderColor: T.primary, backgroundColor: `${T.primary}12`, alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Text style={{ color: T.primary, fontSize: 12.5, fontWeight: '700' }}>Agora</Text>
+                  </Pressable>
+                </View>
               </View>
-              <Pressable
-                onPress={() => setFinishedAtText(toDateTimeInput(new Date().toISOString()))}
-                hitSlop={8}
-                style={{ height: 44, paddingHorizontal: 14, borderRadius: 11, borderWidth: 1, borderColor: T.primary, backgroundColor: `${T.primary}12`, alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Text style={{ color: T.primary, fontSize: 12.5, fontWeight: '700' }}>Agora</Text>
-              </Pressable>
-            </View>
-          </View>
+            </>
+          )}
         </View>
       </SectionCard>
 
