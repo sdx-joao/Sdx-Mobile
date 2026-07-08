@@ -9,7 +9,28 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
-## (próximo build) — OS com molde ÚNICO do servidor + solução adotada preservada
+## (próximo build) — Conclusão da OS: assinatura do técnico + documento do solicitante
+
+**Status:** commitado em `main`. Precisa de rebuild `servus-prod`. Depende do
+backend (deployado): 2ª assinatura + documento no `work_order_signature` /
+`work_order_requester`, e o GET expõe `requesterDocument`.
+
+- **Assistente de conclusão em 3 passos** (`WorkOrderSignatureScreen` virou wizard,
+  reaproveitando o mesmo pad):
+  1. **Técnico responsável assina** → vai pro campo "assinatura do técnico" na OS.
+  2. **Documento do solicitante** (CPF / RG / matrícula) — só aparece se o
+     solicitante ainda não tiver documento cadastrado; senão pula direto. Salvo no
+     catálogo do solicitante complementando o cadastro.
+  3. **Solicitante assina** → mostra o documento ao lado do nome, **mascarado**
+     (CPF/RG com •) ou **matrícula inteira**.
+- O fluxo entra pela conclusão normal (marcar "Resolvida" → "Salvar e assinar" no
+  `WorkOrderEditScreen`, que já tem Solução adotada + Hora final).
+- `updateWorkOrderStatus` envia `techSignatureDataUrl`/`techSignerName`/
+  `requesterDocument`/`requesterDocumentType`; `getWorkOrder` traz `requesterDocument`.
+
+---
+
+## OS com molde ÚNICO do servidor + solução adotada preservada
 
 **Status:** commitado em `main`. Precisa de rebuild `servus-prod`. Depende do
 backend (deploy): novo GET `/api/mobile/work-orders/[id]/print-html` (HTML

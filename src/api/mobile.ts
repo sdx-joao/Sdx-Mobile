@@ -139,7 +139,17 @@ export function getWorkOrder(token: string | null, id: string) {
   return apiFetch<{
     workOrder: WorkOrder;
     timeline: TimelineEvent[];
-    signature: { signatureDataUrl: string; signerName?: string | null; signedAt?: string | null } | null;
+    signature: {
+      signatureDataUrl: string;
+      signerName?: string | null;
+      signedAt?: string | null;
+      techSignatureDataUrl?: string | null;
+      techSignerName?: string | null;
+      techSignedAt?: string | null;
+      signerDocument?: string | null;
+      signerDocumentType?: string | null;
+    } | null;
+    requesterDocument: { document: string; documentType: string | null } | null;
   }>(`/api/mobile/work-orders/${id}`, { token });
 }
 
@@ -215,6 +225,12 @@ export function updateWorkOrderStatus(
     signatureDataUrl?: string;
     signerName?: string;
     resolutionNotes?: string;
+    // 2ª assinatura (técnico) + documento do solicitante, coletados na conclusão.
+    techSignatureDataUrl?: string;
+    techSignerName?: string;
+    requesterDocument?: string;
+    requesterDocumentType?: 'cpf' | 'rg' | 'matricula';
+    finishedAt?: string | null;
   } = {},
 ) {
   return apiFetch<{ ok: true; printRequested?: boolean }>(`/api/mobile/work-orders/${id}`, {
