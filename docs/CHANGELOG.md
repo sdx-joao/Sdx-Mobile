@@ -9,6 +9,25 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## versionCode 20 — Ajustes de assinatura + toast custom + documento do técnico
+
+- **Documento do técnico** exibido na assinatura, puxado do **cadastro dele**
+  (CPF do usuário logado, via `/api/mobile/me`, mascarado) — espelha o do
+  solicitante.
+- **Orientação por passo:** campos pré-assinatura (situação, documento, revisão)
+  ficam na **vertical**; só os passos de **assinar** vão para paisagem.
+- **Botão "Limpar" sutil** dentro do quadro de assinatura (canto) para refazer;
+  removido o refresh do cabeçalho (redundante).
+- **Toast custom** (`lib/toast.tsx` + `<ToastHost/>` no root) no lugar do
+  `ToastAndroid` "quadrado" do sistema — mensagem estilizada deslizando de baixo.
+
+Backend (deployado): nova senha **não pode ser igual ao CPF** (senha inicial
+padrão); senha inicial/redefinição = CPF.
+
+versionCode 19 → 20.
+
+---
+
 ## versionCode 19 — Overhaul de UX do ciclo de vida da OS (6 itens)
 
 Redesenho do fluxo com base na revisão UX sênior:

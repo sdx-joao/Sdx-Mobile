@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.sdxpro.mobile",
-      "versionCode": 19,
+      "versionCode": 20,
       "adaptiveIcon": {
         "backgroundColor": "#072AC8",
         "foregroundImage": "./assets/adaptive-foreground.png"

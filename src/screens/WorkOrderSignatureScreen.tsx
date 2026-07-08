@@ -120,7 +120,10 @@ function fmtNow(iso: string): string {
 export function WorkOrderSignatureScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'WorkOrderSignature'>>();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  // Documento do técnico = CPF do cadastro dele (usuário logado), mascarado.
+  const techCpfDigits = String(user?.cpf ?? '').replace(/\D/g, '');
+  const techDocMasked = techCpfDigits ? maskDoc(techCpfDigits, 'cpf') : '';
 
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<Step>('resolution');
@@ -146,10 +149,15 @@ export function WorkOrderSignatureScreen() {
   const padRef = useRef<View>(null);
   const padBox = useRef({ x: 0, y: 0, width: PAD_WIDTH, height: PAD_HEIGHT });
 
+  // Só os passos de ASSINATURA vão para paisagem (mais espaço pra assinar). Os
+  // campos pré-assinatura (situação, documento, revisão) ficam na vertical.
   useEffect(() => {
-    void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => undefined);
-    return () => { void ScreenOrientation.unlockAsync().catch(() => undefined); };
-  }, []);
+    const signing = step === 'tech' || step === 'requester';
+    void ScreenOrientation.lockAsync(
+      signing ? ScreenOrientation.OrientationLock.LANDSCAPE : ScreenOrientation.OrientationLock.PORTRAIT_UP,
+    ).catch(() => undefined);
+  }, [step]);
+  useEffect(() => () => { void ScreenOrientation.unlockAsync().catch(() => undefined); }, []);
 
   useEffect(() => {
     let alive = true;
@@ -286,11 +294,7 @@ export function WorkOrderSignatureScreen() {
           <Icon name="arrow-left" size={19} color="#fff" />
         </Pressable>
         <Text style={{ color: '#fff', fontSize: 16, fontWeight: '800' }}>{title}</Text>
-        {isSignStep ? (
-          <Pressable onPress={() => setStrokes([])} style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: chipBg, alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="refresh" size={18} color="#fff" />
-          </Pressable>
-        ) : <View style={{ width: 42 }} />}
+        <View style={{ width: 42 }} />
       </View>
 
       {loading ? (
@@ -357,7 +361,19 @@ export function WorkOrderSignatureScreen() {
             <Svg width="100%" height="100%" viewBox={`0 0 ${padSize.width} ${padSize.height}`} preserveAspectRatio="none">
               {strokes.map((points, index) => <Path key={index} d={pointsToPath(points)} fill="none" stroke="#111827" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />)}
             </Svg>
+            {/* Botão sutil para limpar e assinar de novo. */}
+            <Pressable
+              onPress={() => setStrokes([])}
+              hitSlop={8}
+              style={{ position: 'absolute', top: 8, right: 8, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(15,23,42,.06)', borderRadius: 999, paddingVertical: 5, paddingHorizontal: 11 }}
+            >
+              <Icon name="refresh" size={13} color="#64748B" />
+              <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700' }}>Limpar</Text>
+            </Pressable>
           </View>
+          {step === 'tech' && techDocMasked ? (
+            <Text style={{ color: 'rgba(255,255,255,.85)', fontSize: 13, fontWeight: '700' }}>CPF: {techDocMasked}</Text>
+          ) : null}
           {step === 'requester' && docForSignature?.value ? (
             <Text style={{ color: 'rgba(255,255,255,.85)', fontSize: 13, fontWeight: '700' }}>
               {(DOC_TYPES.find(d => d.key === docForSignature.type)?.label || 'Documento')}: {maskDoc(docForSignature.value, docForSignature.type)}

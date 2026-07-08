@@ -8,6 +8,7 @@ import { LockScreen } from './src/screens/LockScreen';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { ToastHost } from './src/lib/toast';
 import { IS_TEST_BUILD } from './src/api/client';
 
 Sentry.init({
@@ -43,6 +44,7 @@ function App() {
           <Root />
         </AuthProvider>
       </ErrorBoundary>
+      <ToastHost />
     </SafeAreaProvider>
   );
 }
