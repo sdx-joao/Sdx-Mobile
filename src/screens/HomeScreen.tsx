@@ -63,7 +63,7 @@ export function HomeScreen() {
   const lowItems = inventory.filter((i) => i.itemType !== 'equipment' && i.minQty > 0 && i.currentQty < i.minQty).slice(0, 4);
   const recent = orders.filter((w) => w.status === 'open' || w.status === 'in_progress' || w.status === 'waiting').slice(0, 3);
 
-  const goOrders = () => nav.navigate('Tabs', { screen: 'Orders' });
+  const goOrders = (filter?: string) => nav.navigate('Tabs', { screen: 'Orders', params: typeof filter === 'string' ? { filter } : undefined });
   const goInventory = () => nav.navigate('Tabs', { screen: 'Inventory' });
   const openWO = (wo: WorkOrder) => nav.navigate('WorkOrderDetail', { id: wo.id });
   const openItem = (it: InventoryItem) => nav.navigate('InventoryDetail', { id: it.id });
@@ -98,8 +98,8 @@ export function HomeScreen() {
         {loading && <LoadingState />}
         {!!error && <EmptyState icon="alert" text={error} />}
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-          <StatTile value={summary.workOrders.activeNow} label="OS ativas" icon="clipboard" tone={accent} onPress={goOrders} />
-          <StatTile value={summary.workOrders.openedToday} label="Abertas hoje" icon="zap" tone="#EA580C" onPress={goOrders} />
+          <StatTile value={summary.workOrders.activeNow} label="OS ativas" icon="clipboard" tone={accent} onPress={() => goOrders('active')} />
+          <StatTile value={summary.workOrders.openedToday} label="Abertas hoje" icon="zap" tone="#EA580C" onPress={() => goOrders('open')} />
         </View>
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 22 }}>
           <StatTile value={summary.inventory.lowStock} label="Estoque baixo" icon="alert" tone="#DC2626" onPress={goInventory} />
@@ -108,7 +108,7 @@ export function HomeScreen() {
 
         <SectionTitle>Módulos</SectionTitle>
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 22 }}>
-          <ModuleTile icon="clipboard" label="Ordens de Serviço" sub={`${summary.workOrders.activeNow} ativas`} accent={accent} onPress={goOrders} />
+          <ModuleTile icon="clipboard" label="Ordens de Serviço" sub={`${summary.workOrders.activeNow} ativas`} accent={accent} onPress={() => goOrders()} />
           <ModuleTile icon="package" label="Inventário" sub={`${summary.inventory.lowStock} alertas`} accent={accent} onPress={goInventory} />
         </View>
 
@@ -139,7 +139,7 @@ export function HomeScreen() {
           </>
         )}
 
-        <SectionTitle action={<TextLink onPress={goOrders}>Ver tudo</TextLink>}>Ordens em aberto</SectionTitle>
+        <SectionTitle action={<TextLink onPress={() => goOrders()}>Ver tudo</TextLink>}>Ordens em aberto</SectionTitle>
         {recent.length === 0
           ? <EmptyState icon="clipboard" text="Nenhuma ordem em aberto." />
           : recent.map((wo) => <WOCard key={wo.id} wo={wo} onOpen={openWO} />)}

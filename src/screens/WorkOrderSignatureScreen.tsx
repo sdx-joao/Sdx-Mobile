@@ -12,6 +12,7 @@ import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
 import { getWorkOrder, getWorkOrderPrintHtml, updateWorkOrderStatus } from '../api/mobile';
 import { IS_TEST_BUILD } from '../api/client';
+import { showToast } from '../lib/toast';
 import type { RootStackParamList } from '../navigation/types';
 
 type Point = { x: number; y: number };
@@ -102,7 +103,19 @@ function maskDoc(value: string, type: DocType | null): string {
   return chars.map((c, i) => (/[0-9A-Za-z]/.test(c) ? (reveal.has(i) ? c : '•') : c)).join('');
 }
 
-type Step = 'tech' | 'document' | 'requester';
+type Step = 'resolution' | 'tech' | 'document' | 'requester' | 'review';
+type Resolution = 'resolved' | 'partial' | 'unresolved';
+const RESOLUTIONS: Array<{ key: Resolution; label: string; color: string }> = [
+  { key: 'resolved', label: 'Resolvida', color: '#059669' },
+  { key: 'partial', label: 'Parcial', color: '#D97706' },
+  { key: 'unresolved', label: 'Não resolvida', color: '#DC2626' },
+];
+
+function fmtNow(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(d);
+}
 
 export function WorkOrderSignatureScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -110,19 +123,24 @@ export function WorkOrderSignatureScreen() {
   const { token } = useAuth();
 
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState<Step>('tech');
+  const [step, setStep] = useState<Step>('resolution');
   const [strokes, setStrokes] = useState<Point[][]>([]);
   const [saving, setSaving] = useState(false);
   const [padSize, setPadSize] = useState({ width: PAD_WIDTH, height: PAD_HEIGHT });
 
   // Dados coletados ao longo do assistente.
+  const [resolution, setResolution] = useState<Resolution>('resolved');
+  const [solution, setSolution] = useState('');
+  const [code, setCode] = useState('');
   const [techName, setTechName] = useState('');
   const [techSig, setTechSig] = useState<string | null>(null);
-  const [reqName, setReqName] = useState(route.params.signerName || '');
+  const [reqName, setReqName] = useState('');
+  const [reqSig, setReqSig] = useState<string | null>(null);
   const [docType, setDocType] = useState<DocType | null>(null);
   const [docValue, setDocValue] = useState('');
-  // Documento já cadastrado do solicitante (pula o passo de documento se houver).
   const existingDoc = useRef<{ document: string; documentType: DocType | null } | null>(null);
+  const isDelivery = useRef(false);
+  const finishedAt = useRef(new Date().toISOString());
 
   const current = useRef<Point[]>([]);
   const padRef = useRef<View>(null);
@@ -133,39 +151,35 @@ export function WorkOrderSignatureScreen() {
     return () => { void ScreenOrientation.unlockAsync().catch(() => undefined); };
   }, []);
 
-  // Carrega técnico responsável + documento existente do solicitante.
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         const { workOrder, requesterDocument } = await getWorkOrder(token, route.params.id);
         if (!alive) return;
+        setCode(workOrder.code || '');
         setTechName(workOrder.responsibleTechnicianName || '');
-        if (!route.params.signerName) setReqName(workOrder.requestedByName || '');
+        setReqName(workOrder.requestedByName || '');
+        isDelivery.current = /ENTREGA|COLETA|TRANSPORTE|RETIRADA/.test((workOrder.serviceType || '').toUpperCase());
         if (requesterDocument?.document) {
           const dt = (requesterDocument.documentType as DocType | null) || null;
           existingDoc.current = { document: requesterDocument.document, documentType: dt };
         }
-      } catch {
-        // segue com defaults
-      } finally {
-        if (alive) setLoading(false);
-      }
+      } catch { /* segue com defaults */ }
+      finally { if (alive) setLoading(false); }
     })();
     return () => { alive = false; };
-  }, [token, route.params.id, route.params.signerName]);
+  }, [token, route.params.id]);
 
   const measurePad = () => {
     padRef.current?.measureInWindow((x, y, width, height) => {
       if (width > 0 && height > 0) { padBox.current = { x, y, width, height }; setPadSize({ width, height }); }
     });
   };
-
   const toLocal = (pageX: number, pageY: number): Point => {
     const { x, y, width, height } = padBox.current;
     return { x: Math.max(0, Math.min(width, pageX - x)), y: Math.max(0, Math.min(height, pageY - y)) };
   };
-
   const pan = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
@@ -181,38 +195,51 @@ export function WorkOrderSignatureScreen() {
     },
   }), []);
 
-  // Passo 1: técnico assina → salva a assinatura do técnico e avança.
+  const docForSignature = existingDoc.current
+    ? { value: existingDoc.current.document, type: existingDoc.current.documentType }
+    : (docType ? { value: docValue, type: docType } : null);
+
+  // Passo 0: situação + solução adotada.
+  function advanceFromResolution() {
+    if (!solution.trim()) { Alert.alert('Solução adotada', 'Descreva a solução adotada.'); return; }
+    setStep('tech');
+  }
+  // Passo 1: técnico assina.
   function advanceFromTech() {
     if (!techName.trim()) { Alert.alert('Assinatura', 'Informe o nome do técnico responsável.'); return; }
     if (strokes.flat().length < 8) { Alert.alert('Assinatura', 'O técnico precisa assinar no quadro.'); return; }
     setTechSig(svgDataUrl(strokes, padSize.width, padSize.height));
     setStrokes([]);
-    // Se já há documento cadastrado, pula direto para a assinatura do solicitante.
     setStep(existingDoc.current ? 'requester' : 'document');
   }
-
   // Passo 2 (se necessário): documento do solicitante.
   function advanceFromDocument() {
     if (!docType) { Alert.alert('Documento', 'Selecione o tipo de documento.'); return; }
     if (docValue.trim().length < 3) { Alert.alert('Documento', 'Informe o documento do solicitante.'); return; }
     setStep('requester');
   }
-
-  // Passo 3: solicitante assina → salva tudo.
-  async function finish() {
+  // Passo 3: solicitante assina → vai para a revisão.
+  function advanceFromRequester() {
     if (!reqName.trim()) { Alert.alert('Assinatura', 'Informe o nome do solicitante.'); return; }
     if (strokes.flat().length < 8) { Alert.alert('Assinatura', 'O solicitante precisa assinar no quadro.'); return; }
+    setReqSig(svgDataUrl(strokes, padSize.width, padSize.height));
+    setStrokes([]);
+    setStep('review');
+  }
+
+  // Passo 4: revisão → confirma e conclui (irreversível).
+  async function finish() {
+    if (!reqSig) { setStep('requester'); return; }
     setSaving(true);
     try {
-      const typedNotes = (route.params.resolutionNotes || '').trim();
-      const signatureNote = 'OS concluída com assinatura coletada no app.';
-      const resolutionNotes = typedNotes ? `${typedNotes}\n\n${signatureNote}` : signatureNote;
-      await updateWorkOrderStatus(token, route.params.id, route.params.status, {
-        signatureDataUrl: svgDataUrl(strokes, padSize.width, padSize.height),
+      const finalStatus = isDelivery.current ? 'delivered' : 'completed';
+      await updateWorkOrderStatus(token, route.params.id, finalStatus, {
+        signatureDataUrl: reqSig,
         signerName: reqName.trim(),
-        resolutionNotes,
+        resolutionStatus: resolution,
+        resolutionNotes: solution.trim(),
+        finishedAt: finishedAt.current,
         ...(techSig ? { techSignatureDataUrl: techSig, techSignerName: techName.trim() } : {}),
-        // Só envia documento novo se foi coletado agora (não havia cadastrado).
         ...(!existingDoc.current && docType && docValue.trim()
           ? { requesterDocument: docValue.trim(), requesterDocumentType: docType }
           : {}),
@@ -220,9 +247,9 @@ export function WorkOrderSignatureScreen() {
       await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => undefined);
       if (IS_TEST_BUILD) {
         try { await shareWorkOrderPdf(token, route.params.id); }
-        catch (pdfErr) { Alert.alert('OS concluída', 'OS salva, mas não foi possível gerar/compartilhar o PDF.'); console.warn('Falha ao gerar/compartilhar PDF da OS:', pdfErr); }
+        catch (pdfErr) { showToast('OS salva, mas não foi possível gerar o PDF.'); console.warn('Falha ao gerar/compartilhar PDF da OS:', pdfErr); }
       } else {
-        Alert.alert('OS concluída', 'Assinaturas salvas e impressão solicitada ao Electron.');
+        showToast(`${code || 'OS'} concluída — impressão solicitada.`);
       }
       nav.popToTop();
     } catch (e) {
@@ -233,22 +260,34 @@ export function WorkOrderSignatureScreen() {
   }
 
   const isSignStep = step === 'tech' || step === 'requester';
-  const title = step === 'tech' ? 'Assinatura do técnico responsável'
+  const title = step === 'resolution' ? 'Situação e solução'
+    : step === 'tech' ? 'Assinatura do técnico'
     : step === 'document' ? 'Documento do solicitante'
-    : 'Assinatura do solicitante';
-  const docForSignature = existingDoc.current
-    ? { value: existingDoc.current.document, type: existingDoc.current.documentType }
-    : (docType ? { value: docValue, type: docType } : null);
+    : step === 'requester' ? 'Assinatura do solicitante'
+    : 'Revisar e concluir';
+  const primaryLabel = step === 'resolution' ? 'Avançar — assinatura do técnico'
+    : step === 'tech' ? 'Avançar'
+    : step === 'document' ? 'Avançar — assinatura'
+    : step === 'requester' ? 'Avançar — revisão'
+    : 'Confirmar e concluir OS';
+  const onPrimary = step === 'resolution' ? advanceFromResolution
+    : step === 'tech' ? advanceFromTech
+    : step === 'document' ? advanceFromDocument
+    : step === 'requester' ? advanceFromRequester
+    : finish;
+
+  const white70 = 'rgba(255,255,255,.7)';
+  const chipBg = 'rgba(255,255,255,.12)';
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#0F172A', padding: 16, gap: 12 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8 }}>
-        <Pressable onPress={() => nav.goBack()} style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,.12)', alignItems: 'center', justifyContent: 'center' }}>
+        <Pressable onPress={() => nav.goBack()} style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: chipBg, alignItems: 'center', justifyContent: 'center' }}>
           <Icon name="arrow-left" size={19} color="#fff" />
         </Pressable>
         <Text style={{ color: '#fff', fontSize: 16, fontWeight: '800' }}>{title}</Text>
         {isSignStep ? (
-          <Pressable onPress={() => setStrokes([])} style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,.12)', alignItems: 'center', justifyContent: 'center' }}>
+          <Pressable onPress={() => setStrokes([])} style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: chipBg, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="refresh" size={18} color="#fff" />
           </Pressable>
         ) : <View style={{ width: 42 }} />}
@@ -256,15 +295,33 @@ export function WorkOrderSignatureScreen() {
 
       {loading ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color="#fff" /></View>
+      ) : step === 'resolution' ? (
+        <View style={{ flex: 1, gap: 12, justifyContent: 'center' }}>
+          <Text style={{ color: white70, fontSize: 13 }}>Como a OS foi concluída?</Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            {RESOLUTIONS.map(r => (
+              <Pressable key={r.key} onPress={() => setResolution(r.key)}
+                style={{ flex: 1, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: resolution === r.key ? r.color : 'transparent', backgroundColor: resolution === r.key ? `${r.color}33` : chipBg }}>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12.5 }}>{r.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <TextInput
+            value={solution} onChangeText={setSolution} multiline
+            placeholder="Solução adotada / o que foi feito" placeholderTextColor="rgba(255,255,255,.45)"
+            style={{ minHeight: 90, borderRadius: 12, padding: 14, backgroundColor: chipBg, color: '#fff', fontSize: 15, textAlignVertical: 'top' }}
+          />
+          <Text style={{ color: 'rgba(255,255,255,.5)', fontSize: 12 }}>Hora final: {fmtNow(finishedAt.current)} (agora)</Text>
+        </View>
       ) : step === 'document' ? (
         <View style={{ flex: 1, gap: 14, justifyContent: 'center' }}>
-          <Text style={{ color: 'rgba(255,255,255,.7)', fontSize: 13 }}>
-            Informe o documento do solicitante para constar na OS. CPF e RG saem mascarados; matrícula sai por completo.
+          <Text style={{ color: white70, fontSize: 13 }}>
+            Documento do solicitante para constar na OS. CPF e RG saem mascarados; matrícula por completo.
           </Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             {DOC_TYPES.map(dt => (
               <Pressable key={dt.key} onPress={() => setDocType(dt.key)}
-                style={{ flex: 1, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: docType === dt.key ? T.primary : 'rgba(255,255,255,.12)' }}>
+                style={{ flex: 1, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: docType === dt.key ? T.primary : chipBg }}>
                 <Text style={{ color: '#fff', fontWeight: '800' }}>{dt.label}</Text>
               </Pressable>
             ))}
@@ -274,8 +331,25 @@ export function WorkOrderSignatureScreen() {
             placeholder={docType === 'matricula' ? 'Número da matrícula' : docType === 'rg' ? 'Número do RG' : 'Número do CPF'}
             placeholderTextColor="rgba(255,255,255,.45)"
             keyboardType={docType === 'cpf' ? 'number-pad' : 'default'}
-            style={{ height: 52, borderRadius: 12, paddingHorizontal: 14, backgroundColor: 'rgba(255,255,255,.12)', color: '#fff', fontSize: 16 }}
+            style={{ height: 52, borderRadius: 12, paddingHorizontal: 14, backgroundColor: chipBg, color: '#fff', fontSize: 16 }}
           />
+        </View>
+      ) : step === 'review' ? (
+        <View style={{ flex: 1, gap: 9, justifyContent: 'center' }}>
+          {[
+            ['Situação', RESOLUTIONS.find(r => r.key === resolution)?.label || '—'],
+            ['Solução', solution.trim() || '—'],
+            ['Técnico', `${techName || '—'}${techSig ? '  ✓ assinou' : ''}`],
+            ['Solicitante', `${reqName || '—'}${reqSig ? '  ✓ assinou' : ''}`],
+            ['Documento', docForSignature?.value ? `${DOC_TYPES.find(d => d.key === docForSignature.type)?.label || 'Doc'} ${maskDoc(docForSignature.value, docForSignature.type)}` : '—'],
+            ['Hora final', fmtNow(finishedAt.current)],
+          ].map(([label, value]) => (
+            <View key={label} style={{ flexDirection: 'row', gap: 10, paddingVertical: 3 }}>
+              <Text style={{ width: 96, color: 'rgba(255,255,255,.55)', fontSize: 13, fontWeight: '700' }}>{label}</Text>
+              <Text style={{ flex: 1, color: '#fff', fontSize: 13.5, fontWeight: '600' }}>{value}</Text>
+            </View>
+          ))}
+          <Text style={{ color: 'rgba(255,255,255,.5)', fontSize: 12, marginTop: 4 }}>Confira antes de concluir — a OS será fechada e não poderá mais ser editada.</Text>
         </View>
       ) : (
         <>
@@ -294,20 +368,18 @@ export function WorkOrderSignatureScreen() {
             onChangeText={step === 'tech' ? setTechName : setReqName}
             placeholder={step === 'tech' ? 'Nome do técnico responsável' : 'Nome do solicitante'}
             placeholderTextColor="rgba(255,255,255,.45)"
-            style={{ height: 48, borderRadius: 12, paddingHorizontal: 14, backgroundColor: 'rgba(255,255,255,.12)', color: '#fff', fontSize: 15 }}
+            style={{ height: 48, borderRadius: 12, paddingHorizontal: 14, backgroundColor: chipBg, color: '#fff', fontSize: 15 }}
           />
         </>
       )}
 
       <Pressable
-        onPress={step === 'tech' ? advanceFromTech : step === 'document' ? advanceFromDocument : finish}
+        onPress={onPrimary}
         disabled={saving || loading}
         style={{ height: 52, borderRadius: 14, backgroundColor: T.primary, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: (saving || loading) ? 0.75 : 1 }}
       >
-        {saving ? <ActivityIndicator color="#fff" /> : <Icon name={step === 'requester' ? 'check' : 'arrow-right'} size={18} color="#fff" />}
-        <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>
-          {step === 'tech' ? 'Avançar — documento/solicitante' : step === 'document' ? 'Avançar — assinatura do solicitante' : 'Concluir e solicitar impressão'}
-        </Text>
+        {saving ? <ActivityIndicator color="#fff" /> : <Icon name={step === 'review' ? 'check' : 'arrow-right'} size={18} color="#fff" />}
+        <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>{primaryLabel}</Text>
       </Pressable>
     </KeyboardAvoidingView>
   );

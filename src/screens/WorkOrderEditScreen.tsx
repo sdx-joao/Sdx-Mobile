@@ -18,6 +18,7 @@ import {
 } from '../api/mobile';
 import { useResource } from '../api/use-resource';
 import { useAuth } from '../auth/auth-context';
+import { showToast } from '../lib/toast';
 import type { WorkOrder, WorkOrderMaterial, WorkOrderPriority, WorkOrderResolution, WorkOrderStatus } from '../data/mock';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -235,12 +236,10 @@ export function WorkOrderEditScreen() {
     if (requester.phone) setRequesterContact(requester.phone);
   };
 
+  // Editar = só CORRIGIR dados da OS. Status andam sozinhos e a CONCLUSÃO (situação,
+  // solução, hora final, assinaturas) é pelo botão "Concluir OS" no detalhe. Aqui
+  // não mexemos em status/resolução/hora final — o backend preserva o que existe.
   const save = async () => {
-    const parsedFinishedAt = fromDateTimeInput(finishedAtText);
-    if (finishedAtText.trim() && parsedFinishedAt === undefined) {
-      setFormError('Informe a hora final no formato DD/MM/AAAA HH:mm.');
-      return;
-    }
     const missing = [
       ['Tipo de serviço', serviceType],
       ['Categoria', category],
@@ -248,22 +247,7 @@ export function WorkOrderEditScreen() {
       ['Setor', department],
       ['Solicitante', requestedByName],
       ['Solicitação', technicianRequest],
-      ['Situação da OS', resolutionStatus],
     ].filter(([, value]) => !String(value).trim()).map(([label]) => label);
-    if (status === 'in_progress' && !expectedCompletionAt) {
-      missing.push('Prazo de conclusão');
-    }
-    if (resolutionStatus === 'resolved') {
-      [
-        ['Contato', requesterContact],
-        ['Equipe técnica', technicalTeam],
-        ['Técnico responsável', responsibleTechnicianName],
-        ...(attendanceNotesRequired ? [['Observação do atendimento', attendanceNotes] as [string, unknown]] : []),
-        ['Solução adotada', resolutionNotes],
-      ]
-        .filter(([, value]) => !String(value || '').trim())
-        .forEach(([label]) => missing.push(label));
-    }
     if (missing.length) {
       setFormError(`Preencha: ${missing.join(', ')}.`);
       return;
@@ -271,10 +255,7 @@ export function WorkOrderEditScreen() {
     setSaving(true);
     setFormError(null);
     try {
-      const shouldFinalizeWithSignature = resolutionStatus === 'resolved' && !isClosedStatus(order.status);
-      const finalStatus: WorkOrderStatus = isDeliveryOrCollectionService(serviceType) ? 'delivered' : 'completed';
       await updateWorkOrder(token, order.id, {
-        status: shouldFinalizeWithSignature ? order.status : status,
         serviceType,
         category,
         unitName,
@@ -282,15 +263,10 @@ export function WorkOrderEditScreen() {
         requestedByName,
         requesterContact,
         technicalTeam,
-        responsibleTechnicianName,
         technicianRequest,
         attendanceNotes: attendanceNotesRequired ? attendanceNotes : '',
         attendanceNotesRequired,
-        resolutionStatus,
-        resolutionNotes,
         priority,
-        expectedCompletionAt: status === 'in_progress' ? expectedCompletionAt : null,
-        finishedAt: parsedFinishedAt,
         materials: materials
           .filter(item => item.description.trim())
           .map(item => ({
@@ -299,11 +275,7 @@ export function WorkOrderEditScreen() {
             unit: item.unit || null,
           })),
       });
-      if (shouldFinalizeWithSignature) {
-        nav.replace('WorkOrderSignature', { id: order.id, status: finalStatus, signerName: requestedByName, resolutionNotes });
-        return;
-      }
-      Alert.alert('OS atualizada', `${order.code} foi salva com sucesso.`);
+      showToast(`${order.code} salva.`);
       nav.goBack();
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Não foi possível salvar a OS.');
@@ -325,70 +297,6 @@ export function WorkOrderEditScreen() {
         </SectionCard>
       )}
 
-      <SectionCard title="Fluxo">
-        <View style={{ gap: 13 }}>
-          <View>
-            <FieldLabel>Status</FieldLabel>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {(locked ? [order.status] : EDITABLE_STATUS).map(item => {
-                const meta = WO_STATUS[item];
-                const active = status === item;
-                return (
-                  <Pressable
-                    key={item}
-                    disabled={!canEditStatus}
-                    onPress={() => {
-                      setStatus(item);
-                      if (item === 'in_progress' && !expectedCompletionAt) setExpectedCompletionAt(addHours(4));
-                      if (item !== 'in_progress') setExpectedCompletionAt(null);
-                    }}
-                    style={{
-                      minHeight: 38,
-                      borderRadius: 11,
-                      borderWidth: 1.5,
-                      borderColor: active ? meta.solid : T.border,
-                      backgroundColor: active ? meta.soft : T.surface,
-                      justifyContent: 'center',
-                      paddingHorizontal: 12,
-                      opacity: canEditStatus ? 1 : 0.72,
-                    }}
-                  >
-                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: active ? meta.fg : T.muted }}>{meta.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          {status === 'in_progress' && (
-            <View>
-              <FieldLabel required>Prazo de conclusão</FieldLabel>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-                {COMPLETION_PERIOD_OPTIONS.map(option => (
-                  <Pressable
-                    key={option.hours}
-                    onPress={() => setExpectedCompletionAt(addHours(option.hours))}
-                    style={{
-                      paddingVertical: 7,
-                      paddingHorizontal: 12,
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      borderColor: T.border,
-                      backgroundColor: T.surfaceMuted,
-                    }}
-                  >
-                    <Text style={{ color: T.primary, fontSize: 12, fontWeight: '800' }}>+ {option.label}</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-              <Text style={{ marginTop: 7, fontSize: 12, color: T.muted }}>
-                {expectedCompletionAt ? `Até ${toDateTimeInput(expectedCompletionAt)}` : 'Selecione um prazo.'}
-              </Text>
-            </View>
-          )}
-        </View>
-      </SectionCard>
-
       <SectionCard title="Identificação">
         <View style={{ gap: 14 }}>
           <SuggestedInput label="Tipo de serviço" required value={serviceType} onChangeText={setServiceType} placeholder="Tipo" options={optionsByKind.get('work_order_service_type') ?? []} />
@@ -398,7 +306,13 @@ export function WorkOrderEditScreen() {
             <View style={{ flex: 1 }}><SuggestedInput label="Setor" required value={department} onChangeText={setDepartment} placeholder="Setor" options={optionsByKind.get('work_order_department') ?? []} /></View>
           </View>
           <SuggestedInput label="Equipe técnica" value={technicalTeam} onChangeText={setTechnicalTeam} placeholder="Equipe" options={optionsByKind.get('work_order_technical_team') ?? []} />
-          <SuggestedInput label="Técnico responsável" value={responsibleTechnicianName} onChangeText={setResponsibleTechnicianName} placeholder="Responsável" options={optionsByKind.get('work_order_responsible_technician') ?? []} />
+          <View>
+            <FieldLabel>Técnico responsável</FieldLabel>
+            <View style={{ height: 46, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Icon name="lock" size={13} color={T.muted} />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{responsibleTechnicianName || '—'}</Text>
+            </View>
+          </View>
         </View>
       </SectionCard>
 
@@ -421,33 +335,6 @@ export function WorkOrderEditScreen() {
                 }}
               >
                 <Text style={{ fontSize: 12, fontWeight: '600', color: active ? meta.color : T.muted }}>{meta.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </SectionCard>
-
-      <SectionCard title="Situação da OS">
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {(Object.entries(WO_RESOLUTION) as Array<[WorkOrderResolution, { label: string; color: string; soft: string }]>).map(([key, meta]) => {
-            const active = resolutionStatus === key;
-            return (
-              <Pressable
-                key={key}
-                onPress={() => setResolutionStatus(active ? null : key)}
-                style={{
-                  flex: 1,
-                  minHeight: 42,
-                  borderRadius: 11,
-                  borderWidth: 1.5,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingHorizontal: 8,
-                  borderColor: active ? meta.color : T.border,
-                  backgroundColor: active ? meta.soft : T.surface,
-                }}
-              >
-                <Text style={{ fontSize: 11.5, fontWeight: '700', color: active ? meta.color : T.muted, textAlign: 'center' }}>{meta.label}</Text>
               </Pressable>
             );
           })}
@@ -492,33 +379,13 @@ export function WorkOrderEditScreen() {
           ) : (
             <Text style={{ color: T.muted, fontSize: 12.5 }}>Sem observação registrada para esta OS.</Text>
           )}
-          {/* Solução adotada + hora final só aparecem ao declarar a OS como
-              Concluída (Resolvida) — os demais status andam sozinhos. */}
-          {resolutionStatus === 'resolved' && (
-            <>
-              <View><FieldLabel>Solução adotada</FieldLabel><Input value={resolutionNotes} onChangeText={setResolutionNotes} placeholder="Solução executada" multiline /></View>
-              <View>
-                <FieldLabel>Hora final</FieldLabel>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={{ flex: 1 }}>
-                    <Input
-                      value={finishedAtText}
-                      onChangeText={(value) => setFinishedAtText(maskDateTimeInput(value))}
-                      placeholder="DD/MM/AAAA HH:mm"
-                      keyboardType="numeric"
-                    />
-                  </View>
-                  <Pressable
-                    onPress={() => setFinishedAtText(toDateTimeInput(new Date().toISOString()))}
-                    hitSlop={8}
-                    style={{ height: 44, paddingHorizontal: 14, borderRadius: 11, borderWidth: 1, borderColor: T.primary, backgroundColor: `${T.primary}12`, alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Text style={{ color: T.primary, fontSize: 12.5, fontWeight: '700' }}>Agora</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </>
-          )}
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: `${T.primary}0A`, borderRadius: 11, padding: 11 }}>
+            <Icon name="info" size={15} color={T.primary} />
+            <Text style={{ flex: 1, fontSize: 12, color: T.textSoft, lineHeight: 17 }}>
+              Solução adotada, hora final e assinaturas são preenchidas ao tocar em
+              <Text style={{ fontWeight: '800', color: T.primary }}> Concluir OS</Text> no detalhe.
+            </Text>
+          </View>
         </View>
       </SectionCard>
 
@@ -576,7 +443,7 @@ export function WorkOrderEditScreen() {
           <ActivityIndicator color={T.primary} />
         </View>
       ) : (
-        <PrimaryButton label={resolutionStatus === 'resolved' ? 'Salvar e assinar' : 'Salvar alterações'} icon="check" onPress={save} />
+        <PrimaryButton label="Salvar alterações" icon="check" onPress={save} />
       )}
       <View style={{ height: 12 }} />
     </DetailScaffold>

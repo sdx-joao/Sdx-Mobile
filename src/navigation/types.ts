@@ -2,7 +2,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 
 export type TabParamList = {
   Home: undefined;
-  Orders: undefined;
+  Orders: { filter?: string } | undefined;
   Inventory: undefined;
   Profile: undefined;
 };
@@ -18,7 +18,9 @@ export type RootStackParamList = {
   NewWorkOrder: undefined;
   InventoryDetail: { id: string };
   Scan: undefined;
-  WorkOrderSignature: { id: string; status: 'completed' | 'delivered'; signerName?: string; resolutionNotes?: string };
+  // Fluxo de conclusão da OS (situação → solução/data → assinaturas → revisão).
+  // Lançado só com o id; o resto é coletado/derivado dentro do fluxo.
+  WorkOrderSignature: { id: string };
   MyData: undefined;
   Notifications: undefined;
 };

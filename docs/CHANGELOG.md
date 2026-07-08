@@ -9,6 +9,33 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## versionCode 19 — Overhaul de UX do ciclo de vida da OS (6 itens)
+
+Redesenho do fluxo com base na revisão UX sênior:
+
+1. **Botão "Concluir OS"** direto no detalhe (`WorkOrderDetailScreen`) — ação
+   primária, leva ao fluxo de conclusão. Antes concluir estava escondido dentro de
+   "Editar".
+2. **Editar = só corrigir dados.** Removidos do `WorkOrderEditScreen` o seletor
+   manual de status ("Fluxo"), o prazo e a "Situação da OS". Status andam sozinhos;
+   conclusão é só pelo "Concluir OS". Botão vira "Salvar alterações".
+3. **Status como linha do tempo read-only** no detalhe (Aberta • Em andamento •
+   Concluída/Entregue) — não mais um controle cinza desabilitado.
+4. **Técnico read-only** também no Editar (era campo livre).
+5. **Filtro "Minhas"** + chip "Ativas" na lista; **métricas da Home** com
+   drill-down (tocar filtra a lista de OS).
+6. **Toast** (ToastAndroid) no lugar de `Alert` bloqueante em criar/salvar/concluir;
+   **tela de revisão** antes de fechar a OS.
+
+Conclusão agora é um **assistente**: situação (resolvida/parcial/não resolvida) +
+solução + hora final → assinatura do técnico → documento do solicitante (se faltar)
+→ assinatura do solicitante → **revisão** → confirmar. Backend passa a honrar a
+`resolutionStatus` escolhida no fechamento (antes forçava "resolvida").
+
+versionCode 18 → 19.
+
+---
+
 ## versionCode 18 — Técnico fixo no login + solução adotada só na conclusão
 
 - **Técnico responsável fixado no login** (`NewWorkOrderScreen`): campo read-only

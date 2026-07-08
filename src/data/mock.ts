@@ -29,6 +29,8 @@ export type WorkOrder = {
   requesterContact: string | null;
   technicianRequest?: string;
   responsibleTechnicianName: string | null;
+  responsibleTechnicianUserId?: string | null;
+  createdByUserId?: string | null;
   technicalTeam: string | null;
   status: WorkOrderStatus;
   priority: WorkOrderPriority;

@@ -231,6 +231,7 @@ export function updateWorkOrderStatus(
     requesterDocument?: string;
     requesterDocumentType?: 'cpf' | 'rg' | 'matricula';
     finishedAt?: string | null;
+    resolutionStatus?: 'resolved' | 'partial' | 'unresolved';
   } = {},
 ) {
   return apiFetch<{ ok: true; printRequested?: boolean }>(`/api/mobile/work-orders/${id}`, {

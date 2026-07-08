@@ -98,24 +98,12 @@ export function WorkOrderDetailScreen() {
   const accent = T.primary;
   // OS finalizada é somente leitura: nenhum botão de ação fica clicável.
   const finished = wo.status === 'completed' || wo.status === 'delivered' || wo.status === 'cancelled';
-  const persistStatus = async (next: WorkOrderStatus) => {
-    if (next === status || savingStatus) return;
-    if (next === 'completed' || next === 'delivered') {
-      nav.navigate('WorkOrderSignature', { id: wo.id, status: next, signerName: wo.requestedByName, resolutionNotes: wo.resolutionNotes ?? undefined });
-      return;
-    }
-    setSavingStatus(true);
-    setStatusError(null);
-    try {
-      await updateWorkOrderStatus(token, wo.id, next, next === 'in_progress' ? { expectedCompletionHours } : {});
-      setStatus(next);
-      reload();
-    } catch (e) {
-      setStatusError(e instanceof Error ? e.message : 'Não foi possível atualizar o status.');
-    } finally {
-      setSavingStatus(false);
-    }
-  };
+  const cancelled = wo.status === 'cancelled';
+  const isDelivery = /ENTREGA|COLETA|TRANSPORTE|RETIRADA/.test((wo.serviceType || '').toUpperCase());
+  // Estágio na linha do tempo (Aberta • Em andamento • Concluída/Entregue).
+  const currentStage = cancelled ? -1
+    : (status === 'completed' || status === 'delivered') ? 2
+    : status === 'in_progress' ? 1 : 0;
 
   // Gera o PDF da OS (mesmo layout da impressão de produção) e abre o
   // compartilhamento nativo. Usado nas OS finalizadas. A assinatura desenhada
@@ -213,6 +201,20 @@ export function WorkOrderDetailScreen() {
         </Pressable>
       )}
 
+      {/* Ação primária: concluir a OS (situação → solução → assinaturas). */}
+      {!finished && (
+        <Pressable
+          onPress={() => nav.navigate('WorkOrderSignature', { id: wo.id })}
+          style={{
+            marginBottom: 12, height: 54, borderRadius: 14, backgroundColor: T.primary,
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
+          }}
+        >
+          <Icon name="check-circle" size={19} color="#fff" />
+          <Text style={{ fontSize: 15.5, fontWeight: '800', color: '#fff' }}>Concluir OS</Text>
+        </Pressable>
+      )}
+
       {/* Delegação: quem encaminhou a OS e o recado anexo. */}
       {wo.delegatedToName && (
         <View style={{
@@ -255,64 +257,36 @@ export function WorkOrderDetailScreen() {
         </Pressable>
       )}
 
-      {/* Status e prazo — exibidos, mas só editáveis pela tela de Edição */}
-      {!finished && (
-      <SectionCard title="Status e prazo">
-        <View pointerEvents="none" style={{ opacity: 0.6 }}>
-          {status !== 'in_progress' && (
-            <View style={{ marginBottom: 12 }}>
-              <Text style={{ fontSize: 11, color: T.faint, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 7 }}>
-                Prazo ao iniciar atendimento
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-                {COMPLETION_PERIOD_OPTIONS.map(option => {
-                  const active = expectedCompletionHours === option.hours;
-                  return (
-                    <View
-                      key={option.hours}
-                      style={{
-                        paddingVertical: 7,
-                        paddingHorizontal: 12,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                        borderColor: active ? T.primary : T.border,
-                        backgroundColor: active ? `${T.primary}12` : T.surfaceMuted,
-                      }}
-                    >
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: active ? T.primary : T.muted }}>{option.label}</Text>
-                    </View>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-            {FLOW.map((s) => {
-              const on = status === s;
-              const tone = WO_STATUS[s];
-              return (
-                <View
-                  key={s}
-                  style={{
-                    paddingVertical: 8, paddingHorizontal: 13, borderRadius: 10, borderWidth: 1,
-                    borderColor: on ? tone.solid : T.border, backgroundColor: on ? tone.soft : T.surface,
-                  }}
-                >
-                  <Text style={{ fontSize: 12.5, fontWeight: '600', color: on ? tone.fg : T.muted }}>{tone.label}</Text>
+      {/* Andamento — linha do tempo read-only. Os status andam sozinhos; concluir
+          é pelo botão "Concluir OS" acima. */}
+      <SectionCard title="Andamento">
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 }}>
+          {[{ k: 'open', l: 'Aberta' }, { k: 'in_progress', l: 'Em andamento' }, { k: 'done', l: isDelivery ? 'Entregue' : 'Concluída' }].map((s, i, arr) => {
+            const done = i < currentStage;
+            const active = i === currentStage;
+            const on = done || active;
+            const nodeColor = cancelled ? T.danger : on ? T.primary : T.border;
+            return (
+              <View key={s.k} style={{ flex: i < arr.length - 1 ? 1 : 0, flexDirection: 'row', alignItems: 'flex-start' }}>
+                <View style={{ alignItems: 'center', width: 78 }}>
+                  <View style={{ width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: on && !cancelled ? T.primary : T.surface, borderWidth: 1.5, borderColor: nodeColor }}>
+                    {done && !cancelled ? <Icon name="check" size={13} color="#fff" /> : <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: active ? (cancelled ? T.danger : '#fff') : T.border }} />}
+                  </View>
+                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: on ? T.text : T.muted, marginTop: 5, textAlign: 'center' }}>{s.l}</Text>
                 </View>
-              );
-            })}
-          </ScrollView>
+                {i < arr.length - 1 && <View style={{ flex: 1, height: 2, backgroundColor: i < currentStage ? T.primary : T.border, marginTop: 12 }} />}
+              </View>
+            );
+          })}
         </View>
-        <Pressable
-          onPress={() => nav.navigate('WorkOrderEdit', { id: wo.id })}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}
-        >
-          <Icon name="sliders" size={13} color={accent} />
-          <Text style={{ fontSize: 12, color: accent, fontWeight: '700' }}>Toque em Editar para alterar status e prazo</Text>
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <View style={{ backgroundColor: st.soft, borderRadius: 999, paddingVertical: 4, paddingHorizontal: 11 }}>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: st.fg }}>{st.label}</Text>
+          </View>
+          <Text style={{ fontSize: 12, color: T.muted }}>Aberta {fmtDate(wo.openedAt)} · {fmtTime(wo.openedAt)}</Text>
+          {finished && wo.finishedAt ? <Text style={{ fontSize: 12, color: T.muted }}>· Finalizada {fmtDate(wo.finishedAt)}</Text> : null}
+        </View>
       </SectionCard>
-      )}
 
       <SectionCard title="Solicitação">
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>

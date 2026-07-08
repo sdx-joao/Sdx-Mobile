@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { TabParamList } from '../navigation/types';
 import { ModuleScreen, SearchField, ChipRow, EmptyState, LoadingState, type Chip } from '../components/ui';
 import { WOCard } from '../components/cards';
 import { T } from '../theme/theme';
@@ -13,21 +14,36 @@ import type { RootStackParamList } from '../navigation/types';
 
 export function WorkOrdersScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<TabParamList, 'Orders'>>();
   const { token, user } = useAuth();
   const myId = user?.id ?? null;
   const [q, setQ] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(route.params?.filter ?? 'all');
   const loader = useCallback(() => getWorkOrders(token), [token]);
   const { data, loading, refreshing, error, reload } = useResource(loader, { reloadOnFocus: true });
   const orders = data ?? [];
 
+  // Vindo da Home (drill-down): aplica o filtro que a métrica pediu.
+  useEffect(() => {
+    if (route.params?.filter) setFilter(route.params.filter);
+  }, [route.params?.filter]);
+
+  const ACTIVE = ['open', 'in_progress', 'waiting'];
+  const isMine = useCallback((w: WorkOrder) => !!myId && (
+    w.responsibleTechnicianUserId === myId || w.delegatedToUserId === myId || w.createdByUserId === myId
+  ), [myId]);
+
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: orders.length };
+    c.mine = orders.filter(isMine).length;
+    c.active = orders.filter((w) => ACTIVE.includes(w.status)).length;
     orders.forEach((w) => { c[w.status] = (c[w.status] || 0) + 1; });
     return c;
-  }, [orders]);
+  }, [orders, isMine]);
 
   const chips: Chip[] = [
+    { key: 'mine', label: 'Minhas', count: counts.mine },
+    { key: 'active', label: 'Ativas', count: counts.active },
     { key: 'all', label: 'Todas', count: counts.all },
     { key: 'open', label: 'Abertas', count: counts.open },
     { key: 'in_progress', label: 'Em andamento', count: counts.in_progress },
@@ -36,7 +52,9 @@ export function WorkOrdersScreen() {
   ];
 
   const list = orders.filter((w) => {
-    if (filter !== 'all' && w.status !== filter) return false;
+    if (filter === 'mine') { if (!isMine(w)) return false; }
+    else if (filter === 'active') { if (!ACTIVE.includes(w.status)) return false; }
+    else if (filter !== 'all' && w.status !== filter) return false;
     if (q) {
       const t = (w.code + w.serviceType + w.department + (w.responsibleTechnicianName || '') + w.requestedByName).toLowerCase();
       if (!t.includes(q.toLowerCase())) return false;

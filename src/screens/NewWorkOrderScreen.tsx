@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { DetailScaffold, FieldLabel, PrimaryButton, SectionCard } from '../components/ui';
 import { SuggestedInput } from '../components/SuggestedInput';
 import { Icon } from '../components/Icon';
+import { showToast } from '../lib/toast';
 import { RequesterPicker } from '../components/RequesterPicker';
 import { T, WO_PRIORITY } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
@@ -162,7 +163,7 @@ export function NewWorkOrderScreen() {
         technicianRequest,
         priority,
       });
-      Alert.alert('OS criada', `${result.code} foi aberta com sucesso.`);
+      showToast(`${result.code} aberta.`);
       nav.replace('WorkOrderDetail', { id: result.id });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível abrir a OS.');
