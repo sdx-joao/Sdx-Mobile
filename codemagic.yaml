@@ -111,6 +111,15 @@ workflows:
     name: Servus-SDX — OTA update (PRODUCAO)
     instance_type: mac_mini_m2
     max_build_duration: 20
+    # AUTOMATICO: todo push no main publica um OTA de producao.
+    # ⚠️ Regra: ao adicionar codigo NATIVO (novo modulo/permissao), suba a "version"
+    # no app.json e faca um build na Play — senao o OTA chega em build sem o modulo.
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
     environment:
       node: 20.18.0
       groups:
@@ -126,6 +135,8 @@ workflows:
             echo "ERRO: EXPO_TOKEN nao definido (UI -> Environment variables, grupo expo)."
             exit 1
           fi
+          # Cria o canal na 1a vez (idempotente) e publica.
+          npx eas channel:create production 2>/dev/null || true
           npx eas update --branch production --message "${CM_COMMIT_MESSAGE:-OTA update}" --non-interactive
     publishing: *publishing
 
@@ -148,5 +159,6 @@ workflows:
             echo "ERRO: EXPO_TOKEN nao definido (grupo expo)."
             exit 1
           fi
+          npx eas channel:create test 2>/dev/null || true
           npx eas update --branch test --message "${CM_COMMIT_MESSAGE:-OTA update}" --non-interactive
     publishing: *publishing

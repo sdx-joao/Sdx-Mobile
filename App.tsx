@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -13,7 +12,7 @@ import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { ToastHost } from './src/lib/toast';
 import { IS_TEST_BUILD } from './src/api/client';
 import { setupNotificationChannels, registerForPushToken, Notifications } from './src/lib/notifications';
-import { fetchLatestUpdate, applyUpdate } from './src/lib/app-update';
+import { checkForUpdateSilently, UpdateBanner } from './src/lib/app-update';
 import { registerPushToken } from './src/api/mobile';
 import type { RootStackParamList } from './src/navigation/types';
 
@@ -40,20 +39,8 @@ Sentry.init({
 function Root() {
   const { status, token } = useAuth();
 
-  // OTA: checa/baixa nova versão ao abrir; se pronta, oferece aplicar na hora.
-  useEffect(() => {
-    void fetchLatestUpdate().then((ready) => {
-      if (!ready) return;
-      Alert.alert(
-        'Atualização disponível',
-        'Uma nova versão do Servus está pronta para instalar.',
-        [
-          { text: 'Depois', style: 'cancel' },
-          { text: 'Atualizar agora', onPress: () => { void applyUpdate(); } },
-        ],
-      );
-    });
-  }, []);
+  // OTA: checa/baixa nova versão ao abrir; se pronta, mostra um banner discreto.
+  useEffect(() => { void checkForUpdateSilently(); }, []);
 
   // Canais + deep-link ao tocar a notificação (uma vez).
   useEffect(() => {
@@ -100,6 +87,7 @@ function App() {
         </AuthProvider>
       </ErrorBoundary>
       <ToastHost />
+      <UpdateBanner />
     </SafeAreaProvider>
   );
 }
