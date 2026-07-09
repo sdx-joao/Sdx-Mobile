@@ -11,6 +11,18 @@ definitions:
     - &deps
       name: Instalar dependencias
       script: npm ci
+    - &google_services
+      name: Restaurar google-services.json (FCM)
+      # O arquivo saiu do git (contem a Google API key). Aqui ele e recriado a
+      # partir da variavel SEGURA GOOGLE_SERVICES_JSON_BASE64 (definida na UI do
+      # Codemagic, grupo "firebase"). Sem ela, o build falha de proposito.
+      script: |
+        if [ -z "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+          echo "ERRO: variavel GOOGLE_SERVICES_JSON_BASE64 nao definida (UI -> Environment variables, grupo firebase)."
+          exit 1
+        fi
+        echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > google-services.json
+        echo "google-services.json restaurado ($(wc -c < google-services.json) bytes)."
     - &prebuild
       name: Expo prebuild (android)
       script: npx expo prebuild --platform android --no-install
@@ -42,6 +54,8 @@ workflows:
       node: 20.18.0
       android_signing:
         - sdxmobile_keystore
+      groups:
+        - firebase
       vars:
         EXPO_PUBLIC_SDX_API_URL: "https://app-test.scandexplus.com.br"
         EXPO_PUBLIC_APP_ENV: "test"
@@ -49,6 +63,7 @@ workflows:
         SENTRY_DISABLE_AUTO_UPLOAD: "true"
     scripts:
       - *deps
+      - *google_services
       - *prebuild
       - *build
     artifacts: *artifacts
@@ -62,6 +77,8 @@ workflows:
       node: 20.18.0
       android_signing:
         - sdxmobile_keystore
+      groups:
+        - firebase
       vars:
         EXPO_PUBLIC_SDX_API_URL: "https://app.scandexplus.com.br"
         EXPO_PUBLIC_APP_ENV: "production"
@@ -69,6 +86,7 @@ workflows:
         SENTRY_DISABLE_AUTO_UPLOAD: "true"
     scripts:
       - *deps
+      - *google_services
       - *prebuild
       - *build
     artifacts: *artifacts
