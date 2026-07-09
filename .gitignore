@@ -45,3 +45,8 @@ yarn-error.*
 Build Expo/
 *.aab
 *.apk
+
+# Firebase/FCM — contem API key; injetar no build, nunca versionar
+google-services.json
+GoogleService-Info.plist
+*-firebase-adminsdk-*.json

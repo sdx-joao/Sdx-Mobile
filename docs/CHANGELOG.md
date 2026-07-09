@@ -9,6 +9,18 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## versionCode 23 — FCM configurado (google-services.json) para o push
+
+- Adicionado `google-services.json` (Firebase projeto `servus-sdx`, package
+  `com.sdxpro.mobile`) e ligado via `android.googleServicesFile` no `app.json`.
+  Necessário para o Expo push entregar via FCM em build standalone.
+- Falta 1 passo do dono (web, sem CLI): subir a **chave de conta de serviço FCM V1**
+  no painel do Expo (Credentials → Android → FCM V1). A chave NÃO fica no repo.
+
+versionCode 22 → 23.
+
+---
+
 ## versionCode 22 — Notificações push (barra do celular) + sino funcional
 
 - **Push na barra do celular** via Expo (`expo-notifications`): ao delegar uma OS
