@@ -23,14 +23,14 @@ definitions:
         fi
         echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > google-services.json
         echo "google-services.json restaurado ($(wc -c < google-services.json) bytes)."
-    - &version_code
-      name: versionCode dinamico
-      # versionCode = minutos desde 2024-01-01 -> sempre unico e crescente, cabe no
-      # limite do Android (<2.1bi) por milenios. Patcha o app.json antes do prebuild
-      # (o prebuild assa esse valor no build.gradle). Nunca mais "codigo ja usado".
+    - &app_config
+      name: versionCode dinamico + canal OTA
+      # versionCode = minutos desde 2024-01-01 -> sempre unico e crescente. E grava
+      # o canal OTA (EXPO_UPDATE_CHANNEL) no updates.requestHeaders pra o build puxar
+      # os updates certos (prod x test). Patcha o app.json antes do prebuild.
       script: |
         VC=$(( ( $(date +%s) - 1704067200 ) / 60 ))
-        node -e "const f='app.json';const j=require('./'+f);j.expo.android.versionCode=$VC;require('fs').writeFileSync(f,JSON.stringify(j,null,2));console.log('versionCode ->',$VC)"
+        node -e "const f='app.json';const j=require('./'+f);j.expo.android.versionCode=$VC;if(process.env.EXPO_UPDATE_CHANNEL){j.expo.updates=j.expo.updates||{};j.expo.updates.requestHeaders=j.expo.updates.requestHeaders||{};j.expo.updates.requestHeaders['expo-channel-name']=process.env.EXPO_UPDATE_CHANNEL;}require('fs').writeFileSync(f,JSON.stringify(j,null,2));console.log('versionCode',$VC,'| canal',process.env.EXPO_UPDATE_CHANNEL||'(default)')"
     - &prebuild
       name: Expo prebuild (android)
       script: npx expo prebuild --platform android --no-install
@@ -67,12 +67,13 @@ workflows:
       vars:
         EXPO_PUBLIC_SDX_API_URL: "https://app-test.scandexplus.com.br"
         EXPO_PUBLIC_APP_ENV: "test"
+        EXPO_UPDATE_CHANNEL: "test"
         # Sentry: source maps DESLIGADOS por ora (upload derrubava o bundleRelease).
         SENTRY_DISABLE_AUTO_UPLOAD: "true"
     scripts:
       - *deps
       - *google_services
-      - *version_code
+      - *app_config
       - *prebuild
       - *build
     artifacts: *artifacts
@@ -91,13 +92,61 @@ workflows:
       vars:
         EXPO_PUBLIC_SDX_API_URL: "https://app.scandexplus.com.br"
         EXPO_PUBLIC_APP_ENV: "production"
+        EXPO_UPDATE_CHANNEL: "production"
         # Sentry: source maps DESLIGADOS por ora (upload derrubava o bundleRelease).
         SENTRY_DISABLE_AUTO_UPLOAD: "true"
     scripts:
       - *deps
       - *google_services
-      - *version_code
+      - *app_config
       - *prebuild
       - *build
     artifacts: *artifacts
+    publishing: *publishing
+
+  # ── OTA: publica atualizacao de JS/telas SEM build na Play (instantaneo) ──
+  # Requer EXPO_TOKEN (grupo "expo" na UI do Codemagic) e o canal ja criado 1x:
+  #   npx eas channel:create production   (e test)
+  servus-ota-prod:
+    name: Servus-SDX — OTA update (PRODUCAO)
+    instance_type: mac_mini_m2
+    max_build_duration: 20
+    environment:
+      node: 20.18.0
+      groups:
+        - expo
+      vars:
+        EXPO_PUBLIC_SDX_API_URL: "https://app.scandexplus.com.br"
+        EXPO_PUBLIC_APP_ENV: "production"
+    scripts:
+      - *deps
+      - name: Publicar OTA (EAS Update)
+        script: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "ERRO: EXPO_TOKEN nao definido (UI -> Environment variables, grupo expo)."
+            exit 1
+          fi
+          npx eas update --branch production --message "${CM_COMMIT_MESSAGE:-OTA update}" --non-interactive
+    publishing: *publishing
+
+  servus-ota-test:
+    name: Servus-SDX — OTA update (TESTE)
+    instance_type: mac_mini_m2
+    max_build_duration: 20
+    environment:
+      node: 20.18.0
+      groups:
+        - expo
+      vars:
+        EXPO_PUBLIC_SDX_API_URL: "https://app-test.scandexplus.com.br"
+        EXPO_PUBLIC_APP_ENV: "test"
+    scripts:
+      - *deps
+      - name: Publicar OTA (EAS Update)
+        script: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "ERRO: EXPO_TOKEN nao definido (grupo expo)."
+            exit 1
+          fi
+          npx eas update --branch test --message "${CM_COMMIT_MESSAGE:-OTA update}" --non-interactive
     publishing: *publishing
