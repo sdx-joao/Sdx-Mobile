@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from 'react';
+import { useCallback, useState, type ReactElement, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -11,8 +11,13 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from './Icon';
 import { useKeyboardHeight } from './use-keyboard-height';
+import { useAuth } from '../auth/auth-context';
+import { getNotifications } from '../api/mobile';
+import type { RootStackParamList } from '../navigation/types';
 import { IS_TEST_BUILD } from '../api/client';
 import { T, type Tone } from '../theme/theme';
 
@@ -244,17 +249,34 @@ export function BlueHeader({ children, compact }: { children: ReactNode; compact
   );
 }
 
-// Botão circular (sino) no header
+// Botão circular (sino) no header — abre Notificações e mostra não lidas.
 function HeaderBell() {
+  const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { token } = useAuth();
+  const [unread, setUnread] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getNotifications(token)
+        .then((r) => { if (active) setUnread(r.unreadCount || 0); })
+        .catch(() => undefined);
+      return () => { active = false; };
+    }, [token]),
+  );
   return (
     <Pressable
+      onPress={() => nav.navigate('Notifications')}
       style={{
         width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,.14)',
         alignItems: 'center', justifyContent: 'center',
       }}
     >
       <Icon name="bell" size={19} color="#fff" />
-      <View style={{ position: 'absolute', top: 9, right: 10, width: 7, height: 7, borderRadius: 4, backgroundColor: '#FBBF24', borderWidth: 1.5, borderColor: '#1538C9' }} />
+      {unread > 0 && (
+        <View style={{ position: 'absolute', top: 3, right: 3, minWidth: 17, height: 17, paddingHorizontal: 4, borderRadius: 9, backgroundColor: '#FBBF24', borderWidth: 1.5, borderColor: '#1538C9', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 9.5, fontWeight: '900', color: '#1F2937' }}>{unread > 99 ? '99+' : unread}</Text>
+        </View>
+      )}
     </Pressable>
   );
 }

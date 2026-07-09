@@ -9,6 +9,27 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## versionCode 22 — Notificações push (barra do celular) + sino funcional
+
+- **Push na barra do celular** via Expo (`expo-notifications`): ao delegar uma OS
+  o destinatário recebe uma notificação clara; quem delegou é avisado quando a OS
+  é movida/resolvida. Tocar a notificação **abre a OS** (deep-link).
+- **Sons/toques por tipo:** dois canais Android — `os-delegated` (delegada a você,
+  vibração marcante) e `os-updated` (sua OS foi resolvida/movida, vibração
+  diferente). Som = padrão do sistema (dá pra trocar por sons customizados depois).
+- **Sino do header agora funciona:** abre Notificações e mostra o contador de não
+  lidas (antes era um botão morto).
+- Registro do Expo push token por aparelho (`/api/mobile/push-token`); token
+  removido no logout.
+
+> ⚠️ Para o push **chegar** em build standalone (Play), o projeto Expo precisa das
+> credenciais **FCM** configuradas uma vez (`eas credentials` / dashboard) — sem
+> custo. Sem isso, o token é gerado mas a entrega não ocorre.
+
+versionCode 21 → 22.
+
+---
+
 ## versionCode 21 — Correções de assinatura + margem inferior + técnico concluinte
 
 - **Botão "Limpar" agora funciona:** estava dentro da View do PanResponder (que

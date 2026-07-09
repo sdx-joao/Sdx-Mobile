@@ -77,6 +77,20 @@ export type AppNotification = {
   createdAt: string | null;
 };
 
+/** Registra o token de push (Expo) do aparelho para o usuário logado. */
+export function registerPushToken(token: string | null, expoToken: string, app: string) {
+  return apiFetch<{ ok: true }>('/api/mobile/push-token', {
+    method: 'POST', token, body: { token: expoToken, platform: 'android', app },
+  });
+}
+
+/** Remove o token de push (logout). Best-effort. */
+export function unregisterPushToken(token: string | null, expoToken: string) {
+  return apiFetch<{ ok: true }>('/api/mobile/push-token', {
+    method: 'DELETE', token, body: { token: expoToken },
+  }).catch(() => undefined);
+}
+
 export function getNotifications(token: string | null) {
   return apiFetch<{ notifications: AppNotification[]; unreadCount: number }>(
     '/api/mobile/notifications',

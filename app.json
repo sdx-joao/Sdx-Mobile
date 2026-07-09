@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.sdxpro.mobile",
-      "versionCode": 21,
+      "versionCode": 22,
       "adaptiveIcon": {
         "backgroundColor": "#072AC8",
         "foregroundImage": "./assets/adaptive-foreground.png"
@@ -41,7 +41,13 @@
           "faceIDPermission": "O Servus usa o reconhecimento facial para desbloquear o app."
         }
       ],
-      "@sentry/react-native"
+      "@sentry/react-native",
+      [
+        "expo-notifications",
+        {
+          "color": "#072AC8"
+        }
+      ]
     ],
     "extra": {
       "eas": {
