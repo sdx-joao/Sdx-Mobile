@@ -277,6 +277,7 @@ export function ModuleScreen({
   secondaryAction?: { label: string; icon?: string; onPress: () => void };
 }) {
   const keyboardHeight = useKeyboardHeight();
+  const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
       <BlueHeader>
@@ -320,7 +321,7 @@ export function ModuleScreen({
       <View style={{ flex: 1, paddingBottom: keyboardHeight }}>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={[{ paddingTop: onNew ? 10 : 12, paddingBottom: 48 }, contentStyle]}
+          contentContainerStyle={[{ paddingTop: onNew ? 10 : 12, paddingBottom: 48 + insets.bottom }, contentStyle]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           refreshControl={refreshControl}
@@ -346,6 +347,7 @@ export function DetailScaffold({
   refreshControl?: ReactElement<RefreshControlProps>;
 }) {
   const keyboardHeight = useKeyboardHeight();
+  const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
       <BlueHeader compact={compact}>
@@ -369,7 +371,7 @@ export function DetailScaffold({
       <View style={{ flex: 1, paddingBottom: keyboardHeight }}>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 48 + insets.bottom }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           refreshControl={refreshControl}

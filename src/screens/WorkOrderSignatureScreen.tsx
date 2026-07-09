@@ -5,6 +5,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import Svg, { Path } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
@@ -121,6 +122,7 @@ export function WorkOrderSignatureScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'WorkOrderSignature'>>();
   const { token, user } = useAuth();
+  const insets = useSafeAreaInsets();
   // Documento do técnico = CPF do cadastro dele (usuário logado), mascarado.
   const techCpfDigits = String(user?.cpf ?? '').replace(/\D/g, '');
   const techDocMasked = techCpfDigits ? maskDoc(techCpfDigits, 'cpf') : '';
@@ -135,7 +137,7 @@ export function WorkOrderSignatureScreen() {
   const [resolution, setResolution] = useState<Resolution>('resolved');
   const [solution, setSolution] = useState('');
   const [code, setCode] = useState('');
-  const [techName, setTechName] = useState('');
+  const [techName, setTechName] = useState(user?.name || '');
   const [techSig, setTechSig] = useState<string | null>(null);
   const [reqName, setReqName] = useState('');
   const [reqSig, setReqSig] = useState<string | null>(null);
@@ -166,7 +168,9 @@ export function WorkOrderSignatureScreen() {
         const { workOrder, requesterDocument } = await getWorkOrder(token, route.params.id);
         if (!alive) return;
         setCode(workOrder.code || '');
-        setTechName(workOrder.responsibleTechnicianName || '');
+        // O técnico responsável pela conclusão é SEMPRE o dono do celular que está
+        // colhendo a assinatura (não o responsável salvo na OS — que pode ser quem
+        // delegou). O backend também grava o concluinte como responsável.
         setReqName(workOrder.requestedByName || '');
         isDelivery.current = /ENTREGA|COLETA|TRANSPORTE|RETIRADA/.test((workOrder.serviceType || '').toUpperCase());
         if (requesterDocument?.document) {
@@ -288,7 +292,7 @@ export function WorkOrderSignatureScreen() {
   const chipBg = 'rgba(255,255,255,.12)';
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#0F172A', padding: 16, gap: 12 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#0F172A', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 + insets.bottom, gap: 12 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8 }}>
         <Pressable onPress={() => nav.goBack()} style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: chipBg, alignItems: 'center', justifyContent: 'center' }}>
           <Icon name="arrow-left" size={19} color="#fff" />
@@ -357,15 +361,18 @@ export function WorkOrderSignatureScreen() {
         </View>
       ) : (
         <>
-          <View ref={padRef} style={{ backgroundColor: '#fff', borderRadius: 12, flex: 1, overflow: 'hidden' }} onLayout={measurePad} {...pan.panHandlers}>
-            <Svg width="100%" height="100%" viewBox={`0 0 ${padSize.width} ${padSize.height}`} preserveAspectRatio="none">
-              {strokes.map((points, index) => <Path key={index} d={pointsToPath(points)} fill="none" stroke="#111827" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />)}
-            </Svg>
-            {/* Botão sutil para limpar e assinar de novo. */}
+          <View style={{ flex: 1, position: 'relative' }}>
+            <View ref={padRef} style={{ backgroundColor: '#fff', borderRadius: 12, flex: 1, overflow: 'hidden' }} onLayout={measurePad} {...pan.panHandlers}>
+              <Svg width="100%" height="100%" viewBox={`0 0 ${padSize.width} ${padSize.height}`} preserveAspectRatio="none">
+                {strokes.map((points, index) => <Path key={index} d={pointsToPath(points)} fill="none" stroke="#111827" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />)}
+              </Svg>
+            </View>
+            {/* Botão sutil para limpar — FORA da View do PanResponder (senão o pad
+                captura o toque e o botão não funciona). */}
             <Pressable
               onPress={() => setStrokes([])}
-              hitSlop={8}
-              style={{ position: 'absolute', top: 8, right: 8, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(15,23,42,.06)', borderRadius: 999, paddingVertical: 5, paddingHorizontal: 11 }}
+              hitSlop={10}
+              style={{ position: 'absolute', top: 8, right: 8, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(15,23,42,.06)', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 12 }}
             >
               <Icon name="refresh" size={13} color="#64748B" />
               <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700' }}>Limpar</Text>

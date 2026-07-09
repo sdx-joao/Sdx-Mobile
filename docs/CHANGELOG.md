@@ -9,6 +9,23 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## versionCode 21 — Correções de assinatura + margem inferior + técnico concluinte
+
+- **Botão "Limpar" agora funciona:** estava dentro da View do PanResponder (que
+  engolia o toque); movido para fora, sobre o quadro.
+- **Margem inferior segura:** telas (scaffolds + wizard de conclusão) respeitam o
+  `insets.bottom` — botões não ficam mais escondidos/atrás dos botões do celular.
+- **Técnico responsável = dono do celular** que colhe a assinatura (era o
+  responsável salvo na OS — ex.: quem delegou). Nome + CPF vêm do usuário logado;
+  o backend também grava o concluinte como `responsible_technician_*`.
+
+Backend (deployado): **toggle global de impressão automática** em
+`/admin/print-stations` — desligado = fluxo 100% digital, nada imprime ao concluir.
+
+versionCode 20 → 21.
+
+---
+
 ## versionCode 20 — Ajustes de assinatura + toast custom + documento do técnico
 
 - **Documento do técnico** exibido na assinatura, puxado do **cadastro dele**
