@@ -23,6 +23,14 @@ definitions:
         fi
         echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > google-services.json
         echo "google-services.json restaurado ($(wc -c < google-services.json) bytes)."
+    - &version_code
+      name: versionCode dinamico
+      # versionCode = minutos desde 2024-01-01 -> sempre unico e crescente, cabe no
+      # limite do Android (<2.1bi) por milenios. Patcha o app.json antes do prebuild
+      # (o prebuild assa esse valor no build.gradle). Nunca mais "codigo ja usado".
+      script: |
+        VC=$(( ( $(date +%s) - 1704067200 ) / 60 ))
+        node -e "const f='app.json';const j=require('./'+f);j.expo.android.versionCode=$VC;require('fs').writeFileSync(f,JSON.stringify(j,null,2));console.log('versionCode ->',$VC)"
     - &prebuild
       name: Expo prebuild (android)
       script: npx expo prebuild --platform android --no-install
@@ -64,6 +72,7 @@ workflows:
     scripts:
       - *deps
       - *google_services
+      - *version_code
       - *prebuild
       - *build
     artifacts: *artifacts
@@ -87,6 +96,7 @@ workflows:
     scripts:
       - *deps
       - *google_services
+      - *version_code
       - *prebuild
       - *build
     artifacts: *artifacts
