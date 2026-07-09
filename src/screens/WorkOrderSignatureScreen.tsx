@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, PanResponder, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
+import * as NavigationBar from 'expo-navigation-bar';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -161,6 +162,20 @@ export function WorkOrderSignatureScreen() {
   }, [step]);
   useEffect(() => () => { void ScreenOrientation.unlockAsync().catch(() => undefined); }, []);
 
+  // Nos passos de ASSINAR, some com a barra de navegação do Android (imersivo) —
+  // libera a tela toda pro quadro e evita toque acidental nos botões do celular.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const signing = step === 'tech' || step === 'requester';
+    (async () => {
+      try {
+        await NavigationBar.setBehaviorAsync('overlay-swipe');
+        await NavigationBar.setVisibilityAsync(signing ? 'hidden' : 'visible');
+      } catch { /* noop */ }
+    })();
+  }, [step]);
+  useEffect(() => () => { if (Platform.OS === 'android') void NavigationBar.setVisibilityAsync('visible').catch(() => undefined); }, []);
+
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -288,118 +303,127 @@ export function WorkOrderSignatureScreen() {
     : step === 'requester' ? advanceFromRequester
     : finish;
 
-  const white70 = 'rgba(255,255,255,.7)';
-  const chipBg = 'rgba(255,255,255,.12)';
+  // Tema claro e minimalista (pouca área escura).
+  const BG = '#F1F5F9', CARD = '#FFFFFF', BORDER = '#E2E8F0';
+  const TXT = '#0F172A', MUTED = '#64748B', SUBTLE = '#94A3B8';
+  const signDoc = step === 'tech'
+    ? (techDocMasked ? `CPF ${techDocMasked}` : '')
+    : (docForSignature?.value ? `${DOC_TYPES.find(d => d.key === docForSignature.type)?.label || 'Doc'} ${maskDoc(docForSignature.value, docForSignature.type)}` : '');
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#0F172A', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 + insets.bottom, gap: 12 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8 }}>
-        <Pressable onPress={() => nav.goBack()} style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: chipBg, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="arrow-left" size={19} color="#fff" />
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: BG, paddingHorizontal: 14, paddingTop: insets.top + 6, paddingBottom: 12 + insets.bottom, gap: 10 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* Cabeçalho enxuto */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <Pressable onPress={() => nav.goBack()} hitSlop={8} style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="arrow-left" size={18} color={MUTED} />
         </Pressable>
-        <Text style={{ color: '#fff', fontSize: 16, fontWeight: '800' }}>{title}</Text>
-        <View style={{ width: 42 }} />
+        <Text style={{ color: TXT, fontSize: 15, fontWeight: '800', flex: 1 }}>{title}</Text>
+        {!!code && <Text style={{ color: SUBTLE, fontSize: 12, fontWeight: '700' }}>{code}</Text>}
       </View>
 
       {loading ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color="#fff" /></View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color={T.primary} /></View>
       ) : step === 'resolution' ? (
         <View style={{ flex: 1, gap: 12, justifyContent: 'center' }}>
-          <Text style={{ color: white70, fontSize: 13 }}>Como a OS foi concluída?</Text>
+          <Text style={{ color: MUTED, fontSize: 13, fontWeight: '600' }}>Como a OS foi concluída?</Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             {RESOLUTIONS.map(r => (
               <Pressable key={r.key} onPress={() => setResolution(r.key)}
-                style={{ flex: 1, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: resolution === r.key ? r.color : 'transparent', backgroundColor: resolution === r.key ? `${r.color}33` : chipBg }}>
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12.5 }}>{r.label}</Text>
+                style={{ flex: 1, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: resolution === r.key ? r.color : BORDER, backgroundColor: resolution === r.key ? `${r.color}18` : CARD }}>
+                <Text style={{ color: resolution === r.key ? r.color : MUTED, fontWeight: '800', fontSize: 12.5 }}>{r.label}</Text>
               </Pressable>
             ))}
           </View>
           <TextInput
             value={solution} onChangeText={setSolution} multiline
-            placeholder="Solução adotada / o que foi feito" placeholderTextColor="rgba(255,255,255,.45)"
-            style={{ minHeight: 90, borderRadius: 12, padding: 14, backgroundColor: chipBg, color: '#fff', fontSize: 15, textAlignVertical: 'top' }}
+            placeholder="Solução adotada / o que foi feito" placeholderTextColor={SUBTLE}
+            style={{ minHeight: 100, borderRadius: 12, padding: 14, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, color: TXT, fontSize: 15, textAlignVertical: 'top' }}
           />
-          <Text style={{ color: 'rgba(255,255,255,.5)', fontSize: 12 }}>Hora final: {fmtNow(finishedAt.current)} (agora)</Text>
+          <Text style={{ color: SUBTLE, fontSize: 12 }}>Hora final: {fmtNow(finishedAt.current)} (agora)</Text>
         </View>
       ) : step === 'document' ? (
         <View style={{ flex: 1, gap: 14, justifyContent: 'center' }}>
-          <Text style={{ color: white70, fontSize: 13 }}>
+          <Text style={{ color: MUTED, fontSize: 13 }}>
             Documento do solicitante para constar na OS. CPF e RG saem mascarados; matrícula por completo.
           </Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             {DOC_TYPES.map(dt => (
               <Pressable key={dt.key} onPress={() => setDocType(dt.key)}
-                style={{ flex: 1, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: docType === dt.key ? T.primary : chipBg }}>
-                <Text style={{ color: '#fff', fontWeight: '800' }}>{dt.label}</Text>
+                style={{ flex: 1, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: docType === dt.key ? T.primary : BORDER, backgroundColor: docType === dt.key ? `${T.primary}14` : CARD }}>
+                <Text style={{ color: docType === dt.key ? T.primary : MUTED, fontWeight: '800' }}>{dt.label}</Text>
               </Pressable>
             ))}
           </View>
           <TextInput
             value={docValue} onChangeText={setDocValue}
             placeholder={docType === 'matricula' ? 'Número da matrícula' : docType === 'rg' ? 'Número do RG' : 'Número do CPF'}
-            placeholderTextColor="rgba(255,255,255,.45)"
+            placeholderTextColor={SUBTLE}
             keyboardType={docType === 'cpf' ? 'number-pad' : 'default'}
-            style={{ height: 52, borderRadius: 12, paddingHorizontal: 14, backgroundColor: chipBg, color: '#fff', fontSize: 16 }}
+            style={{ height: 52, borderRadius: 12, paddingHorizontal: 14, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, color: TXT, fontSize: 16 }}
           />
         </View>
       ) : step === 'review' ? (
-        <View style={{ flex: 1, gap: 9, justifyContent: 'center' }}>
+        <View style={{ flex: 1, gap: 8, justifyContent: 'center' }}>
           {[
             ['Situação', RESOLUTIONS.find(r => r.key === resolution)?.label || '—'],
             ['Solução', solution.trim() || '—'],
-            ['Técnico', `${techName || '—'}${techSig ? '  ✓ assinou' : ''}`],
-            ['Solicitante', `${reqName || '—'}${reqSig ? '  ✓ assinou' : ''}`],
+            ['Técnico', `${techName || '—'}${techSig ? '  ✓' : ''}`],
+            ['Solicitante', `${reqName || '—'}${reqSig ? '  ✓' : ''}`],
             ['Documento', docForSignature?.value ? `${DOC_TYPES.find(d => d.key === docForSignature.type)?.label || 'Doc'} ${maskDoc(docForSignature.value, docForSignature.type)}` : '—'],
             ['Hora final', fmtNow(finishedAt.current)],
           ].map(([label, value]) => (
             <View key={label} style={{ flexDirection: 'row', gap: 10, paddingVertical: 3 }}>
-              <Text style={{ width: 96, color: 'rgba(255,255,255,.55)', fontSize: 13, fontWeight: '700' }}>{label}</Text>
-              <Text style={{ flex: 1, color: '#fff', fontSize: 13.5, fontWeight: '600' }}>{value}</Text>
+              <Text style={{ width: 96, color: SUBTLE, fontSize: 13, fontWeight: '700' }}>{label}</Text>
+              <Text style={{ flex: 1, color: TXT, fontSize: 13.5, fontWeight: '600' }}>{value}</Text>
             </View>
           ))}
-          <Text style={{ color: 'rgba(255,255,255,.5)', fontSize: 12, marginTop: 4 }}>Confira antes de concluir — a OS será fechada e não poderá mais ser editada.</Text>
+          <Text style={{ color: SUBTLE, fontSize: 12, marginTop: 4 }}>Confira antes de concluir — a OS será fechada e não poderá mais ser editada.</Text>
         </View>
       ) : (
+        // ── Passos de ASSINAR: quadro gigante, dados sutis ──
         <>
           <View style={{ flex: 1, position: 'relative' }}>
-            <View ref={padRef} style={{ backgroundColor: '#fff', borderRadius: 12, flex: 1, overflow: 'hidden' }} onLayout={measurePad} {...pan.panHandlers}>
+            <View ref={padRef} style={{ backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: BORDER, flex: 1, overflow: 'hidden' }} onLayout={measurePad} {...pan.panHandlers}>
               <Svg width="100%" height="100%" viewBox={`0 0 ${padSize.width} ${padSize.height}`} preserveAspectRatio="none">
-                {strokes.map((points, index) => <Path key={index} d={pointsToPath(points)} fill="none" stroke="#111827" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />)}
+                {strokes.map((points, index) => <Path key={index} d={pointsToPath(points)} fill="none" stroke="#0F172A" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />)}
               </Svg>
             </View>
-            {/* Botão sutil para limpar — FORA da View do PanResponder (senão o pad
-                captura o toque e o botão não funciona). */}
+            {/* Dica central bem sutil, some ao começar a assinar. */}
+            {strokes.flat().length < 2 && (
+              <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: '#CBD5E1', fontSize: 15, fontWeight: '700', letterSpacing: 0.3 }}>Assine no quadro</Text>
+              </View>
+            )}
+            {/* Limpar — FORA da View do PanResponder (senão o pad engole o toque). */}
             <Pressable
               onPress={() => setStrokes([])}
-              hitSlop={10}
-              style={{ position: 'absolute', top: 8, right: 8, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(15,23,42,.06)', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 12 }}
+              hitSlop={12}
+              style={{ position: 'absolute', top: 10, right: 10, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: BORDER, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 12 }}
             >
-              <Icon name="refresh" size={13} color="#64748B" />
-              <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700' }}>Limpar</Text>
+              <Icon name="refresh" size={13} color={MUTED} />
+              <Text style={{ color: MUTED, fontSize: 12, fontWeight: '700' }}>Limpar</Text>
             </Pressable>
           </View>
-          {step === 'tech' && techDocMasked ? (
-            <Text style={{ color: 'rgba(255,255,255,.85)', fontSize: 13, fontWeight: '700' }}>CPF: {techDocMasked}</Text>
-          ) : null}
-          {step === 'requester' && docForSignature?.value ? (
-            <Text style={{ color: 'rgba(255,255,255,.85)', fontSize: 13, fontWeight: '700' }}>
-              {(DOC_TYPES.find(d => d.key === docForSignature.type)?.label || 'Documento')}: {maskDoc(docForSignature.value, docForSignature.type)}
-            </Text>
-          ) : null}
-          <TextInput
-            value={step === 'tech' ? techName : reqName}
-            onChangeText={step === 'tech' ? setTechName : setReqName}
-            placeholder={step === 'tech' ? 'Nome do técnico responsável' : 'Nome do solicitante'}
-            placeholderTextColor="rgba(255,255,255,.45)"
-            style={{ height: 48, borderRadius: 12, paddingHorizontal: 14, backgroundColor: chipBg, color: '#fff', fontSize: 15 }}
-          />
+          {/* Dados sutis: nome (linha discreta) + documento minúsculo */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                value={step === 'tech' ? techName : reqName}
+                onChangeText={step === 'tech' ? setTechName : setReqName}
+                placeholder={step === 'tech' ? 'Nome do técnico' : 'Nome do solicitante'}
+                placeholderTextColor={SUBTLE}
+                style={{ height: 40, borderBottomWidth: 1, borderBottomColor: BORDER, color: TXT, fontSize: 14, fontWeight: '600', paddingHorizontal: 2 }}
+              />
+            </View>
+            {!!signDoc && <Text style={{ color: SUBTLE, fontSize: 12, fontWeight: '700' }}>{signDoc}</Text>}
+          </View>
         </>
       )}
 
       <Pressable
         onPress={onPrimary}
         disabled={saving || loading}
-        style={{ height: 52, borderRadius: 14, backgroundColor: T.primary, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: (saving || loading) ? 0.75 : 1 }}
+        style={{ height: 50, borderRadius: 14, backgroundColor: T.primary, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: (saving || loading) ? 0.75 : 1 }}
       >
         {saving ? <ActivityIndicator color="#fff" /> : <Icon name={step === 'review' ? 'check' : 'arrow-right'} size={18} color="#fff" />}
         <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>{primaryLabel}</Text>

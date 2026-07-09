@@ -9,6 +9,21 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## (próximo build) — Assinatura minimalista + imersivo (barra do Android some)
+
+- **Tela de assinatura redesenhada, tema claro/minimalista** (pouca área escura):
+  quadro de assinatura **bem maior** (dominante, borda sutil), **dados discretos**
+  (nome numa linha fina, documento em cinza minúsculo), dica "Assine no quadro" que
+  some ao começar. Passos de situação/documento/revisão também em tema claro.
+- **Modo imersivo nos passos de assinar:** a **barra de navegação do Android some**
+  (`expo-navigation-bar`, overlay-swipe) — libera a tela toda pro quadro e evita
+  toque acidental nos botões do celular. Volta ao sair da tela.
+- Respeita a safe area (insets) em todos os passos.
+
+> versionCode agora é **dinâmico no build** (Codemagic) — não precisa mais bumpar.
+
+---
+
 ## versionCode 23 — FCM configurado (google-services.json) para o push
 
 - Adicionado `google-services.json` (Firebase projeto `servus-sdx`, package
