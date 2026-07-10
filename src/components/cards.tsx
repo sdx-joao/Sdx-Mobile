@@ -97,7 +97,10 @@ export function WOCard({
         </View>
       )}
       <Text style={{ fontSize: 14.5, fontWeight: '600', color: T.text, marginBottom: 3, lineHeight: 19 }}>{wo.serviceType}</Text>
-      <Text style={{ fontSize: 12.5, color: T.faint, marginBottom: 10 }}>{wo.category}</Text>
+      <Text style={{ fontSize: 12.5, color: T.faint, marginBottom: wo.technicianRequest?.trim() ? 7 : 10 }}>{wo.category}</Text>
+      {!!wo.technicianRequest?.trim() && (
+        <Text numberOfLines={2} style={{ fontSize: 12.5, color: T.muted, lineHeight: 17, marginBottom: 10 }}>{wo.technicianRequest}</Text>
+      )}
       <View style={{ gap: 5 }}>
         <MetaRow icon="building">{wo.department} · {wo.unitName.replace('Hospital do Olho — ', 'HO ')}</MetaRow>
         <MetaRow icon="user">{wo.responsibleTechnicianName || 'Não atribuída'}</MetaRow>
