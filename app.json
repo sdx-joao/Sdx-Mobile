@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Servus",
-    "slug": "servus-sdx",
+    "slug": "sdx-mobile",
     "version": "1.2.0",
     "scheme": "servus",
     "orientation": "default",
