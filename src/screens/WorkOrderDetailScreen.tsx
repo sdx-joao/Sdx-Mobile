@@ -201,6 +201,17 @@ export function WorkOrderDetailScreen() {
         </Pressable>
       )}
 
+      {/* Solicitação (o que precisa ser feito) — visível sem precisar editar a OS. */}
+      {!!wo.technicianRequest?.trim() && (
+        <View style={{ marginBottom: 12, borderRadius: 14, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface, padding: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+            <Icon name="clipboard" size={15} color={accent} />
+            <Text style={{ fontSize: 12.5, fontWeight: '800', color: accent, textTransform: 'uppercase', letterSpacing: 0.4 }}>Solicitação</Text>
+          </View>
+          <Text style={{ fontSize: 14.5, color: T.text, lineHeight: 21 }}>{wo.technicianRequest}</Text>
+        </View>
+      )}
+
       {/* Ação primária: concluir a OS (situação → solução → assinaturas). */}
       {!finished && (
         <Pressable
@@ -288,7 +299,7 @@ export function WorkOrderDetailScreen() {
         </View>
       </SectionCard>
 
-      <SectionCard title="Solicitação">
+      <SectionCard title="Detalhes">
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
           {[
             ['Unidade', wo.unitName], ['Setor', wo.department],
