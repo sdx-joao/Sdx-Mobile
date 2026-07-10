@@ -32,16 +32,20 @@ export function WorkOrdersScreen() {
   const isMine = useCallback((w: WorkOrder) => !!myId && (
     w.responsibleTechnicianUserId === myId || w.delegatedToUserId === myId || w.createdByUserId === myId
   ), [myId]);
+  // Urgência: urgente ou escalada, ainda ativa.
+  const isUrgent = useCallback((w: WorkOrder) => ACTIVE.includes(w.status) && (w.priority === 'urgent' || w.escalationCount > 0), []);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: orders.length };
     c.mine = orders.filter(isMine).length;
     c.active = orders.filter((w) => ACTIVE.includes(w.status)).length;
+    c.urgent = orders.filter(isUrgent).length;
     orders.forEach((w) => { c[w.status] = (c[w.status] || 0) + 1; });
     return c;
-  }, [orders, isMine]);
+  }, [orders, isMine, isUrgent]);
 
   const chips: Chip[] = [
+    { key: 'urgent', label: 'Urgência', count: counts.urgent },
     { key: 'mine', label: 'Minhas', count: counts.mine },
     { key: 'active', label: 'Ativas', count: counts.active },
     { key: 'all', label: 'Todas', count: counts.all },
@@ -54,6 +58,7 @@ export function WorkOrdersScreen() {
   const list = orders.filter((w) => {
     if (filter === 'mine') { if (!isMine(w)) return false; }
     else if (filter === 'active') { if (!ACTIVE.includes(w.status)) return false; }
+    else if (filter === 'urgent') { if (!isUrgent(w)) return false; }
     else if (filter !== 'all' && w.status !== filter) return false;
     if (q) {
       const t = (w.code + w.serviceType + w.department + (w.responsibleTechnicianName || '') + w.requestedByName).toLowerCase();

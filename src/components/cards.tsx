@@ -42,6 +42,10 @@ export function WOCard({
   const finished = wo.status === 'completed' || wo.status === 'delivered' || wo.status === 'cancelled';
   const overdue = !!wo.expectedCompletionAt && new Date(wo.expectedCompletionAt) < new Date() && !finished;
   const delegated = !!wo.delegatedToName;
+  // OS que exigem atenção: urgente ou escalada (e ainda aberta). Ganham um leve
+  // tom de fundo diferente pra saltar aos olhos na lista.
+  const critical = !finished && (wo.priority === 'urgent' || wo.escalationCount > 0);
+  const criticalColor = wo.priority === 'urgent' ? T.danger : '#C2410C';
 
   // Chip "Aberta" pulsa sutilmente para chamar atenção das OS sem atendimento.
   const isOpen = wo.status === 'open';
@@ -62,9 +66,9 @@ export function WOCard({
     <Pressable
       onPress={() => onOpen(wo)}
       style={{
-        backgroundColor: delegatedToMe ? `${DELEGATION_COLOR}0C` : T.surface,
-        borderWidth: 1, borderColor: delegatedToMe ? `${DELEGATION_COLOR}55` : T.border,
-        borderLeftWidth: 3, borderLeftColor: delegatedToMe ? DELEGATION_COLOR : pr.color,
+        backgroundColor: delegatedToMe ? `${DELEGATION_COLOR}0C` : critical ? `${criticalColor}0D` : T.surface,
+        borderWidth: 1, borderColor: delegatedToMe ? `${DELEGATION_COLOR}55` : critical ? `${criticalColor}55` : T.border,
+        borderLeftWidth: critical ? 4 : 3, borderLeftColor: delegatedToMe ? DELEGATION_COLOR : critical ? criticalColor : pr.color,
         borderRadius: 14, padding: 14, marginBottom: 10,
         ...cardShadow,
       }}
