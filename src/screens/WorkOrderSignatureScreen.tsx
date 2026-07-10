@@ -5,7 +5,7 @@ import * as NavigationBar from 'expo-navigation-bar';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Line } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,6 +21,8 @@ type Point = { x: number; y: number };
 
 const PAD_WIDTH = 720;
 const PAD_HEIGHT = 320;
+// 1,5 cm em dp (160 dp = 1 pol = 2,54 cm) — posição da linha-guia acima do fundo.
+const BASELINE_FROM_BOTTOM = 1.5 * (160 / 2.54);
 
 function pointsToPath(points: Point[]) {
   if (points.length < 2) return '';
@@ -385,6 +387,14 @@ export function WorkOrderSignatureScreen() {
           <View style={{ flex: 1, position: 'relative' }}>
             <View ref={padRef} style={{ backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: BORDER, flex: 1, overflow: 'hidden' }} onLayout={measurePad} {...pan.panHandlers}>
               <Svg width="100%" height="100%" viewBox={`0 0 ${padSize.width} ${padSize.height}`} preserveAspectRatio="none">
+                {/* Linha-guia (baseline) 1,5 cm acima do fundo — orienta a assinatura. */}
+                {padSize.height > BASELINE_FROM_BOTTOM + 16 && (
+                  <Line
+                    x1={16} y1={padSize.height - BASELINE_FROM_BOTTOM}
+                    x2={padSize.width - 16} y2={padSize.height - BASELINE_FROM_BOTTOM}
+                    stroke="#CBD5E1" strokeWidth={1.5} strokeDasharray="8 6"
+                  />
+                )}
                 {strokes.map((points, index) => <Path key={index} d={pointsToPath(points)} fill="none" stroke="#0F172A" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />)}
               </Svg>
             </View>
