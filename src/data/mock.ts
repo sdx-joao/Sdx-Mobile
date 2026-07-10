@@ -31,6 +31,7 @@ export type WorkOrder = {
   responsibleTechnicianName: string | null;
   responsibleTechnicianUserId?: string | null;
   createdByUserId?: string | null;
+  createdByName?: string | null;
   technicalTeam: string | null;
   status: WorkOrderStatus;
   priority: WorkOrderPriority;
@@ -45,6 +46,11 @@ export type WorkOrder = {
   delegatedByName?: string | null;
   delegationMessage?: string | null;
   delegatedAt?: string | null;
+  // Solicitação de cancelamento pendente (null/ausente = nenhuma).
+  cancelRequestedAt?: string | null;
+  cancelRequestedByUserId?: string | null;
+  cancelRequestedByName?: string | null;
+  cancelReason?: string | null;
   attendanceNotes: string | null;
   resolutionStatus: WorkOrderResolution | null;
   resolutionNotes?: string | null;

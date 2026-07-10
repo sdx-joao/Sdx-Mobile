@@ -136,6 +136,20 @@ export async function getDelegatableUsers(
   return res.users ?? [];
 }
 
+/** Solicita o cancelamento da OS (motivo obrigatório). Aprovação é de quem gerencia. */
+export function requestWorkOrderCancellation(token: string | null, id: string, reason: string) {
+  return apiFetch<{ ok: true; code: string }>(`/api/mobile/work-orders/${id}/cancel-request`, {
+    method: 'POST', token, body: { reason },
+  });
+}
+
+/** Aprova ou recusa a solicitação de cancelamento (canManageWorkOrders). */
+export function reviewWorkOrderCancellation(token: string | null, id: string, action: 'approve' | 'reject') {
+  return apiFetch<{ ok: true; code: string; action: string }>(`/api/mobile/work-orders/${id}/cancel-review`, {
+    method: 'POST', token, body: { action },
+  });
+}
+
 /** Delega/encaminha a OS a um usuário, com mensagem opcional. */
 export function delegateWorkOrder(
   token: string | null,

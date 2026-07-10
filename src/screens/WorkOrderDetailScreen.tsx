@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -14,10 +14,13 @@ import {
   getWorkOrder,
   getWorkOrderAttachments,
   getWorkOrderPrintHtml,
+  requestWorkOrderCancellation,
+  reviewWorkOrderCancellation,
   updateWorkOrderStatus,
   type WorkOrderAttachment,
   type WorkOrderAttachmentCategory,
 } from '../api/mobile';
+import { showToast } from '../lib/toast';
 import { useResource } from '../api/use-resource';
 import { API_BASE_URL } from '../api/client';
 import type { RootStackParamList } from '../navigation/types';
@@ -66,6 +69,10 @@ export function WorkOrderDetailScreen() {
   const [statusError, setStatusError] = useState<string | null>(null);
   const [expectedCompletionHours, setExpectedCompletionHours] = useState(4);
   const [sharing, setSharing] = useState(false);
+  // Solicitação de cancelamento (motivo obrigatório).
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReasonText, setCancelReasonText] = useState('');
+  const [cancelBusy, setCancelBusy] = useState(false);
 
   useEffect(() => {
     if (wo) setStatus(wo.status);
@@ -98,6 +105,62 @@ export function WorkOrderDetailScreen() {
   const accent = T.primary;
   // OS finalizada é somente leitura: nenhum botão de ação fica clicável.
   const finished = wo.status === 'completed' || wo.status === 'delivered' || wo.status === 'cancelled';
+  // Propriedade: só o criador (ou o delegado) edita/conclui — espelha o backend.
+  const canAct = !!user && (
+    user.id === wo.createdByUserId ||
+    user.id === wo.delegatedToUserId ||
+    user.role === 'SuperAdministrador'
+  );
+  const canManage = user?.role === 'SuperAdministrador' || !!user?.capabilities?.canManageWorkOrders;
+  const cancelPending = !!wo.cancelRequestedAt && !finished;
+
+  const submitCancelRequest = async () => {
+    if (cancelBusy) return;
+    if (cancelReasonText.trim().length < 5) {
+      Alert.alert('Cancelamento', 'Declare o motivo do cancelamento (mínimo 5 caracteres).');
+      return;
+    }
+    setCancelBusy(true);
+    try {
+      await requestWorkOrderCancellation(token, wo.id, cancelReasonText.trim());
+      showToast('Solicitação de cancelamento enviada.');
+      setCancelOpen(false);
+      setCancelReasonText('');
+      reload();
+    } catch (e) {
+      Alert.alert('Erro', e instanceof Error ? e.message : 'Não foi possível solicitar o cancelamento.');
+    } finally {
+      setCancelBusy(false);
+    }
+  };
+
+  const reviewCancel = (action: 'approve' | 'reject') => {
+    Alert.alert(
+      action === 'approve' ? 'Cancelar OS' : 'Recusar solicitação',
+      action === 'approve'
+        ? `Aprovar o cancelamento da ${wo.code}? A OS será fechada como Cancelada.`
+        : `Recusar a solicitação de cancelamento da ${wo.code}?`,
+      [
+        { text: 'Voltar', style: 'cancel' },
+        {
+          text: action === 'approve' ? 'Cancelar OS' : 'Recusar',
+          style: action === 'approve' ? 'destructive' : 'default',
+          onPress: async () => {
+            setCancelBusy(true);
+            try {
+              await reviewWorkOrderCancellation(token, wo.id, action);
+              showToast(action === 'approve' ? `${wo.code} cancelada.` : 'Solicitação recusada.');
+              reload();
+            } catch (e) {
+              Alert.alert('Erro', e instanceof Error ? e.message : 'Não foi possível concluir a ação.');
+            } finally {
+              setCancelBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  };
   const cancelled = wo.status === 'cancelled';
   const isDelivery = /ENTREGA|COLETA|TRANSPORTE|RETIRADA/.test((wo.serviceType || '').toUpperCase());
   // Estágio na linha do tempo (Aberta • Em andamento • Concluída/Entregue).
@@ -159,7 +222,7 @@ export function WorkOrderDetailScreen() {
           <Text style={{ fontSize: 12.5, color: 'rgba(255,255,255,.75)' }}>{wo.category}</Text>
           <Pressable
             onPress={() => nav.navigate('WorkOrderEdit', { id: wo.id })}
-            disabled={finished}
+            disabled={finished || !canAct}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -168,7 +231,7 @@ export function WorkOrderDetailScreen() {
               paddingVertical: 5,
               paddingHorizontal: 10,
               borderRadius: 999,
-              opacity: finished ? 0.4 : 1,
+              opacity: finished || !canAct ? 0.4 : 1,
             }}
           >
             <Icon name="sliders" size={13} color={T.primary} />
@@ -212,8 +275,47 @@ export function WorkOrderDetailScreen() {
         </View>
       )}
 
-      {/* Ação primária: concluir a OS (situação → solução → assinaturas). */}
-      {!finished && (
+      {/* Solicitação de cancelamento pendente: banner + decisão de quem gerencia. */}
+      {cancelPending && (
+        <View style={{ marginBottom: 12, borderRadius: 14, borderWidth: 1, borderColor: `${T.danger}55`, backgroundColor: `${T.danger}0C`, padding: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+            <Icon name="alert" size={15} color={T.danger} />
+            <Text style={{ fontSize: 13, fontWeight: '800', color: T.danger }}>Cancelamento solicitado</Text>
+          </View>
+          <Text style={{ fontSize: 13, color: T.text, lineHeight: 19 }}>
+            <Text style={{ fontWeight: '700' }}>{wo.cancelRequestedByName || 'Usuário'}</Text>
+            {wo.cancelRequestedAt ? <Text style={{ color: T.faint }}>{` · ${fmtDate(wo.cancelRequestedAt)} ${fmtTime(wo.cancelRequestedAt)}`}</Text> : null}
+          </Text>
+          {!!wo.cancelReason && (
+            <Text style={{ marginTop: 9, fontSize: 13, color: T.textSoft, lineHeight: 20, backgroundColor: '#fff', borderRadius: 10, padding: 11, borderWidth: 1, borderColor: `${T.danger}22` }}>
+              “{wo.cancelReason}”
+            </Text>
+          )}
+          {canManage && (
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+              <Pressable
+                onPress={() => reviewCancel('approve')}
+                disabled={cancelBusy}
+                style={{ flex: 1, height: 44, borderRadius: 11, backgroundColor: T.danger, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, opacity: cancelBusy ? 0.6 : 1 }}
+              >
+                <Icon name="x" size={15} color="#fff" />
+                <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#fff' }}>Cancelar OS</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => reviewCancel('reject')}
+                disabled={cancelBusy}
+                style={{ flex: 1, height: 44, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center', opacity: cancelBusy ? 0.6 : 1 }}
+              >
+                <Text style={{ fontSize: 13.5, fontWeight: '800', color: T.textSoft }}>Recusar solicitação</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Ação primária: concluir a OS (situação → solução → assinaturas). Só o
+          criador/delegado — regra de propriedade espelhada do backend. */}
+      {!finished && canAct && (
         <Pressable
           onPress={() => nav.navigate('WorkOrderSignature', { id: wo.id })}
           style={{
@@ -224,6 +326,14 @@ export function WorkOrderDetailScreen() {
           <Icon name="check-circle" size={19} color="#fff" />
           <Text style={{ fontSize: 15.5, fontWeight: '800', color: '#fff' }}>Concluir OS</Text>
         </Pressable>
+      )}
+      {!finished && !canAct && (
+        <View style={{ marginBottom: 12, flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: T.surfaceMuted, borderRadius: 11, padding: 11 }}>
+          <Icon name="lock" size={14} color={T.muted} />
+          <Text style={{ flex: 1, fontSize: 12, color: T.muted, lineHeight: 17 }}>
+            Somente {wo.createdByName || 'quem criou a OS'} (ou quem a recebeu por delegação) pode editá-la ou concluí-la.
+          </Text>
+        </View>
       )}
 
       {/* Delegação: quem encaminhou a OS e o recado anexo. */}
@@ -252,8 +362,53 @@ export function WorkOrderDetailScreen() {
         </View>
       )}
 
-      {/* Ação de delegar (só quem tem permissão e OS não finalizada). */}
-      {!finished && canDelegate && (
+      {/* Solicitar cancelamento — qualquer usuário, com motivo obrigatório.
+          A decisão (aprovar/recusar) é de quem tem canManageWorkOrders. */}
+      {!finished && !cancelPending && (
+        cancelOpen ? (
+          <View style={{ marginBottom: 12, borderRadius: 14, borderWidth: 1, borderColor: `${T.danger}44`, backgroundColor: T.surface, padding: 14, gap: 10 }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: T.danger }}>Solicitar cancelamento</Text>
+            <TextInput
+              value={cancelReasonText}
+              onChangeText={setCancelReasonText}
+              multiline
+              placeholder="Motivo do cancelamento (obrigatório)"
+              placeholderTextColor={T.faint}
+              style={{ minHeight: 76, borderRadius: 11, borderWidth: 1, borderColor: T.border, padding: 12, fontSize: 14, color: T.text, textAlignVertical: 'top', backgroundColor: T.surfaceMuted }}
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable
+                onPress={submitCancelRequest}
+                disabled={cancelBusy}
+                style={{ flex: 1, height: 44, borderRadius: 11, backgroundColor: T.danger, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, opacity: cancelBusy ? 0.6 : 1 }}
+              >
+                {cancelBusy ? <ActivityIndicator color="#fff" /> : <Icon name="send" size={14} color="#fff" />}
+                <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#fff' }}>Enviar solicitação</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { setCancelOpen(false); setCancelReasonText(''); }}
+                style={{ paddingHorizontal: 16, height: 44, borderRadius: 11, borderWidth: 1, borderColor: T.border, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Text style={{ fontSize: 13.5, fontWeight: '700', color: T.muted }}>Voltar</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <Pressable
+            onPress={() => setCancelOpen(true)}
+            style={{
+              marginBottom: 12, height: 46, borderRadius: 12, borderWidth: 1, borderColor: `${T.danger}66`,
+              backgroundColor: `${T.danger}08`, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}
+          >
+            <Icon name="x" size={15} color={T.danger} />
+            <Text style={{ fontSize: 14, fontWeight: '800', color: T.danger }}>Solicitar cancelamento</Text>
+          </Pressable>
+        )
+      )}
+
+      {/* Ação de delegar (permissão + propriedade: só criador/delegado encaminha). */}
+      {!finished && canDelegate && canAct && (
         <Pressable
           onPress={() => nav.navigate('WorkOrderDelegate', { id: wo.id, code: wo.code })}
           style={{

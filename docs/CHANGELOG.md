@@ -9,6 +9,24 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## (OTA) — Dono da OS + solicitação de cancelamento + fix catálogo on-the-go
+
+- **Propriedade da OS:** só quem **criou** (ou recebeu por **delegação**) pode
+  editar/concluir/delegar — botões "Editar", "Concluir OS" e "Delegar" somem para
+  os demais (nota explica quem pode). Backend reforça (403) no web e no app;
+  SuperAdministrador é exceção.
+- **Solicitar cancelamento** (botão na tela de resumo da OS): qualquer usuário
+  solicita declarando **motivo obrigatório**. A OS ganha banner vermelho
+  "Cancelamento solicitado" (quem/quando/motivo) + indicador no card da lista.
+  Quem tem `canManageWorkOrders` vê **Cancelar OS** (aprova → OS Cancelada, com
+  auditoria) ou **Recusar solicitação**. Notificações para aprovadores e para o
+  solicitante no desfecho. Eventos na timeline.
+- **Fix catálogo on-the-go:** tipo de serviço/categoria digitados na criação
+  passam a ser salvos no catálogo (não somem mais das sugestões). Seed manual de
+  "ENTREGA DE PERIFERICOS" e "TROCA DE PERIFERICO" aplicado no banco.
+
+---
+
 ## (próximo build) — Assinatura minimalista + imersivo (barra do Android some)
 
 - **Tela de assinatura redesenhada, tema claro/minimalista** (pouca área escura):

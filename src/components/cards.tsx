@@ -100,6 +100,14 @@ export function WOCard({
           </Text>
         </View>
       )}
+      {!!wo.cancelRequestedAt && !finished && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+          <Icon name="alert" size={12} color={T.danger} />
+          <Text numberOfLines={1} style={{ fontSize: 11.5, color: T.danger, fontWeight: '700', flexShrink: 1 }}>
+            Cancelamento solicitado{wo.cancelRequestedByName ? ` por ${wo.cancelRequestedByName}` : ''}
+          </Text>
+        </View>
+      )}
       <Text style={{ fontSize: 14.5, fontWeight: '600', color: T.text, marginBottom: 3, lineHeight: 19 }}>{wo.serviceType}</Text>
       <Text style={{ fontSize: 12.5, color: T.faint, marginBottom: wo.technicianRequest?.trim() ? 7 : 10 }}>{wo.category}</Text>
       {!!wo.technicianRequest?.trim() && (
