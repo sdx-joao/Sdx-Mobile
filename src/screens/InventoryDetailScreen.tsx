@@ -50,6 +50,10 @@ export function InventoryDetailScreen() {
   const moves = data?.movements ?? [];
   const pct = item.maxQty ? Math.min(100, (item.currentQty / item.maxQty) * 100) : 100;
   const photoUrl = item.mainPhotoUrl ? `${API_BASE_URL}${item.mainPhotoUrl}` : null;
+  // O endpoint de foto mobile exige Bearer — o <Image> precisa mandar no header.
+  const photoSource = photoUrl
+    ? { uri: photoUrl, headers: token ? { Authorization: `Bearer ${token}` } : undefined }
+    : null;
 
   return (
     <DetailScaffold
@@ -78,8 +82,8 @@ export function InventoryDetailScreen() {
           alignItems: 'center', justifyContent: 'center',
         }}
       >
-        {photoUrl ? (
-          <Image source={{ uri: photoUrl }} resizeMode="cover" style={{ width: '100%', height: '100%' }} />
+        {photoSource ? (
+          <Image source={photoSource} resizeMode="cover" style={{ width: '100%', height: '100%' }} />
         ) : (
           <>
             <Icon name="camera" size={24} color={T.faint} />
