@@ -17,6 +17,7 @@ export type RootStackParamList = {
   WorkOrderPhotoViewer: { id: string; startId?: string };
   NewWorkOrder: undefined;
   InventoryDetail: { id: string };
+  NewInventoryItem: { labelCode?: string } | undefined;
   Scan: undefined;
   // Fluxo de conclusão da OS (situação → solução/data → assinaturas → revisão).
   // Lançado só com o id; o resto é coletado/derivado dentro do fluxo.

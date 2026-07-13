@@ -8,7 +8,7 @@ import { Icon } from '../components/Icon';
 import { T, INV_TYPE } from '../theme/theme';
 import type { InventoryItem } from '../data/mock';
 import { useAuth } from '../auth/auth-context';
-import { getInventory, resolveAsset } from '../api/mobile';
+import { getInventory, resolveAsset, resolveInventoryLabel } from '../api/mobile';
 import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -78,6 +78,22 @@ export function ScanScreen() {
     }
     locked.current = true;
     try {
+      // Etiqueta genérica (ETQ-…): disponível → cadastro; vinculada → abre o item.
+      if (/^ETQ-?\d/i.test(asset)) {
+        const label = await resolveInventoryLabel(token, asset);
+        if (label.status === 'assigned' && label.itemId) {
+          setTimeout(() => nav.replace('InventoryDetail', { id: label.itemId as string }), 500);
+          return;
+        }
+        if (!label.canRegister) {
+          setScanError('Etiqueta disponível — sem permissão para cadastrar.');
+          locked.current = false;
+          return;
+        }
+        setTimeout(() => nav.replace('NewInventoryItem', { labelCode: label.code }), 400);
+        return;
+      }
+      // Código patrimonial legado: abre o item existente.
       const res = await resolveAsset(token, asset);
       setDetecting(res.item);
       setTimeout(() => nav.replace('InventoryDetail', { id: res.item.id }), 700);

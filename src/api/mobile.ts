@@ -338,3 +338,31 @@ export function resolveAsset(token: string | null, code: string) {
     { token },
   );
 }
+
+/** Resolve uma etiqueta genérica escaneada (ETQ-…): disponível ou já vinculada. */
+export function resolveInventoryLabel(token: string | null, code: string) {
+  return apiFetch<{ code: string; status: 'available' | 'assigned' | 'void'; itemId: string | null; canRegister: boolean }>(
+    `/api/mobile/inventory/labels/${encodeURIComponent(code)}`,
+    { token },
+  );
+}
+
+export type NewInventoryItemInput = {
+  labelCode?: string;
+  name: string;
+  itemType?: 'equipment' | 'consumable';
+  category?: string;
+  unitName: string;
+  room: string;
+  currentLocation?: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+};
+
+/** Cadastra um equipamento pelo celular (vinculando a etiqueta genérica). */
+export function createInventoryItem(token: string | null, input: NewInventoryItemInput) {
+  return apiFetch<{ ok: true; item: InventoryItem }>('/api/mobile/inventory', {
+    method: 'POST', token, body: input,
+  });
+}

@@ -75,6 +75,8 @@ export type InventoryItem = {
   assetTag: string | null;
   serialNumber: string | null;
   currentLocation: string | null;
+  unitName?: string | null;
+  room?: string | null;
   brand: string | null;
   model: string | null;
   equipmentStatus: string | null;

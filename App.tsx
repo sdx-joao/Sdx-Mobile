@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Linking } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -13,7 +14,8 @@ import { ToastHost } from './src/lib/toast';
 import { IS_TEST_BUILD } from './src/api/client';
 import { setupNotificationChannels, registerForPushToken, Notifications } from './src/lib/notifications';
 import { checkForUpdateSilently, UpdateBanner } from './src/lib/app-update';
-import { registerPushToken } from './src/api/mobile';
+import { registerPushToken, resolveInventoryLabel } from './src/api/mobile';
+import { getToken } from './src/auth/token-store';
 import type { RootStackParamList } from './src/navigation/types';
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
@@ -23,6 +25,34 @@ function openFromNotification(data: unknown) {
   const woId = (data as { workOrderId?: string | null } | undefined)?.workOrderId;
   if (woId && navigationRef.isReady()) {
     navigationRef.navigate('WorkOrderDetail', { id: String(woId) });
+  }
+}
+
+// Extrai o código da etiqueta de uma URL de App Link / custom scheme:
+//   https://app.scandexplus.com.br/i/ETQ-000001
+//   servus://i/ETQ-000001
+function extractLabelCode(url: string): string | null {
+  const m = url.match(/\/i\/([^/?#]+)/) || url.match(/^servus:\/\/i\/([^/?#]+)/i);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+// Deep-link da etiqueta de inventário: resolve e abre o item (vinculada) ou o
+// cadastro (disponível). Requer sessão ativa (usa o token salvo).
+async function handleInventoryDeepLink(url: string | null) {
+  if (!url) return;
+  const code = extractLabelCode(url);
+  if (!code) return;
+  const token = await getToken();
+  if (!token || !navigationRef.isReady()) return;
+  try {
+    const label = await resolveInventoryLabel(token, code);
+    if (label.status === 'assigned' && label.itemId) {
+      navigationRef.navigate('InventoryDetail', { id: label.itemId });
+    } else if (label.canRegister) {
+      navigationRef.navigate('NewInventoryItem', { labelCode: label.code });
+    }
+  } catch {
+    /* etiqueta inválida / offline — ignora */
   }
 }
 
@@ -54,6 +84,14 @@ function Root() {
     });
     return () => sub.remove();
   }, []);
+
+  // Deep link da etiqueta de inventário (App Link / QR): só quando autenticado.
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    void Linking.getInitialURL().then(handleInventoryDeepLink);
+    const sub = Linking.addEventListener('url', (e) => { void handleInventoryDeepLink(e.url); });
+    return () => sub.remove();
+  }, [status]);
 
   // Registra o token de push do aparelho quando autenticado.
   useEffect(() => {
