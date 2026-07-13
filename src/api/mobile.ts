@@ -16,7 +16,8 @@ export type SelectOptionKind =
   | 'work_order_technical_team'
   | 'work_order_responsible_technician'
   | 'work_order_material'
-  | 'work_order_material_unit';
+  | 'work_order_material_unit'
+  | 'inventory_location';
 
 export type SelectOption = {
   kind: SelectOptionKind;

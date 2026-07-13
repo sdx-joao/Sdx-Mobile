@@ -31,9 +31,10 @@ export function NewInventoryItemScreen() {
   const labelCode = route.params?.labelCode;
   const { token } = useAuth();
 
-  const optionsLoader = useCallback(() => getOptions(token, ['work_order_unit']), [token]);
+  const optionsLoader = useCallback(() => getOptions(token, ['work_order_unit', 'inventory_location']), [token]);
   const { data: options } = useResource(optionsLoader);
   const unitOptions = useMemo<SelectOption[]>(() => (options ?? []).filter((o) => o.kind === 'work_order_unit'), [options]);
+  const roomOptions = useMemo<SelectOption[]>(() => (options ?? []).filter((o) => o.kind === 'inventory_location'), [options]);
 
   const [name, setName] = useState('');
   const [itemType, setItemType] = useState<'equipment' | 'consumable'>('equipment');
@@ -96,7 +97,8 @@ export function NewInventoryItemScreen() {
       <SectionCard title="Local (Mapa)">
         <View style={{ gap: 14 }}>
           <SuggestedInput label="Unidade" required value={unitName} onChangeText={setUnitName} placeholder="Ex.: HOSPITAL DO OLHO" options={unitOptions} />
-          <View><FieldLabel required>Cômodo / sala</FieldLabel><Field value={room} onChangeText={setRoom} placeholder="Ex.: Recepção, Sala de cirurgia 2" /></View>
+          <SuggestedInput label="Cômodo / sala" required value={room} onChangeText={setRoom} placeholder="Ex.: Recepção, Sala de cirurgia 2" options={roomOptions} />
+          <Text style={{ fontSize: 11, color: T.muted, marginTop: -6 }}>Pode escolher da lista ou digitar um novo — entra no catálogo.</Text>
         </View>
       </SectionCard>
 
