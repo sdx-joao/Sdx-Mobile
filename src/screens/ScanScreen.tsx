@@ -9,6 +9,7 @@ import { T, INV_TYPE } from '../theme/theme';
 import type { InventoryItem } from '../data/mock';
 import { useAuth } from '../auth/auth-context';
 import { getInventory, resolveAsset, resolveInventoryLabel } from '../api/mobile';
+import { parseLabelScan, isLabelCode } from '../lib/label-scan';
 import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -71,16 +72,14 @@ export function ScanScreen() {
   const onScanned = async (code: string) => {
     if (locked.current) return;
     setScanError(null);
-    const asset = parseAssetCode(code);
-    if (!asset) {
-      setScanError('QR Code não reconhecido como etiqueta SDX.');
-      return;
-    }
-    locked.current = true;
-    try {
-      // Etiqueta genérica (ETQ-…): disponível → cadastro; vinculada → abre o item.
-      if (/^ETQ-?\d/i.test(asset)) {
-        const label = await resolveInventoryLabel(token, asset);
+
+    // Etiqueta genérica (ETQ-…): resolve — vinculada abre o item; disponível abre
+    // o cadastro passando o nº de cópias e a cópia escaneada (já conta na validação).
+    const scan = parseLabelScan(code);
+    if (scan && isLabelCode(scan.code)) {
+      locked.current = true;
+      try {
+        const label = await resolveInventoryLabel(token, scan.code);
         if (label.status === 'assigned' && label.itemId) {
           setTimeout(() => nav.replace('InventoryDetail', { id: label.itemId as string }), 500);
           return;
@@ -90,10 +89,23 @@ export function ScanScreen() {
           locked.current = false;
           return;
         }
-        setTimeout(() => nav.replace('NewInventoryItem', { labelCode: label.code }), 400);
+        setTimeout(() => nav.replace('NewInventoryItem', { labelCode: label.code, copies: label.copies, firstCopy: scan.copy }), 400);
+        return;
+      } catch {
+        setScanError('Etiqueta não encontrada.');
+        locked.current = false;
         return;
       }
-      // Código patrimonial legado: abre o item existente.
+    }
+
+    // Código patrimonial legado: abre o item existente.
+    const asset = parseAssetCode(code);
+    if (!asset) {
+      setScanError('QR Code não reconhecido como etiqueta SDX.');
+      return;
+    }
+    locked.current = true;
+    try {
       const res = await resolveAsset(token, asset);
       setDetecting(res.item);
       setTimeout(() => nav.replace('InventoryDetail', { id: res.item.id }), 700);

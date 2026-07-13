@@ -16,6 +16,7 @@ import { setupNotificationChannels, registerForPushToken, Notifications } from '
 import { checkForUpdateSilently, UpdateBanner } from './src/lib/app-update';
 import { registerPushToken, resolveInventoryLabel } from './src/api/mobile';
 import { getToken } from './src/auth/token-store';
+import { parseLabelScan } from './src/lib/label-scan';
 import type { RootStackParamList } from './src/navigation/types';
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
@@ -28,28 +29,20 @@ function openFromNotification(data: unknown) {
   }
 }
 
-// Extrai o código da etiqueta de uma URL de App Link / custom scheme:
-//   https://app.scandexplus.com.br/i/ETQ-000001
-//   servus://i/ETQ-000001
-function extractLabelCode(url: string): string | null {
-  const m = url.match(/\/i\/([^/?#]+)/) || url.match(/^servus:\/\/i\/([^/?#]+)/i);
-  return m ? decodeURIComponent(m[1]) : null;
-}
-
-// Deep-link da etiqueta de inventário: resolve e abre o item (vinculada) ou o
-// cadastro (disponível). Requer sessão ativa (usa o token salvo).
+// Deep-link da etiqueta de inventário (App Link / custom scheme): resolve e abre
+// o item (vinculada) ou o cadastro (disponível). Requer sessão ativa.
 async function handleInventoryDeepLink(url: string | null) {
   if (!url) return;
-  const code = extractLabelCode(url);
-  if (!code) return;
+  const scan = parseLabelScan(url);
+  if (!scan) return;
   const token = await getToken();
   if (!token || !navigationRef.isReady()) return;
   try {
-    const label = await resolveInventoryLabel(token, code);
+    const label = await resolveInventoryLabel(token, scan.code);
     if (label.status === 'assigned' && label.itemId) {
       navigationRef.navigate('InventoryDetail', { id: label.itemId });
     } else if (label.canRegister) {
-      navigationRef.navigate('NewInventoryItem', { labelCode: label.code });
+      navigationRef.navigate('NewInventoryItem', { labelCode: label.code, copies: label.copies, firstCopy: scan.copy });
     }
   } catch {
     /* etiqueta inválida / offline — ignora */

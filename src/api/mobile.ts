@@ -342,7 +342,7 @@ export function resolveAsset(token: string | null, code: string) {
 
 /** Resolve uma etiqueta genérica escaneada (ETQ-…): disponível ou já vinculada. */
 export function resolveInventoryLabel(token: string | null, code: string) {
-  return apiFetch<{ code: string; status: 'available' | 'assigned' | 'void'; itemId: string | null; canRegister: boolean }>(
+  return apiFetch<{ code: string; status: 'available' | 'assigned' | 'void'; itemId: string | null; copies: number; canRegister: boolean }>(
     `/api/mobile/inventory/labels/${encodeURIComponent(code)}`,
     { token },
   );
@@ -350,6 +350,7 @@ export function resolveInventoryLabel(token: string | null, code: string) {
 
 export type NewInventoryItemInput = {
   labelCode?: string;
+  validatedCopies?: number[];
   name: string;
   itemType?: 'equipment' | 'consumable';
   category?: string;

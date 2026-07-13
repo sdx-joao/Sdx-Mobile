@@ -1,14 +1,14 @@
-import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { DetailScaffold, FieldLabel, PrimaryButton, SectionCard } from '../components/ui';
 import { SuggestedInput } from '../components/SuggestedInput';
 import { Icon } from '../components/Icon';
-import { showToast } from '../lib/toast';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
-import { createInventoryItem, getOptions, type SelectOption } from '../api/mobile';
+import { getOptions, type SelectOption } from '../api/mobile';
+import { listPending } from '../lib/pending-registrations';
 import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -29,6 +29,9 @@ export function NewInventoryItemScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'NewInventoryItem'>>();
   const labelCode = route.params?.labelCode;
+  const copies = Math.max(1, route.params?.copies ?? 1);
+  const firstCopy = route.params?.firstCopy ?? 1; // a cópia escaneada para iniciar já conta
+  const resumeLabelCode = route.params?.resumeLabelCode;
   const { token } = useAuth();
 
   const optionsLoader = useCallback(() => getOptions(token, ['work_order_unit', 'inventory_location']), [token]);
@@ -44,25 +47,35 @@ export function NewInventoryItemScreen() {
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resumeValidated, setResumeValidated] = useState<number[] | null>(null);
 
-  const submit = async () => {
+  // Retomar um cadastro pendente: prefill do formulário + cópias já validadas.
+  useEffect(() => {
+    if (!resumeLabelCode) return;
+    let active = true;
+    listPending().then((list) => {
+      const d = list.find((p) => p.labelCode === resumeLabelCode);
+      if (!d || !active) return;
+      setName(d.form.name); setItemType(d.form.itemType); setCategory(d.form.category || '');
+      setUnitName(d.form.unitName); setRoom(d.form.room);
+      setBrand(d.form.brand || ''); setModel(d.form.model || ''); setSerialNumber(d.form.serialNumber || '');
+      setResumeValidated(d.validated);
+    });
+    return () => { active = false; };
+  }, [resumeLabelCode]);
+
+  // Vai para a validação das cópias (Modelo B) — o cadastro só é salvo lá, após
+  // escanear todas as cópias. A cópia usada para iniciar já entra como validada.
+  const continueToValidation = () => {
     if (!name.trim()) { setError('Informe o nome do equipamento.'); return; }
     if (!unitName.trim() || !room.trim()) { setError('Informe a unidade e o cômodo.'); return; }
     setError(null);
-    setSaving(true);
-    try {
-      const res = await createInventoryItem(token, {
-        labelCode, name, itemType, category, unitName, room, brand, model, serialNumber,
-      });
-      showToast(`${name} cadastrado.`);
-      nav.replace('InventoryDetail', { id: res.item.id });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Não foi possível cadastrar.');
-    } finally {
-      setSaving(false);
-    }
+    const code = labelCode || resumeLabelCode;
+    if (!code) { setError('Cadastro só pode iniciar pela leitura de uma etiqueta.'); return; }
+    const form = { name, itemType, category, unitName, room, brand, model, serialNumber };
+    const validated = resumeValidated ?? (firstCopy >= 1 && firstCopy <= copies ? [firstCopy] : []);
+    nav.replace('InventoryCopyValidation', { labelCode: code, copies, validated, form });
   };
 
   return (
@@ -113,11 +126,10 @@ export function NewInventoryItemScreen() {
       )}
 
       {!!error && <Text style={{ color: T.danger, fontSize: 13, marginBottom: 12 }}>{error}</Text>}
-      {saving ? (
-        <View style={{ height: 50, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color={T.primary} /></View>
-      ) : (
-        <PrimaryButton label="Cadastrar equipamento" icon="check" accent={T.primary} onPress={submit} />
-      )}
+      <Text style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>
+        Ao continuar, você valida as {copies} cópia(s) da etiqueta escaneando cada uma no equipamento.
+      </Text>
+      <PrimaryButton label="Continuar para validação" icon="chevron-right" accent={T.primary} onPress={continueToValidation} />
       <View style={{ height: 12 }} />
     </DetailScaffold>
   );

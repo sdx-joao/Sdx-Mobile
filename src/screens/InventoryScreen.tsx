@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ModuleScreen, SearchField, ChipRow, EmptyState, LoadingState, type Chip } from '../components/ui';
 import { InvCard } from '../components/cards';
@@ -8,6 +8,7 @@ import { T } from '../theme/theme';
 import type { InventoryItem } from '../data/mock';
 import { useAuth } from '../auth/auth-context';
 import { getInventory } from '../api/mobile';
+import { listPending } from '../lib/pending-registrations';
 import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -16,6 +17,8 @@ export function InventoryScreen() {
   const { token } = useAuth();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
+  const [pendingCount, setPendingCount] = useState(0);
+  useFocusEffect(useCallback(() => { let a = true; listPending().then((l) => { if (a) setPendingCount(l.length); }); return () => { a = false; }; }, []));
   const loader = useCallback(() => getInventory(token), [token]);
   const { data, loading, refreshing, error, reload } = useResource(loader, { reloadOnFocus: true });
   const inventory = data ?? [];
@@ -53,6 +56,7 @@ export function InventoryScreen() {
       onNew={() => nav.navigate('Scan')}
       newLabel="Escanear QR Code"
       newIcon="scan"
+      secondaryAction={pendingCount > 0 ? { label: `Pendentes (${pendingCount})`, icon: 'clock', onPress: () => nav.navigate('PendingRegistrations') } : undefined}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={T.primary} colors={[T.primary]} />}
     >
       <View style={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12 }}>
