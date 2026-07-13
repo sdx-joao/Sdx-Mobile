@@ -96,7 +96,10 @@ export function NewWorkOrderScreen() {
   const { data } = useResource(optionsLoader);
   const [serviceType, setServiceType] = useState('');
   const [category, setCategory] = useState('');
-  const [unitName, setUnitName] = useState('HO JCB');
+  // Padrão = nome CANÔNICO do catálogo (antes era 'HO JCB', que não existia no
+  // catálogo de unidades e travava o fechamento da OS na web: "Use apenas itens
+  // cadastrados em Catálogos — Unidade").
+  const [unitName, setUnitName] = useState('HOSPITAL DO OLHO');
   const [department, setDepartment] = useState('');
   const [technicalTeam, setTechnicalTeam] = useState('');
   const [responsibleTechnicianName, setResponsibleTechnicianName] = useState('');
