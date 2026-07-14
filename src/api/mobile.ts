@@ -17,7 +17,16 @@ export type SelectOptionKind =
   | 'work_order_responsible_technician'
   | 'work_order_material'
   | 'work_order_material_unit'
-  | 'inventory_location';
+  | 'inventory_item_type'
+  | 'inventory_equipment_category'
+  | 'inventory_category'
+  | 'inventory_unit'
+  | 'inventory_location'
+  | 'inventory_equipment_status'
+  | 'inventory_brand'
+  | 'inventory_model'
+  | 'inventory_spec_key'
+  | 'inventory_operating_system';
 
 export type SelectOption = {
   kind: SelectOptionKind;
@@ -348,6 +357,7 @@ export function resolveInventoryLabel(token: string | null, code: string) {
   );
 }
 
+export type InventorySpec = { key: string; value: string };
 export type NewInventoryItemInput = {
   labelCode?: string;
   validatedCopies?: number[];
@@ -360,7 +370,37 @@ export type NewInventoryItemInput = {
   brand?: string;
   model?: string;
   serialNumber?: string;
+  sku?: string;
+  description?: string;
+  assetTag?: string;
+  equipmentStatus?: string;
+  operatingSystem?: string;
+  technicalSpecs?: InventorySpec[];
+  notes?: string;
+  unit?: string;
+  minQty?: number;
+  maxQty?: number;
+  initialQty?: number;
 };
+
+/** Envia uma foto do item (principal ou anexo) — usado após o cadastro. */
+export async function uploadInventoryPhoto(
+  token: string | null,
+  itemId: string,
+  input: { uri: string; role: 'main' | 'attachment' },
+) {
+  const res = await FileSystem.uploadAsync(`${API_BASE_URL}/api/mobile/inventory/${itemId}/photo`, input.uri, {
+    httpMethod: 'POST',
+    uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+    fieldName: 'file',
+    mimeType: 'image/jpeg',
+    parameters: { role: input.role },
+    headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  });
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`Falha ao enviar foto (${res.status}).`);
+  }
+}
 
 /** Cadastra um equipamento pelo celular (vinculando a etiqueta genérica). */
 export function createInventoryItem(token: string | null, input: NewInventoryItemInput) {

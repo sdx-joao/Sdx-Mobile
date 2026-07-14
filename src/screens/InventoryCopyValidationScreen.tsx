@@ -8,7 +8,7 @@ import { Icon } from '../components/Icon';
 import { showToast } from '../lib/toast';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
-import { createInventoryItem } from '../api/mobile';
+import { createInventoryItem, uploadInventoryPhoto } from '../api/mobile';
 import { parseLabelScan } from '../lib/label-scan';
 import { savePending, removePending } from '../lib/pending-registrations';
 import type { RootStackParamList } from '../navigation/types';
@@ -57,10 +57,20 @@ export function InventoryCopyValidationScreen() {
     if (!complete || saving) return;
     setSaving(true);
     try {
-      const res = await createInventoryItem(token, { ...form, labelCode, validatedCopies: validated });
+      // Fotos são locais (URIs) — enviadas separadamente após criar o item.
+      const { mainPhotoUri, attachmentUris, ...fields } = form;
+      const res = await createInventoryItem(token, {
+        ...fields, labelCode, validatedCopies: validated,
+      });
+      const itemId = res.item.id;
+      // Upload das fotos (best-effort; não bloqueia o cadastro se uma falhar).
+      try {
+        if (mainPhotoUri) await uploadInventoryPhoto(token, itemId, { uri: mainPhotoUri, role: 'main' });
+        for (const uri of attachmentUris ?? []) await uploadInventoryPhoto(token, itemId, { uri, role: 'attachment' });
+      } catch { /* foto falhou — item já foi cadastrado */ }
       await removePending(labelCode);
       showToast(`${form.name} cadastrado.`);
-      nav.replace('InventoryDetail', { id: res.item.id });
+      nav.replace('InventoryDetail', { id: itemId });
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Falha ao concluir o cadastro.');
       setSaving(false);

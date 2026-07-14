@@ -7,14 +7,29 @@ import * as FileSystem from 'expo-file-system/legacy';
  * O item só vai ao servidor quando todas as cópias são validadas.
  */
 export type PendingForm = {
+  primaryType: string;
   name: string;
   itemType: 'equipment' | 'consumable';
   category?: string;
   unitName: string;
   room: string;
+  currentLocation?: string;
+  sku?: string;
+  assetTag?: string;
+  serialNumber?: string;
   brand?: string;
   model?: string;
-  serialNumber?: string;
+  equipmentStatus?: string;
+  operatingSystem?: string;
+  unit?: string;
+  minQty?: number;
+  maxQty?: number;
+  initialQty?: number;
+  technicalSpecs?: Array<{ key: string; value: string }>;
+  notes?: string;
+  // Fotos capturadas localmente (URIs) — enviadas ao servidor APÓS o cadastro.
+  mainPhotoUri?: string | null;
+  attachmentUris?: string[];
 };
 
 export type PendingRegistration = {
