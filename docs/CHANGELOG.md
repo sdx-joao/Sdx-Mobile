@@ -9,6 +9,38 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## 1.4.0 — Sessão persistente: refresh token 30 dias + digital restaura sessão (build Play)
+
+**Requer build na Play** (Fase 2 do overhaul de controle de sessão — par do
+backend no ScandexGed). Resolve o "a digital não bastava, precisava relogar":
+antes a sessão morria em 8h e a biometria era só um cadeado de UI sobre um token
+que já tinha expirado.
+
+- **Refresh token rotativo de 30 dias**: o login passa a devolver
+  `{ token, refreshToken }`. O access token (Bearer) agora é curto (~1h) e é
+  renovado silenciosamente pelo refresh, que desliza 30 dias a cada uso. O app
+  fica logado enquanto for aberto ao menos uma vez por mês.
+- **Digital restaura a sessão**: no boot, se a biometria está ligada, o app entra
+  travado (`LockScreen`); a digital dispara o refresh + `/me` e restaura a sessão
+  **sem pedir senha**. Antes da Fase 2, a digital só destravava a UI e, se o token
+  tivesse expirado, caía na tela de senha.
+- **Refresh silencioso no 401**: `api/client.ts` tenta um refresh e repete a
+  request uma vez antes de deslogar. Refresh deduplicado no `auth-context`
+  (várias 401 simultâneas → uma só troca). Rotação com uma geração de
+  sobreposição cobre a corrida de o app ser morto antes de persistir o novo token.
+- **Logout revoga no servidor**: `POST /api/mobile/auth/logout` invalida o refresh
+  (não fica válido por 30 dias após sair).
+- **Compatibilidade**: o app anuncia `X-Sdx-Caps: refresh`; sem esse header o
+  backend emite o token longo (8h) de antes — builds antigos não passam a
+  deslogar de hora em hora enquanto não atualizam.
+- Armazenamento: `token-store.ts` guarda access + refresh no `expo-secure-store`;
+  o gate biométrico segue via `expo-local-authentication` (não `requireAuthentication`,
+  que pediria a digital também na escrita e quebraria a rotação silenciosa).
+- Arquivos: `auth/auth-context.tsx`, `auth/token-store.ts`, `auth/types.ts`,
+  `api/client.ts`.
+
+---
+
 ## 1.3.0 — Inventário: cadastro por etiqueta + deep link (build Play)
 
 **Requer build na Play** (mudança nativa: intent filters de App Links).

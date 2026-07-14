@@ -23,5 +23,11 @@ export type MobileUser = {
 
 export type LoginResponse = {
   token: string;
+  refreshToken: string;
   user: MobileUser;
+};
+
+export type RefreshResponse = {
+  token: string;
+  refreshToken: string;
 };

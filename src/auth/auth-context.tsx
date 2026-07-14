@@ -3,13 +3,24 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
-import { apiFetch, setUnauthorizedHandler } from '../api/client';
-import { clearToken, getToken, getBiometricEnabled, markDeviceRegistered, saveToken, setBiometricPref } from './token-store';
+import { apiFetch, ApiError, setUnauthorizedHandler, setRefreshHandler } from '../api/client';
+import {
+  clearToken,
+  getToken,
+  getRefreshToken,
+  getBiometricEnabled,
+  markDeviceRegistered,
+  saveTokens,
+  saveAccessToken,
+  saveRefreshToken,
+  setBiometricPref,
+} from './token-store';
 import { authenticateBiometric, isBiometricAvailable } from './biometrics';
-import type { LoginResponse, MobileCapabilities, MobileUser } from './types';
+import type { LoginResponse, MobileCapabilities, MobileUser, RefreshResponse } from './types';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'locked';
 
@@ -70,29 +81,85 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
 
+  // Refresh token corrente (fonte de verdade em memória durante a sessão) e a
+  // troca em voo (dedup: várias requests 401 ao mesmo tempo disparam UM refresh).
+  const refreshTokenRef = useRef<string | null>(null);
+  const inFlightRefresh = useRef<Promise<string | null> | null>(null);
+
   async function clearSession() {
+    refreshTokenRef.current = null;
     await clearToken();
     setToken(null);
     setUser(null);
     setStatus('unauthenticated');
   }
 
-  // Bootstrap: reusa o token salvo e revalida em /api/mobile/me
+  // Troca silenciosa do access token usando o refresh (rotativo). Deduplicada:
+  // chamadas concorrentes esperam a mesma promessa. Em falha, encerra a sessão.
+  async function doRefresh(): Promise<string | null> {
+    if (inFlightRefresh.current) return inFlightRefresh.current;
+    const current = refreshTokenRef.current;
+    if (!current) return null;
+
+    inFlightRefresh.current = (async () => {
+      try {
+        const res = await apiFetch<RefreshResponse>('/api/mobile/auth/refresh', {
+          method: 'POST',
+          body: { refreshToken: current },
+        });
+        refreshTokenRef.current = res.refreshToken;
+        await saveAccessToken(res.token);
+        await saveRefreshToken(res.refreshToken);
+        setToken(res.token);
+        return res.token;
+      } catch {
+        await clearSession();
+        return null;
+      } finally {
+        inFlightRefresh.current = null;
+      }
+    })();
+    return inFlightRefresh.current;
+  }
+
+  // Registra os handlers do client: refresh silencioso no 401 e, em último caso,
+  // encerramento da sessão.
+  useEffect(() => {
+    setRefreshHandler(() => doRefresh());
+    setUnauthorizedHandler(() => {
+      void clearSession();
+    });
+    return () => {
+      setRefreshHandler(null);
+      setUnauthorizedHandler(null);
+    };
+  }, []);
+
+  // Bootstrap: reusa os tokens salvos. Se a biometria está ligada, entra travado
+  // (LockScreen pede a digital); o refresh acontece no unlock. Senão, valida já.
   useEffect(() => {
     (async () => {
       try {
-        const stored = await getToken();
-        if (!stored) {
+        const [storedAccess, storedRefresh] = await Promise.all([getToken(), getRefreshToken()]);
+        if (!storedRefresh) {
+          await clearToken();
           setStatus('unauthenticated');
           return;
         }
-        const me = await apiFetch<MobileUser>('/api/mobile/me', { token: stored });
-        setToken(stored);
-        setUser(toSessionUser(me));
-        // Se a biometria está ligada e disponível, entra travado (LockScreen pede a digital).
+        refreshTokenRef.current = storedRefresh;
+        setToken(storedAccess);
+
         const bioOn = await getBiometricEnabled();
         setBiometricEnabled(bioOn);
-        setStatus(bioOn && (await isBiometricAvailable()) ? 'locked' : 'authenticated');
+        if (bioOn && (await isBiometricAvailable())) {
+          // Fica travado; a validação/refresh e o /me acontecem em unlock().
+          setStatus('locked');
+          return;
+        }
+        // Sem biometria: valida já. Se falhar (rede/auth), cai para a tela de
+        // login — os tokens salvos não são apagados numa falha só de rede.
+        const ok = await hydrateSession();
+        if (!ok) setStatus('unauthenticated');
       } catch {
         await clearToken();
         setStatus('unauthenticated');
@@ -100,10 +167,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
+  // Valida a sessão contra o servidor. O /me dispara refresh automático se o
+  // access estiver expirado (via handler do client). Sucesso → authenticated.
+  // Falha de AUTENTICAÇÃO (401/403) encerra a sessão; falha transitória de rede
+  // NÃO desloga — devolve false e mantém o estado atual (o usuário pode repetir).
+  async function hydrateSession(): Promise<boolean> {
+    try {
+      const me = await apiFetch<MobileUser>('/api/mobile/me', { token: await getToken() });
+      setUser(toSessionUser(me));
+      setStatus('authenticated');
+      return true;
+    } catch (e) {
+      const authFailed = e instanceof ApiError && (e.status === 401 || e.status === 403);
+      // Em 401 o refresh handler já pode ter encerrado a sessão; garante o estado.
+      if (authFailed && refreshTokenRef.current) await clearSession();
+      return false;
+    }
+  }
+
   const unlock = async (): Promise<boolean> => {
     const ok = await authenticateBiometric('Desbloquear o Servus');
-    if (ok) setStatus('authenticated');
-    return ok;
+    if (!ok) return false;
+    // Digital ok: restaura a sessão (refresh + /me) sem pedir senha.
+    return hydrateSession();
   };
 
   const setBiometric = async (enabled: boolean): Promise<boolean> => {
@@ -120,19 +206,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  useEffect(() => {
-    setUnauthorizedHandler(() => {
-      void clearSession();
-    });
-    return () => setUnauthorizedHandler(null);
-  }, []);
-
   async function signIn(username: string, password: string) {
     const res = await apiFetch<LoginResponse>('/api/mobile/auth/login', {
       method: 'POST',
       body: { username, password },
     });
-    await saveToken(res.token);
+    refreshTokenRef.current = res.refreshToken;
+    await saveTokens(res.token, res.refreshToken);
     setToken(res.token);
     setUser(toSessionUser(res.user));
     setStatus('authenticated');
@@ -152,7 +232,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       body: { username, password, fullName },
     });
-    await saveToken(res.token);
+    refreshTokenRef.current = res.refreshToken;
+    await saveTokens(res.token, res.refreshToken);
     await markDeviceRegistered(username);
     setToken(res.token);
     setUser(toSessionUser(res.user));
@@ -166,6 +247,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    // Revoga a sessão no servidor (best-effort) antes de limpar o storage local.
+    const current = refreshTokenRef.current;
+    if (current) {
+      try {
+        await apiFetch('/api/mobile/auth/logout', { method: 'POST', body: { refreshToken: current } });
+      } catch {
+        // ignora — o logout local acontece de qualquer forma
+      }
+    }
     await clearSession();
   }
 
