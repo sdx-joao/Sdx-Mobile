@@ -9,6 +9,29 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## 1.3.0 — Inventário: cadastro por etiqueta + deep link (build Play)
+
+**Requer build na Play** (mudança nativa: intent filters de App Links).
+
+- **Cadastro de equipamento por etiqueta (QR)**: só inicia por scan. Preenche
+  nome/tipo/Unidade/Cômodo (Cômodo é catálogo com criar on-the-go) e detalhes.
+- **Modelo B — validação de cópias**: cada cópia da etiqueta tem índice no QR
+  (`?c=n`). Ao concluir, a tela `InventoryCopyValidationScreen` exige escanear
+  todas as cópias; a cópia usada para iniciar já conta. O item só é salvo com
+  todas validadas (backend recusa 422 se faltar).
+- **Cadastros pendentes**: se faltar validar uma cópia, os dados não se perdem —
+  ficam salvos localmente (`pending-registrations.ts`, expo-file-system) e a tela
+  `PendingRegistrationsScreen` (atalho "Pendentes (N)" no Inventário) permite
+  retomar ou descartar.
+- **Foto do item no app**: passa a aparecer (endpoint mobile por Bearer + header
+  no `<Image>`).
+- **Deep link (App Links)**: `app.json` com `intentFilters` (`autoVerify`); o
+  `App.tsx` resolve `…/i/<code>?c=<n>` e roteia para item ou cadastro. Custom
+  scheme `servus://i/<code>` também.
+- Arquivos: `screens/{Scan,NewInventoryItem,InventoryCopyValidation,PendingRegistrations,InventoryDetail}.tsx`,
+  `lib/{label-scan,pending-registrations}.ts`, `api/mobile.ts`, `App.tsx`,
+  `navigation/*`, `app.json`. version 1.2.0 → 1.3.0.
+
 ## (OTA) — Dono da OS + solicitação de cancelamento + fix catálogo on-the-go
 
 - **Propriedade da OS:** só quem **criou** (ou recebeu por **delegação**) pode
