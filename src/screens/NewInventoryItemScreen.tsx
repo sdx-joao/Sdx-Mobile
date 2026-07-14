@@ -22,7 +22,7 @@ const STEPS = ['Cadastro', 'Especificações', 'Fotos', 'Observações'] as cons
 type Step = 0 | 1 | 2 | 3;
 
 const OPTION_KINDS = [
-  'inventory_item_type', 'inventory_equipment_category', 'work_order_unit', 'inventory_location',
+  'inventory_item_type', 'inventory_equipment_category', 'work_order_unit', 'work_order_department',
   'inventory_brand', 'inventory_model', 'inventory_equipment_status', 'inventory_unit', 'inventory_spec_key',
 ] as const;
 
@@ -130,7 +130,7 @@ export function NewInventoryItemScreen() {
       if (!primaryType) return 'Selecione o tipo principal.';
       if (!name.trim()) return 'Informe o nome / descrição.';
       if (!unitName.trim()) return 'Selecione a unidade.';
-      if (!room.trim()) return 'Selecione o cômodo.';
+      if (!room.trim()) return 'Selecione o departamento / setor.';
     }
     return null;
   };
@@ -225,7 +225,7 @@ export function NewInventoryItemScreen() {
             <View><FieldLabel>SKU / código interno</FieldLabel><Field value={sku} onChangeText={setSku} placeholder="Opcional" /></View>
             <View><FieldLabel>Patrimônio / etiqueta anterior(es)</FieldLabel><Field value={assetTag} onChangeText={setAssetTag} placeholder="Um por linha, ou separe por vírgula" multiline /></View>
             <SuggestedInput label="Unidade" required value={unitName} onChangeText={setUnitName} placeholder="Selecione a unidade" options={opts('work_order_unit')} />
-            <SuggestedInput label="Cômodo / sala" required value={room} onChangeText={setRoom} placeholder="Ex.: Recepção, Sala de cirurgia 2" options={opts('inventory_location')} />
+            <SuggestedInput label="Departamento / Setor" required value={room} onChangeText={setRoom} placeholder="Ex.: CEDOC, Recepção, Centro Cirúrgico" options={opts('work_order_department')} />
             {isEquip ? (
               <>
                 <View><FieldLabel>Número de série</FieldLabel><Field value={serialNumber} onChangeText={setSerialNumber} placeholder="Opcional" /></View>
