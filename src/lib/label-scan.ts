@@ -14,4 +14,8 @@ export function parseLabelScan(raw: string): { code: string; copy: number } | nu
   return { code, copy };
 }
 
-export const isLabelCode = (code: string) => /^ETQ-?\d/i.test(code);
+/**
+ * Etiqueta de inventário: <SIGLA>-<número> — a sigla é a da unidade
+ * (HOJCB-000001, HMMRC-000001) ou o legado ETQ-000001.
+ */
+export const isLabelCode = (code: string) => /^[A-Z]{2,10}-?\d{1,10}$/i.test(code);
