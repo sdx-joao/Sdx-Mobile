@@ -15,7 +15,7 @@ export type WorkOrderStatus =
 export type WorkOrderPriority = 'low' | 'normal' | 'high' | 'urgent';
 export type WorkOrderResolution = 'resolved' | 'partial' | 'unresolved';
 
-export type WorkOrderMaterial = { description: string; quantity: number; unit: string | null };
+export type WorkOrderMaterial = { description: string; quantity: number; unit: string | null; inventoryItemId?: string | null };
 
 export type WorkOrder = {
   id: string;

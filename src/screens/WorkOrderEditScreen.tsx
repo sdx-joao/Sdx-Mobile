@@ -8,6 +8,7 @@ import { SuggestedInput } from '../components/SuggestedInput';
 import { RequesterPicker } from '../components/RequesterPicker';
 import { T, WO_PRIORITY, WO_RESOLUTION, WO_STATUS } from '../theme/theme';
 import {
+  getInventory,
   getOptions,
   getWorkOrder,
   getWorkOrderRequesters,
@@ -19,7 +20,7 @@ import {
 import { useResource } from '../api/use-resource';
 import { useAuth } from '../auth/auth-context';
 import { showToast } from '../lib/toast';
-import type { WorkOrder, WorkOrderMaterial, WorkOrderPriority, WorkOrderResolution, WorkOrderStatus } from '../data/mock';
+import type { InventoryItem, WorkOrder, WorkOrderMaterial, WorkOrderPriority, WorkOrderResolution, WorkOrderStatus } from '../data/mock';
 import type { RootStackParamList } from '../navigation/types';
 
 const EDITABLE_STATUS: WorkOrderStatus[] = ['open', 'in_progress', 'waiting'];
@@ -45,6 +46,7 @@ type MaterialDraft = {
   description: string;
   quantity: string;
   unit: string;
+  inventoryItemId?: string | null;
 };
 
 function Input({
@@ -89,6 +91,7 @@ function materialToDraft(material: WorkOrderMaterial): MaterialDraft {
     description: material.description,
     quantity: String(material.quantity || 1),
     unit: material.unit || '',
+    inventoryItemId: material.inventoryItemId ?? null,
   };
 }
 
@@ -170,8 +173,20 @@ export function WorkOrderEditScreen() {
   const [resolutionStatus, setResolutionStatus] = useState<WorkOrderResolution | null>(null);
   const [priority, setPriority] = useState<WorkOrderPriority>('normal');
   const [materials, setMaterials] = useState<MaterialDraft[]>([]);
+  const [consumables, setConsumables] = useState<InventoryItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const list = await getInventory(token);
+        if (!cancelled) setConsumables(list.filter(i => i.itemType === 'consumable'));
+      } catch { /* offline — segue sem vínculo de estoque */ }
+    })();
+    return () => { cancelled = true; };
+  }, [token]);
 
   const optionsByKind = useMemo(() => {
     const grouped = new Map<SelectOptionKind, SelectOption[]>();
@@ -273,6 +288,7 @@ export function WorkOrderEditScreen() {
             description: item.description,
             quantity: Number(item.quantity.replace(',', '.')) || 1,
             unit: item.unit || null,
+            inventoryItemId: item.inventoryItemId ?? null,
           })),
       });
       showToast(`${order.code} salva.`);
@@ -407,6 +423,40 @@ export function WorkOrderEditScreen() {
                   <SuggestedInput label="Unidade" value={material.unit} onChangeText={(value) => setMaterial(index, { unit: value })} placeholder="UN" options={optionsByKind.get('work_order_material_unit') ?? []} />
                 </View>
               </View>
+              {consumables.length > 0 && (() => {
+                const linked = material.inventoryItemId ? consumables.find(c => c.id === material.inventoryItemId) : null;
+                if (linked) {
+                  return (
+                    <Pressable
+                      onPress={() => setMaterial(index, { inventoryItemId: null })}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: `${T.primary}12`, borderWidth: 1, borderColor: `${T.primary}55`, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 10 }}
+                    >
+                      <Icon name="box" size={14} color={T.primary} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 12.5, fontWeight: '700', color: T.primary }}>{linked.name}</Text>
+                        <Text style={{ fontSize: 10.5, color: T.muted }}>Baixa do estoque na conclusão · {linked.currentQty} {linked.unit} em estoque</Text>
+                      </View>
+                      <Icon name="x" size={13} color={T.muted} />
+                    </Pressable>
+                  );
+                }
+                return (
+                  <View>
+                    <Text style={{ fontSize: 10.5, color: T.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Vincular ao estoque</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                      {consumables.slice(0, 30).map(c => (
+                        <Pressable
+                          key={c.id}
+                          onPress={() => setMaterial(index, { inventoryItemId: c.id, description: c.name, unit: c.unit })}
+                          style={{ borderWidth: 1, borderColor: T.border, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 11 }}
+                        >
+                          <Text style={{ fontSize: 12, color: T.textSoft }}>{c.name} · {c.currentQty} {c.unit}</Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                );
+              })()}
               <Pressable onPress={() => removeMaterial(index)} style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Icon name="trash" size={14} color={T.danger} />
                 <Text style={{ color: T.danger, fontSize: 12.5, fontWeight: '700' }}>Remover material</Text>
