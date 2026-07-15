@@ -84,7 +84,11 @@ export type InventoryItem = {
   technicalSpecs: TechnicalSpec[];
   mainPhotoUrl?: string | null;
   attachmentPhotos?: Array<{ name: string; url: string; createdAt: string }>;
+  photos?: Array<{ role?: 'main' | 'attachment' | string; name?: string; url: string; createdAt?: string }>;
+  locationLabel?: string | null;
   notes: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type Movement = {

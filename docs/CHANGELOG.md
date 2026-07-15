@@ -66,6 +66,14 @@ que já tinha expirado.
 
 ## (OTA) — Inventário: carrossel de fotos + wizard de cadastro fiel ao Electron
 
+- **Correção do carrossel no detalhe do patrimônio**: a ficha agora aceita tanto
+  o contrato antigo (`mainPhotoUrl` + `attachmentPhotos`) quanto o novo
+  `photos[]` do backend, normaliza URLs absolutas/relativas e evita duplicar a
+  foto principal. Isso cobre OTA publicado com backend em versões diferentes.
+- **Local do equipamento em destaque**: unidade, departamento/setor e localização
+  aparecem num bloco azul logo abaixo das fotos, antes dos dados de patrimônio.
+- **Aba Histórico**: o detalhe foi separado em `Detalhes` e `Histórico`, reunindo
+  cadastro, última alteração e movimentações do item.
 - **Carrossel de fotos no detalhe do item** (`InventoryDetailScreen`): a box da
   foto principal vira uma **galeria horizontal paginada** (principal + anexos)
   com **bolinhas indicadoras** e contador `n/N`. Toque **amplia em tela cheia**
