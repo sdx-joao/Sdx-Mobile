@@ -349,6 +349,27 @@ export function resolveAsset(token: string | null, code: string) {
   );
 }
 
+export type ScanHitResult = {
+  token: string;
+  code: string;
+  status: 'ok' | 'unregistered';
+  item: {
+    id: string; name: string; itemType?: string | null; assetTag?: string | null;
+    unitName?: string | null; room?: string | null; equipmentStatus?: string | null;
+  } | null;
+};
+
+/**
+ * "Celular como scanner": manda uma etiqueta lida para a sessão aberta no web
+ * (relay). O servidor resolve o equipamento e publica pro web via SSE.
+ */
+export function postWorkOrderScanHit(token: string | null, sessionToken: string, code: string) {
+  return apiFetch<ScanHitResult>(
+    `/api/mobile/work-order-scan-sessions/${encodeURIComponent(sessionToken)}/hit`,
+    { method: 'POST', token, body: { code } },
+  );
+}
+
 /** Resolve uma etiqueta genérica escaneada (ETQ-…): disponível ou já vinculada. */
 export function resolveInventoryLabel(token: string | null, code: string) {
   return apiFetch<{ code: string; status: 'available' | 'assigned' | 'void'; itemId: string | null; copies: number; canRegister: boolean }>(

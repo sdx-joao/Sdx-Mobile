@@ -18,6 +18,7 @@ import { NewInventoryItemScreen } from '../screens/NewInventoryItemScreen';
 import { InventoryCopyValidationScreen } from '../screens/InventoryCopyValidationScreen';
 import { PendingRegistrationsScreen } from '../screens/PendingRegistrationsScreen';
 import { ScanScreen } from '../screens/ScanScreen';
+import { ScanRelayScreen } from '../screens/ScanRelayScreen';
 import { WorkOrderSignatureScreen } from '../screens/WorkOrderSignatureScreen';
 import { MyDataScreen } from '../screens/MyDataScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
@@ -52,6 +53,7 @@ export function RootNavigator() {
       <Stack.Screen name="PendingRegistrations" component={PendingRegistrationsScreen} />
       <Stack.Screen name="NewWorkOrder" component={NewWorkOrderScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="Scan" component={ScanScreen} options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="ScanRelay" component={ScanRelayScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="WorkOrderSignature" component={WorkOrderSignatureScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="MyData" component={MyDataScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />

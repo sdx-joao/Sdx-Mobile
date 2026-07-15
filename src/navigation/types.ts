@@ -26,6 +26,8 @@ export type RootStackParamList = {
   };
   PendingRegistrations: undefined;
   Scan: undefined;
+  // "Celular como scanner": lê a sessão QR aberta no web e envia cada etiqueta lida.
+  ScanRelay: { token: string };
   // Fluxo de conclusão da OS (situação → solução/data → assinaturas → revisão).
   // Lançado só com o id; o resto é coletado/derivado dentro do fluxo.
   WorkOrderSignature: { id: string };

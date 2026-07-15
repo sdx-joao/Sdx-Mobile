@@ -31,8 +31,21 @@ function openFromNotification(data: unknown) {
 
 // Deep-link da etiqueta de inventário (App Link / custom scheme): resolve e abre
 // o item (vinculada) ou o cadastro (disponível). Requer sessão ativa.
+/** Sessão "celular como scanner": servus://scan/<token> ou …/scan/<token>. */
+function parseScanRelayToken(url: string): string | null {
+  const m = url.match(/(?:servus:\/\/scan\/|\/scan\/)([^/?#]+)/i);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
 async function handleInventoryDeepLink(url: string | null) {
   if (!url) return;
+  // Modo estação (relay) tem prioridade — abre a câmera de leitura pra sessão.
+  const relayToken = parseScanRelayToken(url);
+  if (relayToken) {
+    const t = await getToken();
+    if (t && navigationRef.isReady()) navigationRef.navigate('ScanRelay', { token: relayToken });
+    return;
+  }
   const scan = parseLabelScan(url);
   if (!scan) return;
   const token = await getToken();

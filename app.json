@@ -29,7 +29,8 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "https", "host": "app.scandexplus.com.br", "pathPrefix": "/i" }
+            { "scheme": "https", "host": "app.scandexplus.com.br", "pathPrefix": "/i" },
+            { "scheme": "https", "host": "app.scandexplus.com.br", "pathPrefix": "/scan" }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
         }
