@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import { Image, Pressable, RefreshControl, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Dimensions, Image, Modal, NativeScrollEvent, NativeSyntheticEvent, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { Icon } from '../components/Icon';
 import { Badge, DetailScaffold, EmptyState, LoadingState, SectionCard, StatItem } from '../components/ui';
@@ -11,6 +11,74 @@ import { getInventoryItem } from '../api/mobile';
 import { API_BASE_URL } from '../api/client';
 import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
+
+type ImgHeaders = Record<string, string> | undefined;
+
+/** Carrossel de fotos (principal + anexos) com indicadores e viewer em tela cheia. */
+function PhotoCarousel({ photos, headers, width }: { photos: string[]; headers: ImgHeaders; width: number }) {
+  const [active, setActive] = useState(0);
+  const [viewer, setViewer] = useState(false);
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setActive(Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)));
+  };
+
+  if (photos.length === 0) {
+    return (
+      <View style={{ height: 190, borderRadius: 14, marginBottom: 12, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name="camera" size={26} color={T.faint} />
+        <Text style={{ fontSize: 11.5, color: T.faint, marginTop: 7 }}>Sem foto cadastrada</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <View style={{ height: 200, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted }}>
+        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={onScroll} scrollEventThrottle={16}>
+          {photos.map((uri, i) => (
+            <Pressable key={i} onPress={() => setViewer(true)} style={{ width, height: 200 }}>
+              <Image source={{ uri, headers }} resizeMode="cover" style={{ width, height: 200 }} />
+            </Pressable>
+          ))}
+        </ScrollView>
+        {photos.length > 1 && (
+          <View style={{ position: 'absolute', top: 10, right: 12, backgroundColor: 'rgba(15,23,42,.7)', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 }}>
+            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{active + 1}/{photos.length}</Text>
+          </View>
+        )}
+        <View style={{ position: 'absolute', bottom: 9, right: 10, flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 9, backgroundColor: 'rgba(15,23,42,.72)' }}>
+          <Icon name="search" size={12} color="#fff" />
+          <Text style={{ color: '#fff', fontSize: 11.5, fontWeight: '600' }}>Ampliar</Text>
+        </View>
+      </View>
+      {/* Bolinhas indicadoras */}
+      {photos.length > 1 && (
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 8 }}>
+          {photos.map((_, i) => (
+            <View key={i} style={{ width: i === active ? 18 : 6, height: 6, borderRadius: 3, backgroundColor: i === active ? T.primary : T.border }} />
+          ))}
+        </View>
+      )}
+
+      {/* Viewer em tela cheia */}
+      <Modal visible={viewer} transparent animationType="fade" onRequestClose={() => setViewer(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,.92)' }}>
+          <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentOffset={{ x: active * Dimensions.get('window').width, y: 0 }}>
+            {photos.map((uri, i) => (
+              <View key={i} style={{ width: Dimensions.get('window').width, height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                <Image source={{ uri, headers }} resizeMode="contain" style={{ width: '100%', height: '80%' }} />
+              </View>
+            ))}
+          </ScrollView>
+          <Pressable onPress={() => setViewer(false)} style={{ position: 'absolute', top: 44, right: 20, width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,.15)', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="x" size={22} color="#fff" />
+          </Pressable>
+        </View>
+      </Modal>
+    </View>
+  );
+}
 
 function Half({ label, value }: { label: string; value?: string | null }) {
   return (
@@ -49,11 +117,13 @@ export function InventoryDetailScreen() {
   const isEquip = item.itemType === 'equipment';
   const moves = data?.movements ?? [];
   const pct = item.maxQty ? Math.min(100, (item.currentQty / item.maxQty) * 100) : 100;
-  const photoUrl = item.mainPhotoUrl ? `${API_BASE_URL}${item.mainPhotoUrl}` : null;
-  // O endpoint de foto mobile exige Bearer — o <Image> precisa mandar no header.
-  const photoSource = photoUrl
-    ? { uri: photoUrl, headers: token ? { Authorization: `Bearer ${token}` } : undefined }
-    : null;
+  // Fotos: principal + anexos. O endpoint mobile exige Bearer no header do <Image>.
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const photos = [
+    ...(item.mainPhotoUrl ? [`${API_BASE_URL}${item.mainPhotoUrl}`] : []),
+    ...((item.attachmentPhotos ?? []).map((p) => `${API_BASE_URL}${p.url}`)),
+  ];
+  const carouselWidth = Dimensions.get('window').width - 32;
 
   return (
     <DetailScaffold
@@ -75,26 +145,7 @@ export function InventoryDetailScreen() {
         </View>
       }
     >
-      <View
-        style={{
-          height: 150, borderRadius: 14, marginBottom: 12, overflow: 'hidden',
-          borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted,
-          alignItems: 'center', justifyContent: 'center',
-        }}
-      >
-        {photoSource ? (
-          <Image source={photoSource} resizeMode="cover" style={{ width: '100%', height: '100%' }} />
-        ) : (
-          <>
-            <Icon name="camera" size={24} color={T.faint} />
-            <Text style={{ fontSize: 11.5, color: T.faint, marginTop: 7 }}>Sem foto cadastrada</Text>
-          </>
-        )}
-        <View style={{ position: 'absolute', bottom: 10, right: 10, flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 11, borderRadius: 9, backgroundColor: 'rgba(15,23,42,.78)' }}>
-          <Icon name="qr" size={13} color="#fff" />
-          <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>QR</Text>
-        </View>
-      </View>
+      <PhotoCarousel photos={photos} headers={authHeaders} width={carouselWidth} />
 
       {!isEquip ? (
         <SectionCard title="Estoque">

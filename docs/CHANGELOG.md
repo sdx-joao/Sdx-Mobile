@@ -64,6 +64,21 @@ que já tinha expirado.
   `lib/{label-scan,pending-registrations}.ts`, `api/mobile.ts`, `App.tsx`,
   `navigation/*`, `app.json`. version 1.2.0 → 1.3.0.
 
+## (OTA) — Inventário: carrossel de fotos + wizard de cadastro fiel ao Electron
+
+- **Carrossel de fotos no detalhe do item** (`InventoryDetailScreen`): a box da
+  foto principal vira uma **galeria horizontal paginada** (principal + anexos)
+  com **bolinhas indicadoras** e contador `n/N`. Toque **amplia em tela cheia**
+  (viewer com paginação e botão fechar). Todas as imagens passam o header
+  `Authorization: Bearer` (endpoint mobile de foto exige Bearer).
+- **Wizard de cadastro** (`NewInventoryItemScreen`): fiel ao formulário do
+  Electron — 4 etapas (Cadastro → Especificações → Fotos → Observações) com
+  stepper, selects/autocomplete (inclui **Departamento/Setor** = catálogo
+  `work_order_department`), specs, captura de fotos embutida e validação de
+  obrigatórios por etapa.
+- Arquivos: `screens/{InventoryDetail,NewInventoryItem,InventoryCopyValidation}.tsx`,
+  `lib/pending-registrations.ts`, `api/mobile.ts`.
+
 ## (OTA) — Dono da OS + solicitação de cancelamento + fix catálogo on-the-go
 
 - **Propriedade da OS:** só quem **criou** (ou recebeu por **delegação**) pode
