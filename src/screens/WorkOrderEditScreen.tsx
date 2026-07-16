@@ -6,6 +6,7 @@ import { Icon } from '../components/Icon';
 import { DetailScaffold, EmptyState, FieldLabel, LoadingState, PrimaryButton, SectionCard } from '../components/ui';
 import { SuggestedInput } from '../components/SuggestedInput';
 import { RequesterPicker } from '../components/RequesterPicker';
+import { WorkOrderEquipmentEditor, buildEquipmentActionsPayload, type EquipActionDraft } from '../components/WorkOrderEquipmentEditor';
 import { T, WO_PRIORITY, WO_RESOLUTION, WO_STATUS } from '../theme/theme';
 import {
   getInventory,
@@ -173,6 +174,7 @@ export function WorkOrderEditScreen() {
   const [resolutionStatus, setResolutionStatus] = useState<WorkOrderResolution | null>(null);
   const [priority, setPriority] = useState<WorkOrderPriority>('normal');
   const [materials, setMaterials] = useState<MaterialDraft[]>([]);
+  const [equipmentActions, setEquipmentActions] = useState<EquipActionDraft[]>([]);
   const [consumables, setConsumables] = useState<InventoryItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -219,6 +221,18 @@ export function WorkOrderEditScreen() {
     setResolutionStatus(order.resolutionStatus || null);
     setPriority(order.priority || 'normal');
     setMaterials((order.materials || []).map(materialToDraft));
+    // Ações de equipamento já registradas (web ou app) — carrega pra editar sem
+    // apagar. Só as não aplicadas são editáveis; as aplicadas ficam no histórico.
+    setEquipmentActions((data?.detail.equipmentActions ?? [])
+      .filter(a => !a.appliedAt)
+      .map((a): EquipActionDraft => ({
+        action: a.action,
+        incoming: a.incoming,
+        outgoing: a.outgoing,
+        reason: a.reason || '',
+        reasonNotes: a.reasonNotes || '',
+        outgoingDestination: a.outgoingDestination || (a.action === 'swap' ? 'manutencao' : ''),
+      })));
   }, [hydratedId, order]);
 
   if (loading) {
@@ -290,6 +304,7 @@ export function WorkOrderEditScreen() {
             unit: item.unit || null,
             inventoryItemId: item.inventoryItemId ?? null,
           })),
+        equipmentActions: buildEquipmentActionsPayload(equipmentActions, unitName, department),
       });
       showToast(`${order.code} salva.`);
       nav.goBack();
@@ -464,6 +479,19 @@ export function WorkOrderEditScreen() {
             </View>
           ))}
         </View>
+      </SectionCard>
+
+      <SectionCard title={`Equipamentos (${equipmentActions.length})`}>
+        <Text style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>
+          Instalar, mover ou trocar máquina — escaneie a etiqueta de patrimônio. Aplica na conclusão da OS.
+        </Text>
+        <WorkOrderEquipmentEditor
+          actions={equipmentActions}
+          onChange={setEquipmentActions}
+          unitName={unitName}
+          department={department}
+          token={token}
+        />
       </SectionCard>
 
       {!locked && canUploadPhotos && (

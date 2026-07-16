@@ -188,6 +188,17 @@ export function getWorkOrder(token: string | null, id: string) {
       signerDocumentType?: string | null;
     } | null;
     requesterDocument: { document: string; documentType: string | null } | null;
+    /** Ações de equipamento já registradas na OS (para editar sem apagar). */
+    equipmentActions?: Array<{
+      id: string;
+      action: 'install' | 'move' | 'swap';
+      incoming: { id: string; name: string; assetTag: string | null; unitName: string | null; room: string | null } | null;
+      outgoing: { id: string; name: string; assetTag: string | null; unitName: string | null; room: string | null } | null;
+      reason: string | null;
+      reasonNotes: string | null;
+      outgoingDestination: string | null;
+      appliedAt: string | null;
+    }>;
   }>(`/api/mobile/work-orders/${id}`, { token });
 }
 
@@ -226,6 +237,21 @@ export type CreateWorkOrderInput = {
   priority: WorkOrderPriority;
 };
 
+/** Ação de equipamento enviada pela OS (mesma forma do web). */
+export type WorkOrderEquipmentActionInput = {
+  action: 'install' | 'move' | 'swap';
+  incomingItemId?: string | null;
+  outgoingItemId?: string | null;
+  reason?: string | null;
+  reasonNotes?: string | null;
+  toUnit?: string | null;
+  toRoom?: string | null;
+  toStatus?: string | null;
+  outgoingDestination?: string | null;
+  outgoingToRoom?: string | null;
+  outgoingToStatus?: string | null;
+};
+
 export type UpdateWorkOrderInput = Partial<CreateWorkOrderInput> & {
   status?: WorkOrderStatus;
   attendanceNotes?: string | null;
@@ -236,6 +262,7 @@ export type UpdateWorkOrderInput = Partial<CreateWorkOrderInput> & {
   expectedCompletionHours?: number;
   finishedAt?: string | null;
   materials?: WorkOrder['materials'];
+  equipmentActions?: WorkOrderEquipmentActionInput[];
 };
 
 export function createWorkOrder(token: string | null, input: CreateWorkOrderInput) {
