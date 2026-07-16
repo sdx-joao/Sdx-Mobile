@@ -17,6 +17,7 @@ export type SelectOptionKind =
   | 'work_order_responsible_technician'
   | 'work_order_material'
   | 'work_order_material_unit'
+  | 'work_order_movement_reason'
   | 'inventory_item_type'
   | 'inventory_equipment_category'
   | 'inventory_category'

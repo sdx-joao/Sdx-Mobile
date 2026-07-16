@@ -41,6 +41,7 @@ const OPTION_KINDS: SelectOptionKind[] = [
   'work_order_responsible_technician',
   'work_order_material',
   'work_order_material_unit',
+  'work_order_movement_reason',
 ];
 
 type MaterialDraft = {
@@ -491,6 +492,7 @@ export function WorkOrderEditScreen() {
           unitName={unitName}
           department={department}
           token={token}
+          reasonOptions={(optionsByKind.get('work_order_movement_reason') ?? []).map(o => ({ value: o.value, label: o.label || o.value }))}
         />
       </SectionCard>
 

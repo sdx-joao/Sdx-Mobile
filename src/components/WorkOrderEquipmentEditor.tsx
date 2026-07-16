@@ -24,14 +24,18 @@ export type EquipActionDraft = {
 
 const ACTION_LABEL: Record<EquipActionKind, string> = { install: 'Instalar', move: 'Mover', swap: 'Trocar' };
 
-const REASONS: Record<EquipActionKind, Array<{ value: string; label: string }>> = {
-  install: [{ value: 'novo_posto', label: 'Novo posto' }, { value: 'reposicao', label: 'Reposição' }, { value: 'outro', label: 'Outro' }],
-  move: [{ value: 'realocacao', label: 'Realocação' }, { value: 'reorganizacao', label: 'Reorganização' }, { value: 'outro', label: 'Outro' }],
-  swap: [
-    { value: 'defeito', label: 'Defeito' }, { value: 'fim_de_vida', label: 'Fim de vida' },
-    { value: 'upgrade', label: 'Upgrade' }, { value: 'realocacao', label: 'Realocação' }, { value: 'outro', label: 'Outro' },
-  ],
-};
+/**
+ * Fallback usado só se o catálogo (work_order_movement_reason) vier vazio — a
+ * fonte de verdade é Catálogos → Motivos, editável pelo Admin sem deploy.
+ */
+const FALLBACK_REASONS: Array<{ value: string; label: string }> = [
+  { value: 'defeito', label: 'Defeito' },
+  { value: 'fim_de_vida', label: 'Fim de vida útil' },
+  { value: 'upgrade', label: 'Upgrade / melhoria' },
+  { value: 'realocacao', label: 'Realocação' },
+  { value: 'novo_posto', label: 'Novo posto' },
+  { value: 'reposicao', label: 'Reposição' },
+];
 
 const DESTINATIONS = [
   { value: 'manutencao', label: 'Manutenção' },
@@ -112,14 +116,17 @@ function SlotRow({ item, label, onScan, onClear }: { item: EquipSlot | null; lab
 }
 
 export function WorkOrderEquipmentEditor({
-  actions, onChange, unitName, department, token,
+  actions, onChange, unitName, department, token, reasonOptions,
 }: {
   actions: EquipActionDraft[];
   onChange: (next: EquipActionDraft[]) => void;
   unitName: string;
   department: string;
   token: string | null;
+  /** Motivos vindos de Catálogos (work_order_movement_reason). Vazio = fallback. */
+  reasonOptions?: Array<{ value: string; label: string }>;
 }) {
+  const reasons = reasonOptions?.length ? reasonOptions : FALLBACK_REASONS;
   const actionsRef = useRef(actions);
   actionsRef.current = actions;
 
@@ -219,9 +226,10 @@ export function WorkOrderEquipmentEditor({
           <View style={{ gap: 6 }}>
             <Text style={{ fontSize: 10.5, color: T.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>Motivo</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-              {REASONS[action.action].map(r => (
+              {reasons.map(r => (
                 <Chip key={r.value} label={r.label} active={action.reason === r.value} onPress={() => update(index, { reason: r.value })} />
               ))}
+              <Chip label="Outro" active={action.reason === 'outro'} onPress={() => update(index, { reason: 'outro' })} />
             </ScrollView>
           </View>
 
