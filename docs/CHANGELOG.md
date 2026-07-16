@@ -64,6 +64,29 @@ que já tinha expirado.
   `lib/{label-scan,pending-registrations}.ts`, `api/mobile.ts`, `App.tsx`,
   `navigation/*`, `app.json`. version 1.2.0 → 1.3.0.
 
+## 1.5.0 — Inventário × OS: mobile-first (build Play)
+
+**Requer build nativo na Play** (intent filter novo `/scan` + câmera). Par do
+backend no ScandexGed (já no ar). Princípio: **o técnico faz tudo pelo celular** —
+o patrimônio são máquinas já instaladas nos setores, o trabalho é na sala. O
+Electron vira a bancada (tela grande, etiquetas, relatórios).
+
+- **Autoria de equipamento no app** (`WorkOrderEquipmentEditor`): na OS, o técnico
+  toca em **Instalar / Mover / Trocar**, escaneia a etiqueta de patrimônio na
+  câmera do próprio app, e escolhe **motivo** e **destino do que sai**
+  (Manutenção / CEDOC-TI / Baixa). Sem depender de ninguém no computador.
+  Recusa etiqueta não cadastrada e item que não seja equipamento.
+  Aplica local + estado **na conclusão** da OS (cancelar não deixa resíduo).
+- **Vínculo de consumível no material** (`WorkOrderEditScreen`): chips do estoque;
+  vinculado mostra o saldo e dá baixa na conclusão. Texto livre segue funcionando.
+- **Modo "celular como scanner"** (`ScanRelayScreen`): deep link `/scan/<token>` —
+  lê o QR de sessão do web e envia cada etiqueta lida pra OS aberta no computador
+  (fila rápida, leituras ao vivo). Complementa o fluxo autônomo.
+- Carrega as ações já existentes na OS (GET mobile) — editar no app não apaga o
+  que foi criado na web.
+- Arquivos: `components/WorkOrderEquipmentEditor.tsx`, `screens/{ScanRelay,WorkOrderEdit}.tsx`,
+  `api/mobile.ts`, `App.tsx`, `navigation/*`, `app.json`, `data/mock.ts`.
+
 ## (OTA) — Inventário: carrossel de fotos + wizard de cadastro fiel ao Electron
 
 - **Correção do carrossel no detalhe do patrimônio**: a ficha agora aceita tanto

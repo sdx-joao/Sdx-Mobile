@@ -2,7 +2,7 @@
   "expo": {
     "name": "Servus",
     "slug": "sdx-mobile",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "scheme": "servus",
     "orientation": "default",
     "icon": "./assets/icon.png",
@@ -14,7 +14,7 @@
     "android": {
       "package": "com.sdxpro.mobile",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 24,
+      "versionCode": 25,
       "adaptiveIcon": {
         "backgroundColor": "#072AC8",
         "foregroundImage": "./assets/adaptive-foreground.png"
