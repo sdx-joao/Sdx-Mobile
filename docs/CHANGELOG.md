@@ -84,8 +84,17 @@ Electron vira a bancada (tela grande, etiquetas, relatórios).
   (fila rápida, leituras ao vivo). Complementa o fluxo autônomo.
 - Carrega as ações já existentes na OS (GET mobile) — editar no app não apaga o
   que foi criado na web.
-- Arquivos: `components/WorkOrderEquipmentEditor.tsx`, `screens/{ScanRelay,WorkOrderEdit}.tsx`,
-  `api/mobile.ts`, `App.tsx`, `navigation/*`, `app.json`, `data/mock.ts`.
+- **Ler SKU / nº de série pela câmera** (`ScanFieldModal`): botão de câmera nos dois
+  campos do cadastro de equipamento. Dois caminhos:
+  - **Código de barras** (`code128`, `code39`, `datamatrix`, EAN/UPC…) — etiqueta de
+    fabricante quase sempre tem; leu, preencheu. Caminho confiável.
+  - **OCR on-device** (ML Kit, `@react-native-ml-kit/text-recognition@2`) pra etiqueta
+    sem código. **Nunca preenche sozinho**: mostra as linhas lidas, o técnico escolhe
+    e confere/edita antes de confirmar — OCR confunde `0/O`, `1/I`, `5/S`, `8/B`, e um
+    serial errado é pior que serial nenhum. A imagem não sai do aparelho.
+- Arquivos: `components/{WorkOrderEquipmentEditor,ScanFieldModal}.tsx`,
+  `screens/{ScanRelay,WorkOrderEdit,NewInventoryItem}.tsx`, `api/mobile.ts`, `App.tsx`,
+  `navigation/*`, `app.json`, `data/mock.ts`, `package.json` (ML Kit).
 
 ## (OTA) — Inventário: carrossel de fotos + wizard de cadastro fiel ao Electron
 

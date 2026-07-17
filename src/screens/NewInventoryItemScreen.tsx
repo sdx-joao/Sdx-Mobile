@@ -8,6 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRef } from 'react';
 import { DetailScaffold, FieldLabel, PrimaryButton, SectionCard } from '../components/ui';
 import { SuggestedInput } from '../components/SuggestedInput';
+import { ScanFieldModal } from '../components/ScanFieldModal';
 import { Icon } from '../components/Icon';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
@@ -26,15 +27,31 @@ const OPTION_KINDS = [
   'inventory_brand', 'inventory_model', 'inventory_equipment_status', 'inventory_unit', 'inventory_spec_key',
 ] as const;
 
-function Field({ value, onChangeText, placeholder, multiline, keyboardType }: {
-  value: string; onChangeText: (v: string) => void; placeholder: string; multiline?: boolean; keyboardType?: 'default' | 'number-pad';
+function Field({ value, onChangeText, placeholder, multiline, keyboardType, onScan }: {
+  value: string; onChangeText: (v: string) => void; placeholder: string; multiline?: boolean;
+  keyboardType?: 'default' | 'number-pad';
+  /** Quando presente, mostra o botão de câmera (lê código de barras ou os números). */
+  onScan?: () => void;
 }) {
-  return (
+  const input = (
     <TextInput
       value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={T.faint}
-      multiline={multiline} keyboardType={keyboardType}
-      style={{ minHeight: multiline ? 76 : 44, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface, paddingHorizontal: 13, paddingVertical: multiline ? 11 : 0, fontSize: 14, color: T.text }}
+      multiline={multiline} keyboardType={keyboardType} autoCorrect={false}
+      style={{ flex: onScan ? 1 : undefined, minHeight: multiline ? 76 : 44, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface, paddingHorizontal: 13, paddingVertical: multiline ? 11 : 0, fontSize: 14, color: T.text }}
     />
+  );
+  if (!onScan) return input;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      {input}
+      <Pressable
+        onPress={onScan}
+        accessibilityLabel="Ler da etiqueta com a câmera"
+        style={{ width: 44, height: 44, borderRadius: 11, borderWidth: 1, borderColor: `${T.primary}55`, backgroundColor: `${T.primary}12`, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Icon name="camera" size={19} color={T.primary} />
+      </Pressable>
+    </View>
   );
 }
 
@@ -47,6 +64,8 @@ export function NewInventoryItemScreen() {
   const resumeLabelCode = route.params?.resumeLabelCode;
   const { token } = useAuth();
   const insets = useSafeAreaInsets();
+  // Leitor de campo por câmera (código de barras ou OCR). Ver ScanFieldModal.
+  const [scanField, setScanField] = useState<'sku' | 'serial' | null>(null);
 
   const optionsLoader = useCallback(() => getOptions(token, [...OPTION_KINDS]), [token]);
   const { data: options } = useResource(optionsLoader);
@@ -222,13 +241,13 @@ export function NewInventoryItemScreen() {
             </View>
             <View><FieldLabel required>Nome / descrição curta</FieldLabel><Field value={name} onChangeText={setName} placeholder="Ex.: GABINETE DELL OPTIPLEX" /></View>
             <SuggestedInput label="Tipo do equipamento" value={category} onChangeText={setCategory} placeholder="Monitor, tablet, switch…" options={opts('inventory_equipment_category')} />
-            <View><FieldLabel>SKU / código interno</FieldLabel><Field value={sku} onChangeText={setSku} placeholder="Opcional" /></View>
+            <View><FieldLabel>SKU / código interno</FieldLabel><Field value={sku} onChangeText={setSku} placeholder="Opcional" onScan={() => setScanField('sku')} /></View>
             <View><FieldLabel>Patrimônio / etiqueta anterior(es)</FieldLabel><Field value={assetTag} onChangeText={setAssetTag} placeholder="Um por linha, ou separe por vírgula" multiline /></View>
             <SuggestedInput label="Unidade" required value={unitName} onChangeText={setUnitName} placeholder="Selecione a unidade" options={opts('work_order_unit')} />
             <SuggestedInput label="Departamento / Setor" required value={room} onChangeText={setRoom} placeholder="Ex.: CEDOC, Recepção, Centro Cirúrgico" options={opts('work_order_department')} />
             {isEquip ? (
               <>
-                <View><FieldLabel>Número de série</FieldLabel><Field value={serialNumber} onChangeText={setSerialNumber} placeholder="Opcional" /></View>
+                <View><FieldLabel>Número de série</FieldLabel><Field value={serialNumber} onChangeText={setSerialNumber} placeholder="Opcional" onScan={() => setScanField('serial')} /></View>
                 <SuggestedInput label="Marca / fabricante" value={brand} onChangeText={setBrand} placeholder="Selecione ou digite" options={opts('inventory_brand')} />
                 <SuggestedInput label="Modelo" value={model} onChangeText={setModel} placeholder="Digite ou selecione" options={opts('inventory_model')} />
                 <SuggestedInput label="Estado operacional" value={equipmentStatus} onChangeText={setEquipmentStatus} placeholder="FUNCIONANDO" options={opts('inventory_equipment_status')} />
@@ -313,6 +332,16 @@ export function NewInventoryItemScreen() {
       {!!error && <Text style={{ color: T.danger, fontSize: 13, marginBottom: 10 }}>{error}</Text>}
       <PrimaryButton label={step < 3 ? 'Próximo' : 'Continuar para validação'} icon={step < 3 ? 'chevron-right' : 'check'} accent={T.primary} onPress={next} />
       <View style={{ height: 12 }} />
+
+      <ScanFieldModal
+        visible={scanField !== null}
+        title={scanField === 'serial' ? 'Ler número de série' : 'Ler SKU / código'}
+        onClose={() => setScanField(null)}
+        onPick={(value) => {
+          if (scanField === 'serial') setSerialNumber(value);
+          else if (scanField === 'sku') setSku(value);
+        }}
+      />
     </DetailScaffold>
   );
 }
