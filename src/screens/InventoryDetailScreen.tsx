@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Dimensions, Image, Modal, NativeScrollEvent, NativeSyntheticEvent, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
 import { Badge, DetailScaffold, EmptyState, LoadingState, SectionCard, StatItem } from '../components/ui';
 import { MovementRow } from '../components/cards';
@@ -191,9 +192,12 @@ function AuditRow({ icon, title, detail, at, color = T.primary }: { icon: string
 }
 
 export function InventoryDetailScreen() {
-  const nav = useNavigation();
+  const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'InventoryDetail'>>();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  // Mesma regra do backend (PATCH exige canManageInventory) — sem isso o botão
+  // apareceria e o salvar levaria 403 na cara do técnico.
+  const canEdit = user?.role === 'SuperAdministrador' || user?.permissions?.canManageInventory === true;
   const [tab, setTab] = useState<DetailTab>('details');
   const loader = useCallback(() => getInventoryItem(token, route.params.id), [token, route.params.id]);
   const { data, loading, refreshing, error, reload } = useResource(loader, { reloadOnFocus: true });
@@ -248,6 +252,18 @@ export function InventoryDetailScreen() {
     >
       <PhotoCarousel photos={photos} headers={authHeaders} width={carouselWidth} />
       <LocationHighlight item={item} />
+
+      {/* Completar o cadastro depois, em campo — o técnico nem sempre tem tudo
+          à mão na hora de colar a etiqueta. */}
+      {canEdit && (
+        <Pressable
+          onPress={() => nav.navigate('EditInventoryItem', { id: item.id })}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: `${T.primary}55`, backgroundColor: `${T.primary}0E`, marginBottom: 12 }}
+        >
+          <Icon name="edit" size={16} color={T.primary} />
+          <Text style={{ color: T.primary, fontWeight: '700', fontSize: 13.5 }}>Editar informações e fotos</Text>
+        </Pressable>
+      )}
 
       <View style={{ flexDirection: 'row', gap: 6, padding: 4, borderRadius: 13, backgroundColor: T.surfaceMuted, marginBottom: 12 }}>
         <TabButton label="Detalhes" active={tab === 'details'} onPress={() => setTab('details')} />

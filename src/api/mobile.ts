@@ -451,6 +451,30 @@ export async function uploadInventoryPhoto(
   }
 }
 
+/** Campos editáveis de um item já cadastrado (complementar em campo). */
+export type UpdateInventoryItemInput = {
+  name?: string;
+  category?: string | null;
+  /** Patrimônio ANTERIOR do hospital (vários: um por linha). */
+  assetTag?: string | null;
+  serialNumber?: string | null;
+  sku?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  equipmentStatus?: string | null;
+  operatingSystem?: string | null;
+  unitName?: string | null;
+  room?: string | null;
+  currentLocation?: string | null;
+  notes?: string | null;
+  technicalSpecs?: InventorySpec[];
+};
+
+/** Edita um item já cadastrado. A nossa etiqueta (labelCode) não é editável. */
+export function updateInventoryItem(token: string | null, id: string, input: UpdateInventoryItemInput) {
+  return apiFetch<{ ok: true }>(`/api/mobile/inventory/${id}`, { method: 'PATCH', token, body: input });
+}
+
 /** Cadastra um equipamento pelo celular (vinculando a etiqueta genérica). */
 export function createInventoryItem(token: string | null, input: NewInventoryItemInput) {
   return apiFetch<{ ok: true; item: InventoryItem }>('/api/mobile/inventory', {

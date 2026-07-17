@@ -92,7 +92,17 @@ Electron vira a bancada (tela grande, etiquetas, relatórios).
     sem código. **Nunca preenche sozinho**: mostra as linhas lidas, o técnico escolhe
     e confere/edita antes de confirmar — OCR confunde `0/O`, `1/I`, `5/S`, `8/B`, e um
     serial errado é pior que serial nenhum. A imagem não sai do aparelho.
+- **Editar item pelo celular** (`EditInventoryItemScreen`): completar o cadastro
+  depois, em campo — informações (nome, tipo, patrimônio anterior, série, SKU,
+  marca/modelo, estado, SO, local, specs, observação) **e fotos** (trocar a
+  principal, anexar novas, com a câmera embutida). A **etiqueta SDX não é
+  editável** — ela vem da etiqueta física colada; mudá-la quebraria o QR.
+  Botão "Editar informações e fotos" no detalhe, gated por `canManageInventory`
+  (mesma regra do backend — botão que leva 403 é pior que botão ausente).
+- **Foto principal no card** do inventário (ícone como fallback) + linha de
+  resumo com patrimônio anterior e nº de série.
 - Arquivos: `components/{WorkOrderEquipmentEditor,ScanFieldModal}.tsx`,
+  `screens/EditInventoryItemScreen.tsx`,
   `screens/{ScanRelay,WorkOrderEdit,NewInventoryItem}.tsx`, `api/mobile.ts`, `App.tsx`,
   `navigation/*`, `app.json`, `data/mock.ts`, `package.json` (ML Kit).
 

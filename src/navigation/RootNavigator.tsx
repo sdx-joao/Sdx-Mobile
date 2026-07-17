@@ -14,6 +14,7 @@ import { WorkOrderAttachmentCaptureScreen } from '../screens/WorkOrderAttachment
 import { WorkOrderPhotoViewerScreen } from '../screens/WorkOrderPhotoViewerScreen';
 import { NewWorkOrderScreen } from '../screens/NewWorkOrderScreen';
 import { InventoryDetailScreen } from '../screens/InventoryDetailScreen';
+import { EditInventoryItemScreen } from '../screens/EditInventoryItemScreen';
 import { NewInventoryItemScreen } from '../screens/NewInventoryItemScreen';
 import { InventoryCopyValidationScreen } from '../screens/InventoryCopyValidationScreen';
 import { PendingRegistrationsScreen } from '../screens/PendingRegistrationsScreen';
@@ -48,6 +49,7 @@ export function RootNavigator() {
       <Stack.Screen name="WorkOrderAttachmentCapture" component={WorkOrderAttachmentCaptureScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="WorkOrderPhotoViewer" component={WorkOrderPhotoViewerScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="InventoryDetail" component={InventoryDetailScreen} />
+      <Stack.Screen name="EditInventoryItem" component={EditInventoryItemScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="NewInventoryItem" component={NewInventoryItemScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="InventoryCopyValidation" component={InventoryCopyValidationScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="PendingRegistrations" component={PendingRegistrationsScreen} />
