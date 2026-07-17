@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult, type BarcodeType } from 'expo-camera';
-import TextRecognition from '@react-native-ml-kit/text-recognition';
 import { Icon } from './Icon';
 import { T } from '../theme/theme';
 
@@ -82,6 +81,17 @@ export function ScanFieldModal({
     setBusy(true);
     setError(null);
     try {
+      // Import tardio: o OCR é módulo NATIVO (ML Kit). Se este JS chegou por OTA
+      // num build que ainda não tem o módulo, não quebra a tela — avisa e segue
+      // com o código de barras. Entra de vez no próximo build nativo.
+      let TextRecognition: { recognize: (uri: string) => Promise<{ text?: string }> };
+      try {
+        TextRecognition = require('@react-native-ml-kit/text-recognition').default;
+        if (!TextRecognition?.recognize) throw new Error('sem módulo');
+      } catch {
+        setError('Leitura de números indisponível nesta versão do app. Use o código de barras.');
+        return;
+      }
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.9, skipProcessing: true });
       if (!photo?.uri) throw new Error('Falha ao capturar a imagem.');
       const result = await TextRecognition.recognize(photo.uri);
