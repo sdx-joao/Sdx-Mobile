@@ -186,7 +186,14 @@ export function InvCard({ item, onOpen, accent = T.primary }: { item: InventoryI
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 7 }}>
             <Icon name="map-pin" size={13} color={T.faint} />
-            <Text numberOfLines={1} style={{ fontSize: 12, color: T.muted, flexShrink: 1 }}>{item.currentLocation || 'Sem localização'}</Text>
+            {/* O local é Unidade → Setor (locationLabel, montado pela API).
+                `currentLocation` é só o detalhe livre ("armário 3") e costuma ser
+                nulo — usá-lo sozinho mostrava "Sem localização" em item localizado. */}
+            <Text numberOfLines={1} style={{ fontSize: 12, color: T.muted, flexShrink: 1 }}>
+              {item.locationLabel
+                || [item.unitName, item.room, item.currentLocation].filter(Boolean).join(' • ')
+                || 'Sem localização'}
+            </Text>
           </View>
         </View>
       </View>

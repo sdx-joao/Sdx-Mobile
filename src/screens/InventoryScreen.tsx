@@ -41,7 +41,10 @@ export function InventoryScreen() {
   const list = inventory.filter((i) => {
     if (filter !== 'all' && i.primaryType !== filter) return false;
     if (q) {
-      const t = (i.name + (i.sku || '') + (i.assetTag || '') + (i.brand || '') + (i.currentLocation || '')).toLowerCase();
+      // Busca também por unidade/setor — é assim que o técnico procura ("o que
+      // tem no CEDOC?"), e não pelo detalhe livre do local.
+      const t = (i.name + (i.sku || '') + (i.assetTag || '') + (i.brand || '')
+        + (i.locationLabel || '') + (i.unitName || '') + (i.room || '') + (i.currentLocation || '')).toLowerCase();
       if (!t.includes(q.toLowerCase())) return false;
     }
     return true;

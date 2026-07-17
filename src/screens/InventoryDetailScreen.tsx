@@ -301,7 +301,9 @@ export function InventoryDetailScreen() {
               <Half label="SKU" value={item.sku} />
               <Half label="Unidade" value={item.unit} />
               <Half label="Categoria" value={ty.label} />
-              <Half label="Localização" value={item.currentLocation} />
+              {/* Local completo (Unidade • Setor • detalhe) — currentLocation
+                  sozinho é o detalhe livre e quase sempre vem nulo. */}
+              <Half label="Localização" value={itemLocationLabel(item)} />
               <Half label="Unidade / origem" value={item.unitName} />
               <Half label="Departamento / Setor" value={item.room} />
             </View>
