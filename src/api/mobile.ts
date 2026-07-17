@@ -451,6 +451,36 @@ export async function uploadInventoryPhoto(
   }
 }
 
+export type CollectedSpecs = {
+  serialNumber?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  operatingSystem?: string | null;
+  hostname?: string | null;
+  technicalSpecs?: InventorySpec[];
+  monitores?: Array<{ nome: string; serie: string; fabricante: string }>;
+};
+
+/** Abre uma sessão de coleta: devolve o código curto pra digitar no PC. */
+export function createSpecSession(token: string | null) {
+  return apiFetch<{ code: string; expiresInMinutes: number }>('/api/mobile/inventory/spec-sessions', {
+    method: 'POST', token,
+  });
+}
+
+/** Polling: 'waiting' até o script do PC enviar; 'ready' com as specs. */
+export function pollSpecSession(token: string | null, code: string) {
+  return apiFetch<{ status: 'waiting' | 'ready'; specs?: CollectedSpecs }>(
+    `/api/mobile/inventory/spec-sessions/${encodeURIComponent(code)}`, { token },
+  );
+}
+
+export function closeSpecSession(token: string | null, code: string) {
+  return apiFetch<{ ok: true }>(`/api/mobile/inventory/spec-sessions/${encodeURIComponent(code)}`, {
+    method: 'DELETE', token,
+  });
+}
+
 /** Campos editáveis de um item já cadastrado (complementar em campo). */
 export type UpdateInventoryItemInput = {
   name?: string;

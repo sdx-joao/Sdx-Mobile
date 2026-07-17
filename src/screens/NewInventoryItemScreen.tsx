@@ -9,6 +9,7 @@ import { useRef } from 'react';
 import { DetailScaffold, FieldLabel, PrimaryButton, SectionCard } from '../components/ui';
 import { SuggestedInput } from '../components/SuggestedInput';
 import { ScanFieldModal } from '../components/ScanFieldModal';
+import { SpecCollectModal } from '../components/SpecCollectModal';
 import { Icon } from '../components/Icon';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
@@ -66,6 +67,8 @@ export function NewInventoryItemScreen() {
   const insets = useSafeAreaInsets();
   // Leitor de campo por câmera (código de barras ou OCR). Ver ScanFieldModal.
   const [scanField, setScanField] = useState<'sku' | 'serial' | null>(null);
+  // Coleta de specs pelo PC (script + código). Ver SpecCollectModal.
+  const [collectingSpecs, setCollectingSpecs] = useState(false);
 
   const optionsLoader = useCallback(() => getOptions(token, [...OPTION_KINDS]), [token]);
   const { data: options } = useResource(optionsLoader);
@@ -269,6 +272,19 @@ export function NewInventoryItemScreen() {
 
       {step === 1 && (
         <SectionCard title="Especificações técnicas">
+          {/* Se a máquina está ligada, o PC entrega tudo pronto — série, CPU, RAM,
+              discos e até os monitores. Poupa digitar (e errar) na frente do rack. */}
+          <Pressable
+            onPress={() => setCollectingSpecs(true)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: `${T.primary}0E`, borderWidth: 1, borderColor: `${T.primary}44`, borderRadius: 11, padding: 12, marginBottom: 12 }}
+          >
+            <Icon name="cpu" size={18} color={T.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: T.primary }}>Puxar dados do PC</Text>
+              <Text style={{ fontSize: 11, color: T.muted }}>Se o computador está ligado: série, CPU, RAM, discos e monitores</Text>
+            </View>
+            <Icon name="chevron-right" size={16} color={T.primary} />
+          </Pressable>
           <Text style={{ fontSize: 12, color: T.muted, marginBottom: 12 }}>Adicione apenas os atributos úteis para este equipamento (opcional).</Text>
           <View style={{ gap: 10 }}>
             <SuggestedInput label="Atributo" value={specKey} onChangeText={setSpecKey} placeholder="Ex.: Processador, RAM, Armazenamento" options={opts('inventory_spec_key')} />
@@ -340,6 +356,31 @@ export function NewInventoryItemScreen() {
         onPick={(value) => {
           if (scanField === 'serial') setSerialNumber(value);
           else if (scanField === 'sku') setSku(value);
+        }}
+      />
+
+      <SpecCollectModal
+        visible={collectingSpecs}
+        onClose={() => setCollectingSpecs(false)}
+        onApply={(collected) => {
+          // Só preenche o que está VAZIO — nunca sobrescreve o que o técnico
+          // já digitou olhando a etiqueta.
+          if (collected.serialNumber && !serialNumber.trim()) setSerialNumber(collected.serialNumber);
+          if (collected.brand && !brand.trim()) setBrand(collected.brand);
+          if (collected.model && !model.trim()) setModel(collected.model);
+          if (collected.operatingSystem && !operatingSystem.trim()) setOperatingSystem(collected.operatingSystem);
+          // Specs: mescla por chave, mantendo o que já existe.
+          setSpecs((prev) => {
+            const seen = new Set(prev.map(s => s.key.trim().toUpperCase()));
+            const novas = (collected.technicalSpecs ?? []).filter(s => !seen.has(s.key.trim().toUpperCase()));
+            return [...prev, ...novas];
+          });
+          // Monitores vão pra observação: são equipamentos próprios, não specs
+          // do gabinete — quem decide se viram patrimônio é o técnico.
+          if (collected.monitores?.length) {
+            const linhas = collected.monitores.map(m => `Monitor: ${m.fabricante} ${m.nome} — série ${m.serie}`).join('\n');
+            setNotes((prev) => (prev.trim() ? `${prev}\n${linhas}` : linhas));
+          }
         }}
       />
     </DetailScaffold>
