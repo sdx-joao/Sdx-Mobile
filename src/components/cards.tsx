@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Pressable, Text, View } from 'react-native';
+import { Animated, Image, Pressable, Text, View } from 'react-native';
+import { useAuth } from '../auth/auth-context';
+import { API_BASE_URL } from '../api/client';
 import { Icon } from './Icon';
 import { Badge, MetaRow } from './ui';
 import { T, WO_STATUS, WO_PRIORITY, INV_TYPE, MOVE_TONE } from '../theme/theme';
@@ -157,6 +159,8 @@ export function WOCard({
 
 // ── Cartão de item de inventário ────────────────────────────────────────────
 export function InvCard({ item, onOpen, accent = T.primary }: { item: InventoryItem; onOpen: (it: InventoryItem) => void; accent?: string }) {
+  const { token } = useAuth();
+  const photoUri = item.mainPhotoUrl ? `${API_BASE_URL}${item.mainPhotoUrl}` : null;
   const tone = stockStatusOf(item);
   const ty = INV_TYPE[item.primaryType];
   const isEquip = item.itemType === 'equipment';
@@ -171,8 +175,18 @@ export function InvCard({ item, onOpen, accent = T.primary }: { item: InventoryI
       style={{ backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 14, padding: 13, marginBottom: 10, ...cardShadow }}
     >
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <View style={{ width: 46, height: 46, borderRadius: 11, backgroundColor: `${accent}12`, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name={ty.icon} size={21} color={accent} />
+        {/* Foto principal do item quando houver — reconhecer a máquina pela foto
+            é mais rápido que pelo nome. O endpoint exige Bearer no header. */}
+        <View style={{ width: 46, height: 46, borderRadius: 11, overflow: 'hidden', backgroundColor: `${accent}12`, alignItems: 'center', justifyContent: 'center' }}>
+          {photoUri ? (
+            <Image
+              source={{ uri: photoUri, headers: token ? { Authorization: `Bearer ${token}` } : undefined }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
+            />
+          ) : (
+            <Icon name={ty.icon} size={21} color={accent} />
+          )}
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
@@ -190,9 +204,12 @@ export function InvCard({ item, onOpen, accent = T.primary }: { item: InventoryI
           </View>
           {/* Patrimônio anterior do hospital — só aparece se existir, e nunca
               repete a nossa etiqueta. */}
-          {!!item.assetTag && !!item.labelCode && (
+          {(!!item.assetTag || !!item.serialNumber) && (
             <Text numberOfLines={1} style={{ fontSize: 11, color: T.faint, marginTop: 3 }}>
-              Patrim. anterior: {item.assetTag.split('\n').join(' · ')}
+              {[
+                item.assetTag ? `Ant.: ${item.assetTag.split('\n').join(' · ')}` : '',
+                item.serialNumber ? `Série ${item.serialNumber}` : '',
+              ].filter(Boolean).join('  ·  ')}
             </Text>
           )}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 7 }}>
