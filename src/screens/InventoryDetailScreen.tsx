@@ -229,7 +229,7 @@ export function InventoryDetailScreen() {
   return (
     <DetailScaffold
       onBack={() => nav.goBack()}
-      eyebrow={item.sku || item.assetTag || ty.label}
+      eyebrow={item.labelCode || item.sku || item.assetTag || ty.label}
       title={item.name}
       badge={<Badge tone={tone} badgeStyle="solid" />}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={T.primary} colors={[T.primary]} />}
@@ -273,7 +273,8 @@ export function InventoryDetailScreen() {
           ) : (
             <SectionCard title="Patrimônio">
               <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                <Half label="Etiqueta" value={item.assetTag} />
+                <Half label="Etiqueta SDX (nossa)" value={item.labelCode} />
+                <Half label="Patrimônio anterior" value={item.assetTag?.split('\n').join(' · ')} />
                 <Half label="Nº de série" value={item.serialNumber} />
                 <Half label="Marca" value={item.brand} />
                 <Half label="Modelo" value={item.model} />

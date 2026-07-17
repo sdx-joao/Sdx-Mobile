@@ -180,10 +180,21 @@ export function InvCard({ item, onOpen, accent = T.primary }: { item: InventoryI
             <Badge tone={tone} size="sm" />
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 4 }}>
-            <Text style={{ fontSize: 11.5, color: accent, fontWeight: '600' }}>{item.sku || item.assetTag}</Text>
+            {/* Destaque = A NOSSA etiqueta (a que está colada e o QR resolve).
+                Sem ela, cai no SKU e por último no patrimônio anterior. */}
+            <Text style={{ fontSize: 11.5, color: accent, fontWeight: '700' }}>
+              {item.labelCode || item.sku || item.assetTag?.split('\n')[0] || '—'}
+            </Text>
             <View style={{ width: 3, height: 3, borderRadius: 2, backgroundColor: T.faint }} />
             <Text style={{ fontSize: 11.5, color: T.faint }}>{ty.label}</Text>
           </View>
+          {/* Patrimônio anterior do hospital — só aparece se existir, e nunca
+              repete a nossa etiqueta. */}
+          {!!item.assetTag && !!item.labelCode && (
+            <Text numberOfLines={1} style={{ fontSize: 11, color: T.faint, marginTop: 3 }}>
+              Patrim. anterior: {item.assetTag.split('\n').join(' · ')}
+            </Text>
+          )}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 7 }}>
             <Icon name="map-pin" size={13} color={T.faint} />
             {/* O local é Unidade → Setor (locationLabel, montado pela API).
