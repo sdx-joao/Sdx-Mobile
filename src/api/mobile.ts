@@ -461,9 +461,9 @@ export type CollectedSpecs = {
   monitores?: Array<{ nome: string; serie: string; fabricante: string }>;
 };
 
-/** Abre uma sessão de coleta: devolve o código curto pra digitar no PC. */
+/** Abre uma sessão de coleta: código + URL da página que o PC abre. */
 export function createSpecSession(token: string | null) {
-  return apiFetch<{ code: string; expiresInMinutes: number }>('/api/mobile/inventory/spec-sessions', {
+  return apiFetch<{ code: string; collectUrl: string; expiresInMinutes: number }>('/api/mobile/inventory/spec-sessions', {
     method: 'POST', token,
   });
 }

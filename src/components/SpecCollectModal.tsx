@@ -26,6 +26,7 @@ export function SpecCollectModal({
 }) {
   const { token } = useAuth();
   const [code, setCode] = useState<string | null>(null);
+  const [collectUrl, setCollectUrl] = useState<string | null>(null);
   const [specs, setSpecs] = useState<CollectedSpecs | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,7 +37,7 @@ export function SpecCollectModal({
   const reset = () => {
     stopPolling();
     if (code) void closeSpecSession(token, code).catch(() => undefined);
-    setCode(null); setSpecs(null); setError(null); setBusy(false);
+    setCode(null); setCollectUrl(null); setSpecs(null); setError(null); setBusy(false);
   };
 
   const close = () => { reset(); onClose(); };
@@ -51,6 +52,7 @@ export function SpecCollectModal({
         const res = await createSpecSession(token);
         if (cancelled) return;
         setCode(res.code);
+        setCollectUrl(res.collectUrl);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Não foi possível abrir a coleta.');
       } finally {
@@ -117,22 +119,29 @@ export function SpecCollectModal({
                 </View>
               </View>
 
-              <View style={{ backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 12, padding: 14, gap: 10 }}>
+              <View style={{ backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 12, padding: 14, gap: 8 }}>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: T.text }}>No computador que você está cadastrando:</Text>
-                {[
-                  { n: '1', t: 'Aperte Windows + R' },
-                  { n: '2', t: `Cole: ${sharePath}` },
-                  { n: '3', t: 'Digite o código acima e aguarde' },
-                ].map(s => (
-                  <View key={s.n} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: `${T.primary}18`, alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: T.primary }}>{s.n}</Text>
-                    </View>
-                    <Text style={{ flex: 1, fontSize: 12.5, color: T.textSoft }}>{s.t}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: `${T.primary}18`, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: T.primary }}>1</Text>
                   </View>
-                ))}
+                  <Text style={{ flex: 1, fontSize: 12.5, color: T.textSoft }}>Abra o navegador e digite o endereço:</Text>
+                </View>
+                {!!collectUrl && (
+                  <View style={{ backgroundColor: T.bg, borderWidth: 1, borderColor: T.border, borderRadius: 9, paddingVertical: 9, paddingHorizontal: 11 }}>
+                    <Text selectable style={{ fontSize: 13.5, fontWeight: '700', color: T.primary, letterSpacing: 0.3 }}>
+                      {collectUrl.replace(/^https?:\/\//, '')}
+                    </Text>
+                  </View>
+                )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: `${T.primary}18`, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: T.primary }}>2</Text>
+                  </View>
+                  <Text style={{ flex: 1, fontSize: 12.5, color: T.textSoft }}>Na página, siga uma das opções (colar comando, baixar ou pela rede).</Text>
+                </View>
                 <Text style={{ fontSize: 11, color: T.faint, marginTop: 2 }}>
-                  O código vale por alguns minutos e serve uma vez só.
+                  O código já vai no endereço. Vale alguns minutos e serve uma vez só.
                 </Text>
               </View>
             </>
