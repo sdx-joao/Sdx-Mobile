@@ -16,13 +16,11 @@ import { createSpecSession, pollSpecSession, closeSpecSession, type CollectedSpe
  * As specs NUNCA entram sozinhas — o técnico revisa e confirma.
  */
 export function SpecCollectModal({
-  visible, onClose, onApply, sharePath = '\\\\servidor\\sdx\\coletar.bat',
+  visible, onClose, onApply,
 }: {
   visible: boolean;
   onClose: () => void;
   onApply: (specs: CollectedSpecs) => void;
-  /** Caminho do script no compartilhamento — o que o técnico digita no Executar. */
-  sharePath?: string;
 }) {
   const { token } = useAuth();
   const [code, setCode] = useState<string | null>(null);
@@ -138,7 +136,7 @@ export function SpecCollectModal({
                   <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: `${T.primary}18`, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ fontSize: 11, fontWeight: '800', color: T.primary }}>2</Text>
                   </View>
-                  <Text style={{ flex: 1, fontSize: 12.5, color: T.textSoft }}>Na página, siga uma das opções (colar comando, baixar ou pela rede).</Text>
+                  <Text style={{ flex: 1, fontSize: 12.5, color: T.textSoft }}>Na página, siga uma das opções: colar o comando ou baixar o programa.</Text>
                 </View>
                 <Text style={{ fontSize: 11, color: T.faint, marginTop: 2 }}>
                   O código já vai no endereço. Vale alguns minutos e serve uma vez só.
