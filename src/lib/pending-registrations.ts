@@ -27,6 +27,12 @@ export type PendingForm = {
   initialQty?: number;
   technicalSpecs?: Array<{ key: string; value: string }>;
   notes?: string;
+  /**
+   * Máquina do SDX Nuntius vinculada. Vai junto na pendência: se o cadastro for
+   * interrompido por falta de uma cópia da etiqueta, o vínculo não se perde e o
+   * técnico não precisa refazer a confirmação na máquina.
+   */
+  machineId?: string;
   // Fotos capturadas localmente (URIs) — enviadas ao servidor APÓS o cadastro.
   mainPhotoUri?: string | null;
   attachmentUris?: string[];

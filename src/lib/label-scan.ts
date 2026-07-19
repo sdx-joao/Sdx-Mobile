@@ -19,3 +19,23 @@ export function parseLabelScan(raw: string): { code: string; copy: number } | nu
  * (HOJCB-000001, HMMRC-000001) ou o legado ETQ-000001.
  */
 export const isLabelCode = (code: string) => /^[A-Z]{2,10}-?\d{1,10}$/i.test(code);
+
+/**
+ * QR exibido na tela do PC pelo SDX Nuntius — identifica a MÁQUINA, não a
+ * etiqueta:
+ *   https://app.scandexplus.com.br/i/m/<token>
+ *   servus://i/m/<token>
+ *
+ * ⚠️ Precisa ser testado ANTES de `parseLabelScan`: aquele casa `/i/(...)` e
+ * capturaria "m" como se fosse código de etiqueta.
+ *
+ * O token preserva a caixa (é aleatório, base64url) — diferente da etiqueta,
+ * que é normalizada para maiúsculas.
+ */
+export function parseMachinePairScan(raw: string): string | null {
+  const v = (raw || '').trim();
+  const m = v.match(/\/i\/m\/([^/?#\s]+)/i) || v.match(/^servus:\/\/i\/m\/([^/?#\s]+)/i);
+  if (!m) return null;
+  const token = decodeURIComponent(m[1]);
+  return token.length >= 20 ? token : null;
+}

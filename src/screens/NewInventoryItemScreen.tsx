@@ -10,6 +10,8 @@ import { DetailScaffold, FieldLabel, PrimaryButton, SectionCard } from '../compo
 import { SuggestedInput } from '../components/SuggestedInput';
 import { ScanFieldModal } from '../components/ScanFieldModal';
 import { SpecCollectModal } from '../components/SpecCollectModal';
+import { MachineLinkModal } from '../components/MachineLinkModal';
+import type { DetectedMachine } from '../api/mobile';
 import { Icon } from '../components/Icon';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
@@ -69,6 +71,9 @@ export function NewInventoryItemScreen() {
   const [scanField, setScanField] = useState<'sku' | 'serial' | null>(null);
   // Coleta de specs pelo PC (script + código). Ver SpecCollectModal.
   const [collectingSpecs, setCollectingSpecs] = useState(false);
+  // Vínculo com máquina do SDX Nuntius. Ver MachineLinkModal.
+  const [linkingMachine, setLinkingMachine] = useState(false);
+  const [linkedMachine, setLinkedMachine] = useState<DetectedMachine | null>(null);
 
   const optionsLoader = useCallback(() => getOptions(token, [...OPTION_KINDS]), [token]);
   const { data: options } = useResource(optionsLoader);
@@ -174,6 +179,8 @@ export function NewInventoryItemScreen() {
       unit, minQty: Number(minQty) || 0, maxQty: Number(maxQty) || 0, initialQty: Number(initialQty) || 0,
       technicalSpecs: specs, notes,
       mainPhotoUri, attachmentUris,
+      // Promove a máquina a patrimônio na MESMA transação do item (§5.7).
+      machineId: linkedMachine?.id,
     };
     const validated = resumeValidated ?? (firstCopy >= 1 && firstCopy <= copies ? [firstCopy] : []);
     nav.replace('InventoryCopyValidation', { labelCode: code, copies, validated, form });
@@ -272,6 +279,38 @@ export function NewInventoryItemScreen() {
 
       {step === 1 && (
         <SectionCard title="Especificações técnicas">
+          {/* Caminho preferencial: a máquina tem o SDX Nuntius e já mandou tudo.
+              Fica ANTES do "puxar dados do PC" porque não exige rodar script
+              nenhum — é só confirmar que é aquela máquina. */}
+          {linkedMachine ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#22C55E14', borderWidth: 1, borderColor: '#22C55E55', borderRadius: 11, padding: 12, marginBottom: 12 }}>
+              <Icon name="check-circle" size={18} color="#22C55E" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: T.text }}>
+                  Máquina vinculada{linkedMachine.hostname ? ` · ${linkedMachine.hostname}` : ''}
+                </Text>
+                <Text style={{ fontSize: 11, color: T.muted }}>
+                  {[linkedMachine.brand, linkedMachine.model].filter(Boolean).join(' ') || 'dados preenchidos'}
+                </Text>
+              </View>
+              <Pressable onPress={() => setLinkedMachine(null)} hitSlop={8}>
+                <Icon name="x" size={16} color={T.muted} />
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => setLinkingMachine(true)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: `${T.primary}0E`, borderWidth: 1, borderColor: `${T.primary}44`, borderRadius: 11, padding: 12, marginBottom: 12 }}
+            >
+              <Icon name="monitor" size={18} color={T.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: T.primary }}>Vincular máquina</Text>
+                <Text style={{ fontSize: 11, color: T.muted }}>Se ela tem o SDX Nuntius: preenche tudo sozinho</Text>
+              </View>
+              <Icon name="chevron-right" size={16} color={T.primary} />
+            </Pressable>
+          )}
+
           {/* Se a máquina está ligada, o PC entrega tudo pronto — série, CPU, RAM,
               discos e até os monitores. Poupa digitar (e errar) na frente do rack. */}
           <Pressable
@@ -379,6 +418,41 @@ export function NewInventoryItemScreen() {
           // do gabinete — quem decide se viram patrimônio é o técnico.
           if (collected.monitores?.length) {
             const linhas = collected.monitores.map(m => `Monitor: ${m.fabricante} ${m.nome} — série ${m.serie}`).join('\n');
+            setNotes((prev) => (prev.trim() ? `${prev}\n${linhas}` : linhas));
+          }
+        }}
+      />
+
+      <MachineLinkModal
+        visible={linkingMachine}
+        onClose={() => setLinkingMachine(false)}
+        onLinked={(m) => {
+          setLinkedMachine(m);
+          // Só preenche o que está VAZIO — o que o técnico já digitou olhando o
+          // equipamento tem precedência sobre o que a máquina informa.
+          if (m.biosSerial && !serialNumber.trim()) setSerialNumber(m.biosSerial);
+          if (m.brand && !brand.trim()) setBrand(m.brand);
+          if (m.model && !model.trim()) setModel(m.model);
+          if (m.operatingSystem && !operatingSystem.trim()) setOperatingSystem(m.operatingSystem);
+          // Patrimônio gravado na BIOS vira sugestão de patrimônio ANTERIOR.
+          if (m.biosAssetTag && !assetTag.trim()) setAssetTag(m.biosAssetTag);
+          if (m.chassisType && !category.trim()) setCategory(m.chassisType);
+          if (!name.trim()) {
+            const auto = [m.brand, m.model].filter(Boolean).join(' ').trim();
+            if (auto) setName(auto);
+          }
+          setSpecs((prev) => {
+            const seen = new Set(prev.map((s) => s.key.trim().toUpperCase()));
+            const novas = (m.technicalSpecs ?? []).filter((s) => !seen.has(s.key.trim().toUpperCase()));
+            return [...prev, ...novas];
+          });
+          // Monitores ficam na observação até alguém decidir promovê-los a
+          // patrimônio próprio — o que exige etiqueta própria neles.
+          const naoCadastrados = (m.devices ?? []).filter((d) => !d.itemId);
+          if (naoCadastrados.length) {
+            const linhas = naoCadastrados
+              .map((d) => `Monitor: ${d.manufacturer} ${d.name} — série ${d.serial}`)
+              .join('\n');
             setNotes((prev) => (prev.trim() ? `${prev}\n${linhas}` : linhas));
           }
         }}

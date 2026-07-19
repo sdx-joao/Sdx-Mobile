@@ -406,10 +406,87 @@ export function resolveInventoryLabel(token: string | null, code: string) {
   );
 }
 
+/* ---------------------------------------------------------------------------
+ * SDX Nuntius — máquinas que se cadastram sozinhas
+ * Desenho: docs/INVENTORY_AGENT_AND_REMOTE.md (repo ScandexGed), §5.12.
+ * ------------------------------------------------------------------------- */
+
+export type MachineDevice = {
+  kind: string;
+  name: string;
+  serial: string;
+  manufacturer: string;
+  /** Preenchido quando o dispositivo JÁ é patrimônio — não oferecer "promover". */
+  itemId: string | null;
+  itemName: string | null;
+  labelCode: string | null;
+};
+
+export type DetectedMachine = {
+  id: string;
+  hostname: string | null;
+  biosSerial: string | null;
+  biosAssetTag?: string | null;
+  chassisType?: string | null;
+  macAddress?: string | null;
+  brand: string | null;
+  model: string | null;
+  operatingSystem: string | null;
+  technicalSpecs?: InventorySpec[];
+  devices?: MachineDevice[];
+  unitName: string | null;
+  online?: boolean;
+  lastSeenAt?: string | null;
+};
+
+/** Fila de máquinas detectadas — para escolher qual vincular ao cadastro. */
+export async function getDetectedMachines(token: string | null, q?: string) {
+  const qs = q ? `?q=${encodeURIComponent(q)}` : '';
+  return apiFetch<{ canRegister: boolean; machines: DetectedMachine[] }>(
+    `/api/mobile/inventory/machines${qs}`,
+    { token },
+  );
+}
+
+/** Resolve o QR exibido na tela do PC (URL /i/m/<token>). */
+export function resolveMachinePairToken(token: string | null, pairToken: string) {
+  return apiFetch<{
+    ok: true;
+    machine: DetectedMachine;
+    itemId: string | null;
+    canRegister: boolean;
+  }>(`/api/mobile/inventory/machines/pair/${encodeURIComponent(pairToken)}`, { token });
+}
+
+/**
+ * "Mostre-se": pede que a máquina exiba um código na própria tela. O agente traz
+ * a janela para frente em até ~10s. Prova de presença sem depender da câmera
+ * acertar um monitor sujo ou torto.
+ */
+export function requestMachinePairCode(token: string | null, machineId: string) {
+  return apiFetch<{
+    ok: true;
+    code: string;
+    hostname: string | null;
+    expiresInSeconds: number;
+    appearsInSeconds: number;
+  }>(`/api/mobile/inventory/machines/${machineId}/show-pair`, { token, method: 'POST', body: {} });
+}
+
+/** O técnico confirmou que o código do app é o mesmo da tela do PC. */
+export function confirmMachinePair(token: string | null, machineId: string, code: string) {
+  return apiFetch<{ ok: true; machine: DetectedMachine }>(
+    `/api/mobile/inventory/machines/${machineId}/confirm-pair`,
+    { token, method: 'POST', body: { code } },
+  );
+}
+
 export type InventorySpec = { key: string; value: string };
 export type NewInventoryItemInput = {
   labelCode?: string;
   validatedCopies?: number[];
+  /** Máquina do Nuntius sendo promovida a patrimônio neste mesmo cadastro. */
+  machineId?: string;
   name: string;
   itemType?: 'equipment' | 'consumable';
   category?: string;

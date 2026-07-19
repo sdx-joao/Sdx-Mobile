@@ -8,8 +8,8 @@ import { Icon } from '../components/Icon';
 import { T, INV_TYPE } from '../theme/theme';
 import type { InventoryItem } from '../data/mock';
 import { useAuth } from '../auth/auth-context';
-import { getInventory, resolveAsset, resolveInventoryLabel } from '../api/mobile';
-import { parseLabelScan, isLabelCode } from '../lib/label-scan';
+import { getInventory, resolveAsset, resolveInventoryLabel, resolveMachinePairToken } from '../api/mobile';
+import { parseLabelScan, isLabelCode, parseMachinePairScan } from '../lib/label-scan';
 import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -72,6 +72,29 @@ export function ScanScreen() {
   const onScanned = async (code: string) => {
     if (locked.current) return;
     setScanError(null);
+
+    // QR da tela do PC (SDX Nuntius): identifica a MÁQUINA, não a etiqueta.
+    // ⚠️ Precisa vir ANTES de parseLabelScan, que casaria "/i/m" como etiqueta.
+    // O cadastro continua começando pela etiqueta (§5.12): aqui só informamos o
+    // caminho, para o técnico não achar que o QR está com defeito.
+    const pairToken = parseMachinePairScan(code);
+    if (pairToken) {
+      locked.current = true;
+      try {
+        const res = await resolveMachinePairToken(token, pairToken);
+        if (res.itemId) {
+          setTimeout(() => nav.replace('InventoryDetail', { id: res.itemId as string }), 400);
+          return;
+        }
+        const nome = [res.machine.brand, res.machine.model].filter(Boolean).join(' ')
+          || res.machine.hostname || 'Máquina';
+        setScanError(`${nome} está aguardando cadastro. Escaneie a ETIQUETA colada nela para começar — os dados dela entram automaticamente.`);
+      } catch {
+        setScanError('QR da máquina expirado. Abra o SDX Nuntius nela ou use a lista de máquinas no cadastro.');
+      }
+      locked.current = false;
+      return;
+    }
 
     // Etiqueta genérica (ETQ-…): resolve — vinculada abre o item; disponível abre
     // o cadastro passando o nº de cópias e a cópia escaneada (já conta na validação).
