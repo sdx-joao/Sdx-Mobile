@@ -147,12 +147,12 @@ export function NuntiusUnlockFab() {
     <>
       <Pressable
         onPress={() => setOpen(true)}
-        // bottom leva em conta a altura do TabBar; à direita fica um pouco
-        // acima da margem para não brigar com a lista rolando por baixo.
+        // ~2cm acima da posição anterior (96): a 160dp/pol, 2cm ≈ 126dp. Em
+        // 96 o botão encostava no TabBar e disputava o polegar com ele.
         style={{
           position: 'absolute',
           right: 18,
-          bottom: 96,
+          bottom: 222,
           width: 56,
           height: 56,
           borderRadius: 28,
@@ -167,7 +167,7 @@ export function NuntiusUnlockFab() {
         }}
         accessibilityLabel="Ler QR de desbloqueio"
       >
-        <Icon name="maximize" size={22} color="#fff" />
+        <Icon name="qr" size={24} color="#fff" />
       </Pressable>
       <NuntiusUnlockScanner visible={open} onClose={() => setOpen(false)} />
     </>
