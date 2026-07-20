@@ -448,6 +448,30 @@ export async function getDetectedMachines(token: string | null, q?: string) {
   );
 }
 
+/**
+ * Destranca a janela do SDX Nuntius (§6.2).
+ *
+ * A biometria do celular já rodou ANTES desta chamada — ela prova quem está com
+ * o aparelho na mão. Este endpoint confere se essa pessoa tem canManageInventory
+ * no sistema. Uma coisa não substitui a outra.
+ */
+export function unlockNuntiusMachine(token: string | null, scannedToken: string) {
+  return apiFetch<{
+    ok: true;
+    machine: {
+      id: string;
+      hostname: string | null;
+      brand: string | null;
+      model: string | null;
+      unitName: string | null;
+    };
+  }>('/api/mobile/inventory/machines/unlock', {
+    method: 'POST',
+    token,
+    body: { token: scannedToken },
+  });
+}
+
 /** Resolve o QR exibido na tela do PC (URL /i/m/<token>). */
 export function resolveMachinePairToken(token: string | null, pairToken: string) {
   return apiFetch<{

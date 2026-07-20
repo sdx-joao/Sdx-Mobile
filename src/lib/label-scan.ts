@@ -39,3 +39,17 @@ export function parseMachinePairScan(raw: string): string | null {
   const token = decodeURIComponent(m[1]);
   return token.length >= 20 ? token : null;
 }
+
+/**
+ * QR de DESBLOQUEIO da janela do SDX Nuntius (§6.2). Mesmo formato do de
+ * pareamento, prefixo /i/u/. Separado de propósito: no lado servidor, aceitar
+ * um pelo outro anularia o bloqueio (o QR de vínculo seria útil para destravar
+ * e vice-versa).
+ */
+export function parseMachineUnlockScan(raw: string): string | null {
+  const v = (raw || '').trim();
+  const m = v.match(/\/i\/u\/([^/?#\s]+)/i) || v.match(/^servus:\/\/i\/u\/([^/?#\s]+)/i);
+  if (!m) return null;
+  const token = decodeURIComponent(m[1]);
+  return token.length >= 20 ? token : null;
+}
