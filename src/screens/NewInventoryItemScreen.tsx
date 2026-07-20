@@ -111,6 +111,14 @@ export function NewInventoryItemScreen() {
 
   // Câmera
   const [capturing, setCapturing] = useState<null | 'main' | 'attachment'>(null);
+
+  /** Blocos que a máquina não tem como preencher sozinha. */
+  const pendingBlocks = [
+    !unitName.trim() && 'unidade',
+    !room.trim() && 'setor',
+    !mainPhotoUri && 'foto',
+    !equipmentStatus.trim() && 'estado',
+  ].filter(Boolean) as string[];
   const [permission, requestPermission] = useCameraPermissions();
   const camRef = useRef<CameraView | null>(null);
 
@@ -292,6 +300,15 @@ export function NewInventoryItemScreen() {
                 <Text style={{ fontSize: 11, color: T.muted }}>
                   {[linkedMachine.brand, linkedMachine.model].filter(Boolean).join(' ') || 'dados preenchidos'}
                 </Text>
+                {/* O Nuntius entrega o que a máquina sabe de si; o resto só
+                    existe no mundo físico e ninguém além do técnico ali na
+                    frente pode informar. Listar o que falta evita cadastro
+                    salvo pela metade por parecer "já preenchido". */}
+                {pendingBlocks.length > 0 && (
+                  <Text style={{ fontSize: 11, color: '#B45309', marginTop: 3 }}>
+                    Falta preencher: {pendingBlocks.join(' · ')}
+                  </Text>
+                )}
               </View>
               <Pressable onPress={() => setLinkedMachine(null)} hitSlop={8}>
                 <Icon name="x" size={16} color={T.muted} />
@@ -437,6 +454,7 @@ export function NewInventoryItemScreen() {
           // Patrimônio gravado na BIOS vira sugestão de patrimônio ANTERIOR.
           if (m.biosAssetTag && !assetTag.trim()) setAssetTag(m.biosAssetTag);
           if (m.chassisType && !category.trim()) setCategory(m.chassisType);
+          if (m.unitName && !unitName.trim()) setUnitName(m.unitName);
           if (!name.trim()) {
             const auto = [m.brand, m.model].filter(Boolean).join(' ').trim();
             if (auto) setName(auto);
