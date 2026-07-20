@@ -241,6 +241,48 @@ export function NewInventoryItemScreen() {
         ))}
       </View>
 
+      {/* Fica no TOPO do cadastro, não nas Especificações: é ele que preenche
+          nome, marca, modelo, série, categoria e unidade. Escondido na aba
+          seguinte, o técnico digitava tudo à mão e só depois descobria que a
+          máquina teria preenchido. É o complemento do cadastro — vem primeiro. */}
+      {step === 0 && isEquip && (linkedMachine ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#22C55E14', borderWidth: 1, borderColor: '#22C55E55', borderRadius: 11, padding: 12, marginBottom: 12 }}>
+          <Icon name="check-circle" size={18} color="#22C55E" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: T.text }}>
+              Máquina vinculada{linkedMachine.hostname ? ` · ${linkedMachine.hostname}` : ''}
+            </Text>
+            <Text style={{ fontSize: 11, color: T.muted }}>
+              {[linkedMachine.brand, linkedMachine.model].filter(Boolean).join(' ') || 'dados preenchidos'}
+            </Text>
+            {/* O Nuntius entrega o que a máquina sabe de si; o resto só
+                existe no mundo físico e ninguém além do técnico ali na
+                frente pode informar. Listar o que falta evita cadastro
+                salvo pela metade por parecer "já preenchido". */}
+            {pendingBlocks.length > 0 && (
+              <Text style={{ fontSize: 11, color: '#B45309', marginTop: 3 }}>
+                Falta preencher: {pendingBlocks.join(' · ')}
+              </Text>
+            )}
+          </View>
+          <Pressable onPress={() => setLinkedMachine(null)} hitSlop={8}>
+            <Icon name="x" size={16} color={T.muted} />
+          </Pressable>
+        </View>
+      ) : (
+        <Pressable
+          onPress={() => setLinkingMachine(true)}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: `${T.primary}0E`, borderWidth: 1, borderColor: `${T.primary}44`, borderRadius: 11, padding: 12, marginBottom: 12 }}
+        >
+          <Icon name="monitor" size={18} color={T.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: T.primary }}>Vincular máquina</Text>
+            <Text style={{ fontSize: 11, color: T.muted }}>Se ela tem o SDX Nuntius: preenche tudo sozinho</Text>
+          </View>
+          <Icon name="chevron-right" size={16} color={T.primary} />
+        </Pressable>
+      ))}
+
       {step === 0 && (
         <SectionCard title="Dados do item">
           <View style={{ gap: 14 }}>
@@ -287,47 +329,6 @@ export function NewInventoryItemScreen() {
 
       {step === 1 && (
         <SectionCard title="Especificações técnicas">
-          {/* Caminho preferencial: a máquina tem o SDX Nuntius e já mandou tudo.
-              Fica ANTES do "puxar dados do PC" porque não exige rodar script
-              nenhum — é só confirmar que é aquela máquina. */}
-          {linkedMachine ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#22C55E14', borderWidth: 1, borderColor: '#22C55E55', borderRadius: 11, padding: 12, marginBottom: 12 }}>
-              <Icon name="check-circle" size={18} color="#22C55E" />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: T.text }}>
-                  Máquina vinculada{linkedMachine.hostname ? ` · ${linkedMachine.hostname}` : ''}
-                </Text>
-                <Text style={{ fontSize: 11, color: T.muted }}>
-                  {[linkedMachine.brand, linkedMachine.model].filter(Boolean).join(' ') || 'dados preenchidos'}
-                </Text>
-                {/* O Nuntius entrega o que a máquina sabe de si; o resto só
-                    existe no mundo físico e ninguém além do técnico ali na
-                    frente pode informar. Listar o que falta evita cadastro
-                    salvo pela metade por parecer "já preenchido". */}
-                {pendingBlocks.length > 0 && (
-                  <Text style={{ fontSize: 11, color: '#B45309', marginTop: 3 }}>
-                    Falta preencher: {pendingBlocks.join(' · ')}
-                  </Text>
-                )}
-              </View>
-              <Pressable onPress={() => setLinkedMachine(null)} hitSlop={8}>
-                <Icon name="x" size={16} color={T.muted} />
-              </Pressable>
-            </View>
-          ) : (
-            <Pressable
-              onPress={() => setLinkingMachine(true)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: `${T.primary}0E`, borderWidth: 1, borderColor: `${T.primary}44`, borderRadius: 11, padding: 12, marginBottom: 12 }}
-            >
-              <Icon name="monitor" size={18} color={T.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: T.primary }}>Vincular máquina</Text>
-                <Text style={{ fontSize: 11, color: T.muted }}>Se ela tem o SDX Nuntius: preenche tudo sozinho</Text>
-              </View>
-              <Icon name="chevron-right" size={16} color={T.primary} />
-            </Pressable>
-          )}
-
           {/* Se a máquina está ligada, o PC entrega tudo pronto — série, CPU, RAM,
               discos e até os monitores. Poupa digitar (e errar) na frente do rack. */}
           <Pressable
