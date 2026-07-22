@@ -38,7 +38,9 @@ export function InventoryScreen() {
     { key: 'FERRAMENTA', label: 'Ferramentas', count: counts.FERRAMENTA },
   ].filter((c) => c.count);
 
-  const list = inventory.filter((i) => {
+  // useMemo: sem isto o filtro roda e recria o array a cada render (inclusive a
+  // cada tecla da busca), anulando o memo dos cards.
+  const list = useMemo(() => inventory.filter((i) => {
     if (filter !== 'all' && i.primaryType !== filter) return false;
     if (q) {
       // Busca também por unidade/setor — é assim que o técnico procura ("o que
@@ -48,9 +50,14 @@ export function InventoryScreen() {
       if (!t.includes(q.toLowerCase())) return false;
     }
     return true;
-  });
+  }), [inventory, filter, q]);
 
-  const openItem = (it: InventoryItem) => nav.navigate('InventoryDetail', { id: it.id });
+  // useCallback: `onOpen` com identidade nova a cada render faria o memo do
+  // InvCard nunca segurar — todos os cards re-renderizariam mesmo assim.
+  const openItem = useCallback(
+    (it: InventoryItem) => nav.navigate('InventoryDetail', { id: it.id }),
+    [nav],
+  );
 
   return (
     <ModuleScreen

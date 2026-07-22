@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { Animated, Image, Pressable, Text, View } from 'react-native';
 import { useAuth } from '../auth/auth-context';
 import { API_BASE_URL } from '../api/client';
@@ -158,9 +158,20 @@ export function WOCard({
 }
 
 // ── Cartão de item de inventário ────────────────────────────────────────────
-export function InvCard({ item, onOpen, accent = T.primary }: { item: InventoryItem; onOpen: (it: InventoryItem) => void; accent?: string }) {
+/**
+ * `memo`: sem isto, cada tecla digitada na busca re-renderiza TODOS os cards da
+ * lista (o filtro recria o array a cada render). Com dezenas de itens isso
+ * engasga a digitação e a rolagem.
+ */
+export const InvCard = memo(function InvCard({ item, onOpen, accent = T.primary }: { item: InventoryItem; onOpen: (it: InventoryItem) => void; accent?: string }) {
   const { token } = useAuth();
-  const photoUri = item.mainPhotoUrl ? `${API_BASE_URL}${item.mainPhotoUrl}` : null;
+  // MINIATURA, não a foto inteira. A original pode ter 3MB / 4080x3060 — baixar
+  // e decodificar isso para desenhar 46px consumia ~50MB de RAM POR ITEM, e era
+  // o que travava a rolagem da lista em celular fraco. `w=144` cobre telas 3x e
+  // sai com ~1-3KB. O detalhe do item continua pedindo a foto cheia.
+  const photoUri = item.mainPhotoUrl
+    ? `${API_BASE_URL}${item.mainPhotoUrl}${item.mainPhotoUrl.includes('?') ? '&' : '?'}w=144`
+    : null;
   const tone = stockStatusOf(item);
   const ty = INV_TYPE[item.primaryType];
   const isEquip = item.itemType === 'equipment';
@@ -247,7 +258,7 @@ export function InvCard({ item, onOpen, accent = T.primary }: { item: InventoryI
       )}
     </Pressable>
   );
-}
+});
 
 // ── Linha de movimentação ───────────────────────────────────────────────────
 export function MovementRow({ m }: { m: Movement }) {
