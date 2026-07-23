@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { Icon } from './Icon';
 import { T } from '../theme/theme';
@@ -27,11 +27,14 @@ export function InvolvedEquipmentBlock({
   const [loading, setLoading] = useState(false);
   const [freeText, setFreeText] = useState('');
   const [scanOpen, setScanOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const scanLock = useRef(false);
 
-  // Browse (q vazio) = lista equipamentos patrimoniados, como um select; digitar filtra.
+  // Browse (q vazio) = lista equipamentos patrimoniados; digitar filtra. Só busca
+  // com o seletor aberto — não consome rede à toa.
   useEffect(() => {
+    if (!pickerOpen) return;
     const term = query.trim();
     let alive = true;
     setLoading(true);
@@ -51,18 +54,18 @@ export function InvolvedEquipmentBlock({
       }
     }, term ? 350 : 0);
     return () => { alive = false; clearTimeout(timer); };
-  }, [query, token]);
+  }, [query, token, pickerOpen]);
 
   const has = (id: string) => value.some((e) => e.itemId === id);
   const addItem = (it: { id: string; name: string; assetTag: string | null }) => {
     if (!has(it.id)) onChange([...value, { itemId: it.id, itemName: it.name, itemAssetTag: it.assetTag, problemNote: null }]);
-    setQuery('');
+    setQuery(''); setPickerOpen(false);
   };
   const addFree = () => {
     const t = upper(freeText.trim());
     if (!t) return;
     onChange([...value, { freeText: t, problemNote: null }]);
-    setFreeText('');
+    setFreeText(''); setPickerOpen(false);
   };
 
   const openScanner = async () => {
@@ -71,6 +74,7 @@ export function InvolvedEquipmentBlock({
       if (!res.granted) return;
     }
     scanLock.current = false;
+    setPickerOpen(false);
     setScanOpen(true);
   };
   const onScanned = async ({ data }: BarcodeScanningResult) => {
@@ -123,57 +127,65 @@ export function InvolvedEquipmentBlock({
         </View>
       ))}
 
-      {/* Ler QR da etiqueta (câmera) */}
-      <Pressable onPress={openScanner}
-        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 44, borderRadius: 11, borderWidth: 1, borderColor: T.primary, backgroundColor: `${T.primary}0E` }}>
-        <Icon name="qr" size={16} color={T.primary} />
-        <Text style={{ fontSize: 13.5, fontWeight: '800', color: T.primary }}>Ler QR da etiqueta</Text>
+      {/* Abre o seletor (bottom-sheet), igual ao Solicitante — não polui a tela. */}
+      <Pressable onPress={() => { setQuery(''); setPickerOpen(true); }}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 46, borderRadius: 11, borderWidth: 1, borderColor: T.primary, backgroundColor: `${T.primary}0E` }}>
+        <Icon name="plus" size={16} color={T.primary} />
+        <Text style={{ fontSize: 13.5, fontWeight: '800', color: T.primary }}>Adicionar equipamento</Text>
       </Pressable>
 
-      {/* Busca no inventário (select dos patrimoniados) */}
-      <View>
-        <View style={{ height: 46, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Icon name="search" size={15} color={T.muted} />
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Selecione um patrimoniado ou busque…"
-            placeholderTextColor={T.faint}
-            style={{ flex: 1, fontSize: 14, color: T.text }}
-          />
-          {loading && <ActivityIndicator size="small" color={T.primary} />}
-        </View>
-        {results.length > 0 && (
-          <View style={{ marginTop: 6, borderRadius: 10, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface, overflow: 'hidden' }}>
-            {results.map((it) => (
-              <Pressable key={it.id} onPress={() => addItem(it)} disabled={has(it.id)}
-                style={{ paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: T.border, opacity: has(it.id) ? 0.4 : 1 }}>
-                <Text style={{ fontSize: 13.5, fontWeight: '700', color: T.text }}>{it.name}</Text>
-                <Text style={{ fontSize: 11, color: T.faint }}>
-                  {[it.assetTag, [it.unitName, it.room].filter(Boolean).join(' / ')].filter(Boolean).join('  ·  ') || 'sem local'}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
-      </View>
+      {/* Seletor bottom-sheet: busca + lista contida + QR + texto livre */}
+      <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
+        <Pressable onPress={() => setPickerOpen(false)} style={{ flex: 1, backgroundColor: 'rgba(15,23,42,.45)', justifyContent: 'flex-end' }}>
+          <Pressable onPress={() => {}} style={{ backgroundColor: T.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: 520, paddingTop: 10, paddingBottom: 24 }}>
+            <View style={{ alignItems: 'center', paddingBottom: 8 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: T.border }} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 10 }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: T.text }}>Equipamento envolvido</Text>
+              <Pressable onPress={() => setPickerOpen(false)} hitSlop={10}><Icon name="x" size={20} color={T.muted} /></Pressable>
+            </View>
 
-      {/* Sem cadastro (texto livre) */}
-      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-        <TextInput
-          value={freeText}
-          onChangeText={setFreeText}
-          placeholder="Sem cadastro? Descreva (ex.: Impressora HP recepção)"
-          placeholderTextColor={T.faint}
-          onSubmitEditing={addFree}
-          style={{ flex: 1, height: 44, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, paddingHorizontal: 12, fontSize: 13.5, color: T.text }}
-        />
-        <Pressable onPress={addFree} disabled={!freeText.trim()}
-          style={{ height: 44, paddingHorizontal: 14, borderRadius: 11, borderWidth: 1, borderColor: T.primary, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5, opacity: freeText.trim() ? 1 : 0.5 }}>
-          <Icon name="plus" size={15} color={T.primary} />
-          <Text style={{ fontSize: 13, fontWeight: '800', color: T.primary }}>Add</Text>
+            <View style={{ paddingHorizontal: 16, gap: 10 }}>
+              <Pressable onPress={openScanner}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 44, borderRadius: 11, borderWidth: 1, borderColor: T.primary, backgroundColor: `${T.primary}0E` }}>
+                <Icon name="qr" size={16} color={T.primary} />
+                <Text style={{ fontSize: 13.5, fontWeight: '800', color: T.primary }}>Ler QR da etiqueta</Text>
+              </Pressable>
+
+              <View style={{ height: 46, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Icon name="search" size={15} color={T.muted} />
+                <TextInput value={query} onChangeText={setQuery} placeholder="Buscar patrimoniado…" placeholderTextColor={T.faint} autoFocus style={{ flex: 1, fontSize: 14, color: T.text }} />
+                {loading && <ActivityIndicator size="small" color={T.primary} />}
+              </View>
+            </View>
+
+            <ScrollView keyboardShouldPersistTaps="handled" style={{ marginTop: 8 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+              {results.map((it) => (
+                <Pressable key={it.id} onPress={() => addItem(it)} disabled={has(it.id)}
+                  style={{ paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: T.border, opacity: has(it.id) ? 0.4 : 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{it.name}</Text>
+                  <Text style={{ fontSize: 11.5, color: T.faint }}>
+                    {[it.assetTag, [it.unitName, it.room].filter(Boolean).join(' / ')].filter(Boolean).join('  ·  ') || 'sem local'}
+                  </Text>
+                </Pressable>
+              ))}
+              {!loading && results.length === 0 && (
+                <Text style={{ fontSize: 12.5, color: T.muted, paddingVertical: 12 }}>Nenhum equipamento. Use a descrição abaixo.</Text>
+              )}
+            </ScrollView>
+
+            <View style={{ paddingHorizontal: 16, paddingTop: 8, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+              <TextInput value={freeText} onChangeText={setFreeText} placeholder="Sem cadastro? Descreva…" placeholderTextColor={T.faint} onSubmitEditing={addFree}
+                style={{ flex: 1, height: 44, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, paddingHorizontal: 12, fontSize: 13.5, color: T.text }} />
+              <Pressable onPress={addFree} disabled={!freeText.trim()}
+                style={{ height: 44, paddingHorizontal: 16, borderRadius: 11, backgroundColor: T.primary, alignItems: 'center', justifyContent: 'center', opacity: freeText.trim() ? 1 : 0.5 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>Adicionar</Text>
+              </Pressable>
+            </View>
+          </Pressable>
         </Pressable>
-      </View>
+      </Modal>
 
       {/* Câmera de leitura do QR/etiqueta */}
       <Modal visible={scanOpen} animationType="slide" onRequestClose={() => setScanOpen(false)}>
