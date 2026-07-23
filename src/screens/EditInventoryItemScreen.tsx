@@ -14,7 +14,8 @@ import { useAuth } from '../auth/auth-context';
 import { API_BASE_URL } from '../api/client';
 import {
   getInventoryItem, getOptions, updateInventoryItem, uploadInventoryPhoto,
-  type InventorySpec, type SelectOption, type SelectOptionKind,
+  getSpecSuggestions, mergeSpecsFillEmpty,
+  type InventorySpec, type SelectOption, type SelectOptionKind, type SpecTwin,
 } from '../api/mobile';
 import { showToast } from '../lib/toast';
 import type { RootStackParamList } from '../navigation/types';
@@ -80,6 +81,7 @@ export function EditInventoryItemScreen() {
   const [currentLocation, setCurrentLocation] = useState('');
   const [notes, setNotes] = useState('');
   const [specs, setSpecs] = useState<InventorySpec[]>([]);
+  const [specTwins, setSpecTwins] = useState<SpecTwin[]>([]);
   const [mainPhotoUrl, setMainPhotoUrl] = useState<string | null>(null);
 
   // Câmera embutida pra trocar/adicionar foto sem sair da tela.
@@ -120,6 +122,26 @@ export function EditInventoryItemScreen() {
   }, [token, itemId]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Sugestão de specs de aparelho-gêmeo (mesma marca+modelo+categoria), excluindo este item.
+  useEffect(() => {
+    if (!brand.trim() || !model.trim() || !category.trim()) { setSpecTwins([]); return; }
+    let alive = true;
+    const timer = setTimeout(async () => {
+      try {
+        const found = await getSpecSuggestions(token, { brand, model, category, excludeId: itemId });
+        if (alive) setSpecTwins(found);
+      } catch { if (alive) setSpecTwins([]); }
+    }, 450);
+    return () => { alive = false; clearTimeout(timer); };
+  }, [brand, model, category, token, itemId]);
+
+  const importSpecsFromTwin = (twin: SpecTwin) => {
+    const { merged, applied } = mergeSpecsFillEmpty(specs, twin.technicalSpecs);
+    setSpecs(merged);
+    setSpecTwins([]);
+    showToast(applied ? `${applied} especificaç${applied === 1 ? 'ão importada' : 'ões importadas'}` : 'Nada a preencher');
+  };
 
   const opts = (kind: SelectOptionKind) => options.filter(o => o.kind === kind);
 
@@ -275,6 +297,23 @@ export function EditInventoryItemScreen() {
           <Text style={{ color: T.primary, fontSize: 12.5, fontWeight: '700' }}>Adicionar</Text>
         </Pressable>
       }>
+        {specTwins.length > 0 && (
+          <Pressable
+            onPress={() => importSpecsFromTwin(specTwins[0])}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: `${T.primary}12`, borderWidth: 1, borderColor: `${T.primary}55`, borderRadius: 11, padding: 12, marginBottom: 10 }}
+          >
+            <Icon name="layers" size={18} color={T.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: T.primary }}>
+                Importar de aparelho igual{specTwins.length > 1 ? ` (${specTwins.length})` : ''}
+              </Text>
+              <Text style={{ fontSize: 11, color: T.muted }}>
+                Copia as especificações do mais recente ({specTwins[0].technicalSpecs.length}) — só preenche o que está vazio
+              </Text>
+            </View>
+            <Icon name="chevron-right" size={16} color={T.primary} />
+          </Pressable>
+        )}
         <View style={{ gap: 9 }}>
           {specs.length === 0 && <Text style={{ fontSize: 12.5, color: T.muted }}>Nenhuma especificação.</Text>}
           {specs.map((s, i) => (

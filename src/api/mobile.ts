@@ -370,6 +370,43 @@ export function getInventoryItem(token: string | null, id: string) {
   return apiFetch<{ item: InventoryItem; movements: Movement[] }>(`/api/mobile/inventory/${id}`, { token });
 }
 
+export type SpecTwin = { id: string; name: string; createdAt: string | null; technicalSpecs: Array<{ key: string; value: string }> };
+
+/** Aparelhos-gêmeos (mesma marca+modelo+categoria) com specs, pra importar o molde. */
+export async function getSpecSuggestions(
+  token: string | null,
+  params: { brand: string; model: string; category: string; excludeId?: string },
+): Promise<SpecTwin[]> {
+  const qs = new URLSearchParams({ brand: params.brand, model: params.model, category: params.category });
+  if (params.excludeId) qs.set('excludeId', params.excludeId);
+  const res = await apiFetch<{ suggestions: SpecTwin[] }>(`/api/mobile/inventory/spec-suggestions?${qs.toString()}`, { token });
+  return res.suggestions ?? [];
+}
+
+/** "Só preenche o vazio": adiciona chaves ausentes / preenche vazias; nunca sobrescreve. */
+export function mergeSpecsFillEmpty(
+  current: Array<{ key: string; value: string }>,
+  incoming: Array<{ key: string; value: string }>,
+): { merged: Array<{ key: string; value: string }>; applied: number } {
+  const norm = (s: string) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim().replace(/\s+/g, ' ');
+  const byKey = new Map<string, { key: string; value: string }>();
+  for (const s of current) {
+    const k = norm(s.key);
+    if (k && !byKey.has(k)) byKey.set(k, { key: s.key, value: String(s.value ?? '') });
+  }
+  let applied = 0;
+  for (const s of incoming) {
+    const k = norm(s.key);
+    if (!k) continue;
+    const val = String(s.value ?? '').trim();
+    if (!val) continue;
+    const existing = byKey.get(k);
+    if (!existing) { byKey.set(k, { key: s.key, value: val }); applied++; }
+    else if (!String(existing.value ?? '').trim()) { existing.value = val; applied++; }
+  }
+  return { merged: Array.from(byKey.values()), applied };
+}
+
 export function resolveAsset(token: string | null, code: string) {
   return apiFetch<{ item: InventoryItem; movements: Movement[] }>(
     `/api/mobile/inventory/assets/${encodeURIComponent(code)}`,

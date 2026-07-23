@@ -15,7 +15,7 @@ import type { DetectedMachine } from '../api/mobile';
 import { Icon } from '../components/Icon';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
-import { getOptions, type SelectOption } from '../api/mobile';
+import { getOptions, getSpecSuggestions, mergeSpecsFillEmpty, type SelectOption, type SpecTwin } from '../api/mobile';
 import { listPending, type PendingForm } from '../lib/pending-registrations';
 import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
@@ -108,6 +108,25 @@ export function NewInventoryItemScreen() {
   const [attachmentUris, setAttachmentUris] = useState<string[]>([]);
 
   const isEquip = primaryType === 'EQUIPAMENTO';
+
+  // Sugestão de specs de aparelho-gêmeo (mesma marca+modelo+categoria).
+  const [specTwins, setSpecTwins] = useState<SpecTwin[]>([]);
+  useEffect(() => {
+    if (!isEquip || !brand.trim() || !model.trim() || !category.trim()) { setSpecTwins([]); return; }
+    let alive = true;
+    const timer = setTimeout(async () => {
+      try {
+        const found = await getSpecSuggestions(token, { brand, model, category });
+        if (alive) setSpecTwins(found);
+      } catch { if (alive) setSpecTwins([]); }
+    }, 450);
+    return () => { alive = false; clearTimeout(timer); };
+  }, [isEquip, brand, model, category, token]);
+
+  const importSpecsFromTwin = (twin: SpecTwin) => {
+    setSpecs((prev) => mergeSpecsFillEmpty(prev, twin.technicalSpecs).merged);
+    setSpecTwins([]);
+  };
 
   // Câmera
   const [capturing, setCapturing] = useState<null | 'main' | 'attachment'>(null);
@@ -342,6 +361,23 @@ export function NewInventoryItemScreen() {
             </View>
             <Icon name="chevron-right" size={16} color={T.primary} />
           </Pressable>
+          {specTwins.length > 0 && (
+            <Pressable
+              onPress={() => importSpecsFromTwin(specTwins[0])}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: `${T.primary}12`, borderWidth: 1, borderColor: `${T.primary}55`, borderRadius: 11, padding: 12, marginBottom: 12 }}
+            >
+              <Icon name="layers" size={18} color={T.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: T.primary }}>
+                  Importar de aparelho igual{specTwins.length > 1 ? ` (${specTwins.length})` : ''}
+                </Text>
+                <Text style={{ fontSize: 11, color: T.muted }}>
+                  Copia as especificações do mais recente ({specTwins[0].technicalSpecs.length}) — só preenche o que está vazio
+                </Text>
+              </View>
+              <Icon name="chevron-right" size={16} color={T.primary} />
+            </Pressable>
+          )}
           <Text style={{ fontSize: 12, color: T.muted, marginBottom: 12 }}>Adicione apenas os atributos úteis para este equipamento (opcional).</Text>
           <View style={{ gap: 10 }}>
             <SuggestedInput label="Atributo" value={specKey} onChangeText={setSpecKey} placeholder="Ex.: Processador, RAM, Armazenamento" options={opts('inventory_spec_key')} />
