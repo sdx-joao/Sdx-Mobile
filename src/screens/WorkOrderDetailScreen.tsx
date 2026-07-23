@@ -495,6 +495,30 @@ export function WorkOrderDetailScreen() {
         </View>
       </SectionCard>
 
+      {(wo.involvedEquipment?.length ?? 0) > 0 && (
+        <SectionCard title={`Equipamentos envolvidos (${wo.involvedEquipment!.length})`}>
+          <View style={{ gap: 9 }}>
+            {wo.involvedEquipment!.map((e, i) => (
+              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+                <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: T.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="monitor" size={15} color={T.muted} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={{ fontSize: 13.5, color: T.text, fontWeight: '600' }}>
+                    {e.itemName || e.freeText || e.labelCode || 'Equipamento'}{e.itemAssetTag ? `  ·  ${e.itemAssetTag}` : ''}
+                  </Text>
+                  {(e.problemNote || e.itemUnitName || e.itemRoom) ? (
+                    <Text numberOfLines={1} style={{ fontSize: 11, color: T.faint }}>
+                      {[[e.itemUnitName, e.itemRoom].filter(Boolean).join(' / '), e.problemNote].filter(Boolean).join('  ·  ')}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            ))}
+          </View>
+        </SectionCard>
+      )}
+
       {wo.materials.length > 0 && (
         <SectionCard title={`Materiais (${wo.materials.length})`}>
           <View style={{ gap: 9 }}>

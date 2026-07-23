@@ -55,6 +55,16 @@ export type WorkOrder = {
   resolutionStatus: WorkOrderResolution | null;
   resolutionNotes?: string | null;
   materials: WorkOrderMaterial[];
+  involvedEquipment?: Array<{
+    itemId?: string | null;
+    labelCode?: string | null;
+    freeText?: string | null;
+    problemNote?: string | null;
+    itemName?: string | null;
+    itemAssetTag?: string | null;
+    itemUnitName?: string | null;
+    itemRoom?: string | null;
+  }>;
 };
 
 export type TimelineEvent = { at: string; title?: string; label: string; by: string; tone: WorkOrderStatus };

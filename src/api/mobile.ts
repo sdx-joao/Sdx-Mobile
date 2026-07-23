@@ -34,6 +34,19 @@ export type SelectOption = {
   value: string;
   label: string;
   sortOrder?: number;
+  /** Áreas (CSV) a que um tipo de serviço pertence — cascata categoria→tipo. */
+  backendValue?: string | null;
+  /** 'EQUIP' marca tipos que envolvem equipamento (realça o bloco). */
+  code?: string | null;
+};
+
+export type InvolvedEquipmentInput = {
+  itemId?: string | null;
+  labelCode?: string | null;
+  freeText?: string | null;
+  problemNote?: string | null;
+  itemName?: string | null;
+  itemAssetTag?: string | null;
 };
 
 export type WorkOrderRequester = {
@@ -236,6 +249,8 @@ export type CreateWorkOrderInput = {
   responsibleTechnicianName?: string;
   technicianRequest: string;
   priority: WorkOrderPriority;
+  /** Equipamentos envolvidos (opcional): quem deu problema. Link/QR ou texto. */
+  involvedEquipment?: InvolvedEquipmentInput[];
 };
 
 /** Ação de equipamento enviada pela OS (mesma forma do web). */

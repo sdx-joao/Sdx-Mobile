@@ -171,6 +171,16 @@ export function buildWorkOrderPrintHtml(
     ? `<section><h3>Observação do atendimento</h3><div class="box">${valueOrNA(wo.attendanceNotes)}</div></section>`
     : '';
 
+  const involved = (wo.involvedEquipment?.length ?? 0)
+    ? `<section><h3>Equipamentos envolvidos</h3><table><thead><tr><th>Equipamento</th><th style="width:150px">Local</th><th style="width:180px">Problema</th></tr></thead><tbody>${wo.involvedEquipment!
+        .map(e => {
+          const nome = e.itemName ? `${esc(e.itemName)}${e.itemAssetTag ? ` (${esc(e.itemAssetTag)})` : ''}` : valueOrNA(e.freeText || e.labelCode);
+          const local = [e.itemUnitName, e.itemRoom].filter(Boolean).join(' · ') || NA;
+          return `<tr><td>${nome}</td><td>${esc(local)}</td><td>${valueOrNA(e.problemNote)}</td></tr>`;
+        })
+        .join('')}</tbody></table></section>`
+    : '';
+
   // Rodapé de assinatura — reutilizado em TODAS as folhas (principal + fotos).
   // A imagem da assinatura e o texto "Assinado digitalmente" só aparecem quando
   // há assinatura (signatureSvg preenchido); no compartilhar de OS já assinada,
@@ -216,6 +226,7 @@ export function buildWorkOrderPrintHtml(
     <section><h3>Solicitação</h3><div class="box">${valueOrNA(wo.technicianRequest)}</div></section>
     ${obs}
     <section><h3>Solução adotada</h3><div class="box">${valueOrNA(wo.resolutionNotes)}</div></section>
+    ${involved}
     ${materials}
     ${history}
     ${signatureFooter}

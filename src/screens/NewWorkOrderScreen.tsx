@@ -11,12 +11,15 @@ import { T, WO_PRIORITY } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
 import {
   createWorkOrder,
+  getInventory,
   getOptions,
   getWorkOrderRequesters,
+  type InvolvedEquipmentInput,
   type SelectOption,
   type SelectOptionKind,
   type WorkOrderRequester,
 } from '../api/mobile';
+import { InvolvedEquipmentBlock } from '../components/InvolvedEquipmentBlock';
 import { useResource } from '../api/use-resource';
 import type { WorkOrderPriority } from '../data/mock';
 import type { RootStackParamList } from '../navigation/types';
@@ -109,6 +112,7 @@ export function NewWorkOrderScreen() {
   const [priority, setPriority] = useState<WorkOrderPriority>('normal');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [involvedEquipment, setInvolvedEquipment] = useState<InvolvedEquipmentInput[]>([]);
   const accent = T.primary;
   const optionsByKind = useMemo(() => {
     const grouped = new Map<SelectOptionKind, SelectOption[]>();
@@ -119,6 +123,34 @@ export function NewWorkOrderScreen() {
     }
     return grouped;
   }, [data?.options]);
+
+  // Cascata: tipos da área (categoria). backend_value = áreas CSV; vazio = todas.
+  const serviceTypeOptions = useMemo(() => {
+    const all = optionsByKind.get('work_order_service_type') ?? [];
+    const a = category.trim().toUpperCase();
+    if (!a) return all;
+    return all.filter((o) => {
+      const bv = String(o.backendValue || '').trim();
+      if (!bv) return true;
+      return bv.split(',').map((s) => s.trim().toUpperCase()).includes(a);
+    });
+  }, [optionsByKind, category]);
+  const serviceIsEquip = useMemo(
+    () => (optionsByKind.get('work_order_service_type') ?? []).find((o) => o.value === serviceType)?.code === 'EQUIP',
+    [optionsByKind, serviceType],
+  );
+  const onChangeCategory = (v: string) => {
+    setCategory(v);
+    // Limpa o tipo se ele não pertencer mais à nova área.
+    const all = optionsByKind.get('work_order_service_type') ?? [];
+    const a = v.trim().toUpperCase();
+    const stillValid = all.some((o) => {
+      if (o.value !== serviceType) return false;
+      const bv = String(o.backendValue || '').trim();
+      return !bv || bv.split(',').map((s) => s.trim().toUpperCase()).includes(a);
+    });
+    if (!stillValid) setServiceType('');
+  };
 
   const pickRequester = (requester: WorkOrderRequester) => {
     setRequestedByName(requester.name);
@@ -165,6 +197,7 @@ export function NewWorkOrderScreen() {
         responsibleTechnicianName,
         technicianRequest,
         priority,
+        involvedEquipment,
       });
       showToast(`${result.code} aberta.`);
       nav.replace('WorkOrderDetail', { id: result.id });
@@ -179,8 +212,8 @@ export function NewWorkOrderScreen() {
     <DetailScaffold onBack={() => nav.goBack()} eyebrow="Nova ordem" title="Abrir OS" compact>
       <SectionCard title="Detalhes do serviço">
         <View style={{ gap: 14 }}>
-          <SuggestedInput label="Tipo de serviço" required value={serviceType} onChangeText={setServiceType} placeholder="Ex.: Manutenção corretiva" options={optionsByKind.get('work_order_service_type') ?? []} />
-          <SuggestedInput label="Categoria" required value={category} onChangeText={setCategory} placeholder="Ex.: TI / Infraestrutura" options={optionsByKind.get('work_order_category') ?? []} />
+          <SuggestedInput label="Categoria (área)" required value={category} onChangeText={onChangeCategory} placeholder="Ex.: TI, Predial…" options={optionsByKind.get('work_order_category') ?? []} />
+          <SuggestedInput label="Tipo de serviço" required value={serviceType} onChangeText={setServiceType} placeholder={category ? 'Ex.: Manutenção de impressora' : 'Escolha a área primeiro'} options={serviceTypeOptions} />
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <View style={{ flex: 1 }}><SuggestedInput label="Unidade" required value={unitName} onChangeText={setUnitName} placeholder="Unidade" options={optionsByKind.get('work_order_unit') ?? []} /></View>
             <View style={{ flex: 1 }}><SuggestedInput label="Setor" required value={department} onChangeText={selectDepartment} placeholder="Setor" options={optionsByKind.get('work_order_department') ?? []} /></View>
@@ -195,6 +228,10 @@ export function NewWorkOrderScreen() {
             <Text style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>Fixado no seu login — a OS é aberta em seu nome.</Text>
           </View>
         </View>
+      </SectionCard>
+
+      <SectionCard title="Equipamentos envolvidos">
+        <InvolvedEquipmentBlock token={token} value={involvedEquipment} onChange={setInvolvedEquipment} highlight={serviceIsEquip} />
       </SectionCard>
 
       <SectionCard title="Prioridade">

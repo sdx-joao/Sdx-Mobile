@@ -14,10 +14,12 @@ import {
   getWorkOrder,
   getWorkOrderRequesters,
   updateWorkOrder,
+  type InvolvedEquipmentInput,
   type SelectOption,
   type SelectOptionKind,
   type WorkOrderRequester,
 } from '../api/mobile';
+import { InvolvedEquipmentBlock } from '../components/InvolvedEquipmentBlock';
 import { useResource } from '../api/use-resource';
 import { useAuth } from '../auth/auth-context';
 import { showToast } from '../lib/toast';
@@ -176,6 +178,7 @@ export function WorkOrderEditScreen() {
   const [priority, setPriority] = useState<WorkOrderPriority>('normal');
   const [materials, setMaterials] = useState<MaterialDraft[]>([]);
   const [equipmentActions, setEquipmentActions] = useState<EquipActionDraft[]>([]);
+  const [involvedEquipment, setInvolvedEquipment] = useState<InvolvedEquipmentInput[]>([]);
   const [consumables, setConsumables] = useState<InventoryItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -201,6 +204,32 @@ export function WorkOrderEditScreen() {
     return grouped;
   }, [data?.options]);
 
+  const serviceTypeOptions = useMemo(() => {
+    const all = optionsByKind.get('work_order_service_type') ?? [];
+    const a = category.trim().toUpperCase();
+    if (!a) return all;
+    return all.filter((o) => {
+      const bv = String(o.backendValue || '').trim();
+      if (!bv) return true;
+      return bv.split(',').map((s) => s.trim().toUpperCase()).includes(a);
+    });
+  }, [optionsByKind, category]);
+  const serviceIsEquip = useMemo(
+    () => (optionsByKind.get('work_order_service_type') ?? []).find((o) => o.value === serviceType)?.code === 'EQUIP',
+    [optionsByKind, serviceType],
+  );
+  const onChangeCategory = (v: string) => {
+    setCategory(v);
+    const all = optionsByKind.get('work_order_service_type') ?? [];
+    const a = v.trim().toUpperCase();
+    const stillValid = all.some((o) => {
+      if (o.value !== serviceType) return false;
+      const bv = String(o.backendValue || '').trim();
+      return !bv || bv.split(',').map((s) => s.trim().toUpperCase()).includes(a);
+    });
+    if (!stillValid) setServiceType('');
+  };
+
   useEffect(() => {
     if (!order || hydratedId === order.id) return;
     setHydratedId(order.id);
@@ -222,6 +251,10 @@ export function WorkOrderEditScreen() {
     setResolutionStatus(order.resolutionStatus || null);
     setPriority(order.priority || 'normal');
     setMaterials((order.materials || []).map(materialToDraft));
+    setInvolvedEquipment((order.involvedEquipment ?? []).map((e) => ({
+      itemId: e.itemId, labelCode: e.labelCode, freeText: e.freeText,
+      problemNote: e.problemNote, itemName: e.itemName, itemAssetTag: e.itemAssetTag,
+    })));
     // Ações de equipamento já registradas (web ou app) — carrega pra editar sem
     // apagar. Só as não aplicadas são editáveis; as aplicadas ficam no histórico.
     setEquipmentActions((data?.detail.equipmentActions ?? [])
@@ -306,6 +339,7 @@ export function WorkOrderEditScreen() {
             inventoryItemId: item.inventoryItemId ?? null,
           })),
         equipmentActions: buildEquipmentActionsPayload(equipmentActions, unitName, department),
+        involvedEquipment,
       });
       showToast(`${order.code} salva.`);
       nav.goBack();
@@ -331,8 +365,8 @@ export function WorkOrderEditScreen() {
 
       <SectionCard title="Identificação">
         <View style={{ gap: 14 }}>
-          <SuggestedInput label="Tipo de serviço" required value={serviceType} onChangeText={setServiceType} placeholder="Tipo" options={optionsByKind.get('work_order_service_type') ?? []} />
-          <SuggestedInput label="Categoria" required value={category} onChangeText={setCategory} placeholder="Categoria" options={optionsByKind.get('work_order_category') ?? []} />
+          <SuggestedInput label="Categoria (área)" required value={category} onChangeText={onChangeCategory} placeholder="Ex.: TI, Predial…" options={optionsByKind.get('work_order_category') ?? []} />
+          <SuggestedInput label="Tipo de serviço" required value={serviceType} onChangeText={setServiceType} placeholder={category ? 'Ex.: Manutenção de impressora' : 'Escolha a área primeiro'} options={serviceTypeOptions} />
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <View style={{ flex: 1 }}><SuggestedInput label="Unidade" required value={unitName} onChangeText={setUnitName} placeholder="Unidade" options={optionsByKind.get('work_order_unit') ?? []} /></View>
             <View style={{ flex: 1 }}><SuggestedInput label="Setor" required value={department} onChangeText={setDepartment} placeholder="Setor" options={optionsByKind.get('work_order_department') ?? []} /></View>
@@ -482,7 +516,11 @@ export function WorkOrderEditScreen() {
         </View>
       </SectionCard>
 
-      <SectionCard title={`Equipamentos (${equipmentActions.length})`}>
+      <SectionCard title="Equipamentos envolvidos">
+        <InvolvedEquipmentBlock token={token} value={involvedEquipment} onChange={setInvolvedEquipment} highlight={serviceIsEquip} />
+      </SectionCard>
+
+      <SectionCard title={`Ações de equipamento (${equipmentActions.length})`}>
         <Text style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>
           Instalar, mover ou trocar máquina — escaneie a etiqueta de patrimônio. Aplica na conclusão da OS.
         </Text>
