@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { Icon } from './Icon';
 import { T } from '../theme/theme';
-import { getInventory, type InvolvedEquipmentInput } from '../api/mobile';
+import { getInventory, resolveInventoryLabel, type InvolvedEquipmentInput } from '../api/mobile';
+
+// CAIXA ALTA sem acento — mesma convenção dos selects.
+const upper = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim().replace(/\s+/g, ' ');
 
 /**
  * Bloco "Equipamentos envolvidos" da OS (app) — lista opcional 0..N de quem deu
@@ -22,35 +26,70 @@ export function InvolvedEquipmentBlock({
   const [results, setResults] = useState<Array<{ id: string; name: string; assetTag: string | null; unitName?: string | null; room?: string | null }>>([]);
   const [loading, setLoading] = useState(false);
   const [freeText, setFreeText] = useState('');
+  const [scanOpen, setScanOpen] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+  const scanLock = useRef(false);
 
+  // Browse (q vazio) = lista equipamentos patrimoniados, como um select; digitar filtra.
   useEffect(() => {
     const term = query.trim();
-    if (term.length < 2) { setResults([]); return; }
     let alive = true;
     setLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const items = await getInventory(token, { q: term });
-        if (alive) setResults(items.slice(0, 8).map((i) => ({ id: i.id, name: i.name, assetTag: i.assetTag, unitName: i.unitName, room: i.room })));
+        const items = await getInventory(token, term ? { q: term } : {});
+        if (alive) {
+          setResults(items
+            .filter((i) => (i as { itemType?: string }).itemType !== 'consumable')
+            .slice(0, 12)
+            .map((i) => ({ id: i.id, name: i.name, assetTag: i.assetTag, unitName: i.unitName, room: i.room })));
+        }
       } catch {
         if (alive) setResults([]);
       } finally {
         if (alive) setLoading(false);
       }
-    }, 350);
+    }, term ? 350 : 0);
     return () => { alive = false; clearTimeout(timer); };
   }, [query, token]);
 
   const has = (id: string) => value.some((e) => e.itemId === id);
   const addItem = (it: { id: string; name: string; assetTag: string | null }) => {
     if (!has(it.id)) onChange([...value, { itemId: it.id, itemName: it.name, itemAssetTag: it.assetTag, problemNote: null }]);
-    setQuery(''); setResults([]);
+    setQuery('');
   };
   const addFree = () => {
-    const t = freeText.trim();
+    const t = upper(freeText.trim());
     if (!t) return;
     onChange([...value, { freeText: t, problemNote: null }]);
     setFreeText('');
+  };
+
+  const openScanner = async () => {
+    if (!permission?.granted) {
+      const res = await requestPermission();
+      if (!res.granted) return;
+    }
+    scanLock.current = false;
+    setScanOpen(true);
+  };
+  const onScanned = async ({ data }: BarcodeScanningResult) => {
+    if (scanLock.current) return;
+    scanLock.current = true;
+    setScanOpen(false);
+    try {
+      // O QR guarda a URL .../i/<code>?c=<n>; resolveInventoryLabel normaliza.
+      const r = await resolveInventoryLabel(token, String(data || ''));
+      if (r.itemId) {
+        if (!has(r.itemId)) onChange([...value, { itemId: r.itemId, labelCode: r.code, itemName: r.code, problemNote: null }]);
+      } else {
+        onChange([...value, { labelCode: r.code, freeText: r.code, problemNote: null }]);
+      }
+    } catch {
+      // etiqueta não resolvida — guarda o texto lido como referência
+      const code = String(data || '').split('/i/').pop()?.split('?')[0] || String(data || '');
+      if (code) onChange([...value, { freeText: upper(code), problemNote: null }]);
+    }
   };
   const removeAt = (i: number) => onChange(value.filter((_, idx) => idx !== i));
   const setProblem = (i: number, note: string) => onChange(value.map((e, idx) => (idx === i ? { ...e, problemNote: note } : e)));
@@ -84,14 +123,21 @@ export function InvolvedEquipmentBlock({
         </View>
       ))}
 
-      {/* Busca no inventário */}
+      {/* Ler QR da etiqueta (câmera) */}
+      <Pressable onPress={openScanner}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 44, borderRadius: 11, borderWidth: 1, borderColor: T.primary, backgroundColor: `${T.primary}0E` }}>
+        <Icon name="qr" size={16} color={T.primary} />
+        <Text style={{ fontSize: 13.5, fontWeight: '800', color: T.primary }}>Ler QR da etiqueta</Text>
+      </Pressable>
+
+      {/* Busca no inventário (select dos patrimoniados) */}
       <View>
         <View style={{ height: 46, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Icon name="search" size={15} color={T.muted} />
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Buscar no inventário (nome, etiqueta, patrimônio)"
+            placeholder="Selecione um patrimoniado ou busque…"
             placeholderTextColor={T.faint}
             style={{ flex: 1, fontSize: 14, color: T.text }}
           />
@@ -128,6 +174,24 @@ export function InvolvedEquipmentBlock({
           <Text style={{ fontSize: 13, fontWeight: '800', color: T.primary }}>Add</Text>
         </Pressable>
       </View>
+
+      {/* Câmera de leitura do QR/etiqueta */}
+      <Modal visible={scanOpen} animationType="slide" onRequestClose={() => setScanOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <CameraView
+            style={{ flex: 1 }}
+            barcodeScannerSettings={{ barcodeTypes: ['qr', 'ean13', 'code128', 'code39'] }}
+            onBarcodeScanned={onScanned}
+          />
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: 54, paddingHorizontal: 20, alignItems: 'center' }}>
+            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>Aponte para o QR da etiqueta</Text>
+          </View>
+          <Pressable onPress={() => setScanOpen(false)}
+            style={{ position: 'absolute', bottom: 44, alignSelf: 'center', paddingHorizontal: 26, paddingVertical: 13, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.16)' }}>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800' }}>Cancelar</Text>
+          </Pressable>
+        </View>
+      </Modal>
     </View>
   );
 }
