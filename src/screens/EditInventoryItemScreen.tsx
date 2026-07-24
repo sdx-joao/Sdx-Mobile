@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRef } from 'react';
@@ -87,6 +88,9 @@ export function EditInventoryItemScreen() {
   // Câmera embutida pra trocar/adicionar foto sem sair da tela.
   const [permission, requestPermission] = useCameraPermissions();
   const [shooting, setShooting] = useState<null | 'main' | 'attachment'>(null);
+  // Foto capturada/escolhida aguardando confirmação antes de enviar.
+  const [preview, setPreview] = useState<null | { uri: string; role: 'main' | 'attachment' }>(null);
+  const [uploading, setUploading] = useState(false);
   const cameraRef = useRef<CameraView>(null);
 
   const load = useCallback(async () => {
@@ -145,23 +149,53 @@ export function EditInventoryItemScreen() {
 
   const opts = (kind: SelectOptionKind) => options.filter(o => o.kind === kind);
 
-  const takePhoto = async (role: 'main' | 'attachment') => {
+  // 1) Captura → só mostra a PRÉVIA (não envia ainda). A câmera "sai" na hora,
+  // dando lugar à tela de confirmação — corrige o bug de a câmera ficar aberta
+  // presa no upload.
+  const capturePhoto = async (role: 'main' | 'attachment') => {
     if (!cameraRef.current) return;
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.9 });
       if (!photo?.uri) return;
-      // Reduz antes de subir — o servidor também redimensiona, mas isso poupa
-      // a rede do hospital (foto crua de celular passa de 5 MB).
-      const resized = await ImageManipulator.manipulateAsync(photo.uri, [{ resize: { width: 1600 } }], {
+      setShooting(null);
+      setPreview({ uri: photo.uri, role });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Falha ao tirar a foto.');
+      setShooting(null);
+    }
+  };
+
+  // Escolher da galeria → mesma tela de confirmação.
+  const pickFromGallery = async (role: 'main' | 'attachment') => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) { setError('Permissão da galeria negada.'); return; }
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
+      if (res.canceled || !res.assets?.[0]?.uri) return;
+      setShooting(null);
+      setPreview({ uri: res.assets[0].uri, role });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Falha ao abrir a galeria.');
+    }
+  };
+
+  // 2) Confirmar → redimensiona, ENVIA e fecha. Spinner enquanto sobe.
+  const confirmPhoto = async () => {
+    if (!preview || uploading) return;
+    setUploading(true);
+    try {
+      const resized = await ImageManipulator.manipulateAsync(preview.uri, [{ resize: { width: 1600 } }], {
         compress: 0.8, format: ImageManipulator.SaveFormat.JPEG,
       });
-      await uploadInventoryPhoto(token, itemId, { uri: resized.uri, role });
-      setShooting(null);
+      await uploadInventoryPhoto(token, itemId, { uri: resized.uri, role: preview.role });
+      const role = preview.role;
+      setPreview(null);
       showToast(role === 'main' ? 'Foto principal atualizada.' : 'Foto anexada.');
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao enviar a foto.');
-      setShooting(null);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -216,14 +250,50 @@ export function EditInventoryItemScreen() {
           <View style={{ width: 38 }} />
         </View>
         <View style={{ flex: 1 }} />
-        <View style={{ alignItems: 'center', paddingBottom: 46 }}>
+        <View style={{ paddingBottom: 46, paddingHorizontal: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Galeria */}
+          <Pressable onPress={() => void pickFromGallery(shooting)} style={{ width: 52, height: 52, borderRadius: 14, backgroundColor: 'rgba(255,255,255,.16)', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="archive" size={22} color="#fff" />
+          </Pressable>
+          {/* Disparo */}
           {permission?.granted ? (
-            <Pressable onPress={() => void takePhoto(shooting)} style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#fff', borderWidth: 5, borderColor: 'rgba(255,255,255,.35)' }} />
+            <Pressable onPress={() => void capturePhoto(shooting)} style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#fff', borderWidth: 5, borderColor: 'rgba(255,255,255,.35)' }} />
           ) : (
             <Pressable onPress={requestPermission} style={{ paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, backgroundColor: T.primary }}>
               <Text style={{ color: '#fff', fontWeight: '700' }}>Permitir câmera</Text>
             </Pressable>
           )}
+          {/* espaçador simétrico ao botão de galeria */}
+          <View style={{ width: 52 }} />
+        </View>
+      </View>
+    );
+  }
+
+  // Confirmação da foto (câmera ou galeria) antes de enviar.
+  if (preview) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0A0E18' }}>
+        <Image source={{ uri: preview.uri }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} resizeMode="contain" />
+        <View style={{ paddingTop: 52, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Pressable onPress={() => { if (!uploading) { const r = preview.role; setPreview(null); setShooting(r); } }} style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: 'rgba(255,255,255,.14)', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="x" size={19} color="#fff" />
+          </Pressable>
+          <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>Confirmar foto</Text>
+          <View style={{ width: 38 }} />
+        </View>
+        <View style={{ flex: 1 }} />
+        <View style={{ paddingBottom: 40, paddingHorizontal: 20, flexDirection: 'row', gap: 12 }}>
+          <Pressable onPress={() => { if (!uploading) { const r = preview.role; setPreview(null); setShooting(r); } }} disabled={uploading}
+            style={{ flex: 1, height: 50, borderRadius: 13, borderWidth: 1, borderColor: 'rgba(255,255,255,.4)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: uploading ? 0.5 : 1 }}>
+            <Icon name="refresh" size={16} color="#fff" />
+            <Text style={{ color: '#fff', fontSize: 14.5, fontWeight: '700' }}>Refazer</Text>
+          </Pressable>
+          <Pressable onPress={() => void confirmPhoto()} disabled={uploading}
+            style={{ flex: 1.4, height: 50, borderRadius: 13, backgroundColor: T.primary, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}>
+            {uploading ? <ActivityIndicator size="small" color="#fff" /> : <Icon name="check" size={17} color="#fff" />}
+            <Text style={{ color: '#fff', fontSize: 14.5, fontWeight: '800' }}>{uploading ? 'Enviando…' : 'Usar foto'}</Text>
+          </Pressable>
         </View>
       </View>
     );
