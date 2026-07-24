@@ -23,7 +23,7 @@ export function InvolvedEquipmentBlock({
   highlight?: boolean;
 }) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Array<{ id: string; name: string; assetTag: string | null; unitName?: string | null; room?: string | null }>>([]);
+  const [results, setResults] = useState<Array<{ id: string; name: string; assetTag: string | null; serialNumber?: string | null; unitName?: string | null; room?: string | null; currentLocation?: string | null }>>([]);
   const [loading, setLoading] = useState(false);
   const [freeText, setFreeText] = useState('');
   const [scanOpen, setScanOpen] = useState(false);
@@ -45,7 +45,7 @@ export function InvolvedEquipmentBlock({
           setResults(items
             .filter((i) => (i as { itemType?: string }).itemType !== 'consumable')
             .slice(0, 12)
-            .map((i) => ({ id: i.id, name: i.name, assetTag: i.assetTag, unitName: i.unitName, room: i.room })));
+            .map((i) => ({ id: i.id, name: i.name, assetTag: i.assetTag, serialNumber: i.serialNumber, unitName: i.unitName, room: i.room, currentLocation: (i as { currentLocation?: string | null }).currentLocation })));
         }
       } catch {
         if (alive) setResults([]);
@@ -57,10 +57,16 @@ export function InvolvedEquipmentBlock({
   }, [query, token, pickerOpen]);
 
   const has = (id: string) => value.some((e) => e.itemId === id);
-  const addItem = (it: { id: string; name: string; assetTag: string | null }) => {
-    if (!has(it.id)) onChange([...value, { itemId: it.id, itemName: it.name, itemAssetTag: it.assetTag, problemNote: null }]);
+  const addItem = (it: { id: string; name: string; assetTag: string | null; serialNumber?: string | null; unitName?: string | null; room?: string | null; currentLocation?: string | null }) => {
+    if (!has(it.id)) onChange([...value, {
+      itemId: it.id, itemName: it.name, itemAssetTag: it.assetTag,
+      itemSerialNumber: it.serialNumber, itemUnitName: it.unitName, itemRoom: it.room, itemCurrentLocation: it.currentLocation,
+      problemNote: null,
+    }]);
     setQuery(''); setPickerOpen(false);
   };
+  // Texto de local a partir de unidade/setor/local livre.
+  const localOf = (e: InvolvedEquipmentInput) => [e.itemUnitName, e.itemRoom].filter(Boolean).join(' / ') || e.itemCurrentLocation || '';
   const addFree = () => {
     const t = upper(freeText.trim());
     if (!t) return;
@@ -111,9 +117,12 @@ export function InvolvedEquipmentBlock({
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 13.5, fontWeight: '700', color: T.text }} numberOfLines={1}>
                 {e.itemName || e.freeText || e.labelCode || 'Equipamento'}
-                {e.itemAssetTag ? `  ·  ${e.itemAssetTag}` : ''}
+                {(e.itemAssetTag || e.labelCode) ? `  ·  ${e.itemAssetTag || e.labelCode}` : ''}
               </Text>
-              <Text style={{ fontSize: 10.5, color: T.faint }}>{e.itemId ? 'do inventário' : 'sem cadastro'}</Text>
+              <Text style={{ fontSize: 10.5, color: T.faint }} numberOfLines={1}>
+                {[e.itemSerialNumber ? `SÉRIE ${e.itemSerialNumber}` : null, localOf(e) ? `LOCAL ${localOf(e)}` : null]
+                  .filter(Boolean).join('  ·  ') || (e.itemId ? 'do inventário' : 'sem cadastro')}
+              </Text>
             </View>
             <Pressable onPress={() => removeAt(i)} hitSlop={8}><Icon name="x" size={16} color={T.danger} /></Pressable>
           </View>
@@ -164,9 +173,14 @@ export function InvolvedEquipmentBlock({
               {results.map((it) => (
                 <Pressable key={it.id} onPress={() => addItem(it)} disabled={has(it.id)}
                   style={{ paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: T.border, opacity: has(it.id) ? 0.4 : 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{it.name}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>
+                    {it.name}{it.assetTag ? `  ·  ${it.assetTag}` : ''}
+                  </Text>
                   <Text style={{ fontSize: 11.5, color: T.faint }}>
-                    {[it.assetTag, [it.unitName, it.room].filter(Boolean).join(' / ')].filter(Boolean).join('  ·  ') || 'sem local'}
+                    {[
+                      it.serialNumber ? `SÉRIE ${it.serialNumber}` : null,
+                      [it.unitName, it.room].filter(Boolean).join(' / ') || it.currentLocation || 'sem local',
+                    ].filter(Boolean).join('  ·  ')}
                   </Text>
                 </Pressable>
               ))}

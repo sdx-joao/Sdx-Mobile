@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -130,6 +131,8 @@ export function NewInventoryItemScreen() {
 
   // Câmera
   const [capturing, setCapturing] = useState<null | 'main' | 'attachment'>(null);
+  // Foto tirada/escolhida aguardando confirmação antes de guardar.
+  const [preview, setPreview] = useState<null | { uri: string; role: 'main' | 'attachment' }>(null);
 
   /** Blocos que a máquina não tem como preencher sozinha. */
   const pendingBlocks = [
@@ -160,16 +163,42 @@ export function NewInventoryItemScreen() {
     return () => { active = false; };
   }, [resumeLabelCode]);
 
+  // Tirar → mostra a PRÉVIA (a câmera sai na hora). Guarda só ao confirmar.
   const capturePhoto = async () => {
+    if (!capturing) return;
     try {
       const shot = await camRef.current?.takePictureAsync({ quality: 0.6 });
       if (!shot?.uri) return;
-      const resized = await ImageManipulator.manipulateAsync(shot.uri, [{ resize: { width: 1280 } }], { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG });
-      if (capturing === 'main') setMainPhotoUri(resized.uri);
-      else setAttachmentUris((prev) => [...prev, resized.uri]);
+      const role = capturing;
       setCapturing(null);
+      setPreview({ uri: shot.uri, role });
     } catch {
       setCapturing(null);
+    }
+  };
+
+  const pickFromGallery = async () => {
+    if (!capturing) return;
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) return;
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+      if (res.canceled || !res.assets?.[0]?.uri) return;
+      const role = capturing;
+      setCapturing(null);
+      setPreview({ uri: res.assets[0].uri, role });
+    } catch { /* ignora */ }
+  };
+
+  // Confirmar → redimensiona e guarda localmente (sobe ao salvar o item).
+  const confirmPhoto = async () => {
+    if (!preview) return;
+    try {
+      const resized = await ImageManipulator.manipulateAsync(preview.uri, [{ resize: { width: 1280 } }], { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG });
+      if (preview.role === 'main') setMainPhotoUri(resized.uri);
+      else setAttachmentUris((prev) => [...prev, resized.uri]);
+    } finally {
+      setPreview(null);
     }
   };
 
@@ -233,10 +262,38 @@ export function NewInventoryItemScreen() {
           </Pressable>
         </View>
         {permission?.granted && (
-          <View style={{ position: 'absolute', bottom: insets.bottom + 26, left: 0, right: 0, alignItems: 'center' }}>
+          <View style={{ position: 'absolute', bottom: insets.bottom + 26, left: 0, right: 0, paddingHorizontal: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Pressable onPress={pickFromGallery} style={{ width: 52, height: 52, borderRadius: 14, backgroundColor: 'rgba(255,255,255,.16)', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="archive" size={22} color="#fff" />
+            </Pressable>
             <Pressable onPress={capturePhoto} style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#fff', borderWidth: 4, borderColor: 'rgba(255,255,255,.4)' }} />
+            <View style={{ width: 52 }} />
           </View>
         )}
+      </View>
+    );
+  }
+
+  // Confirmação da foto antes de guardar.
+  if (preview) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0A0E18' }}>
+        <Image source={{ uri: preview.uri }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} resizeMode="contain" />
+        <View style={{ position: 'absolute', top: insets.top + 8, left: 0, right: 0, alignItems: 'center' }}>
+          <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>Confirmar foto</Text>
+        </View>
+        <View style={{ position: 'absolute', bottom: insets.bottom + 30, left: 20, right: 20, flexDirection: 'row', gap: 12 }}>
+          <Pressable onPress={() => { const r = preview.role; setPreview(null); setCapturing(r); }}
+            style={{ flex: 1, height: 50, borderRadius: 13, borderWidth: 1, borderColor: 'rgba(255,255,255,.4)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}>
+            <Icon name="refresh" size={16} color="#fff" />
+            <Text style={{ color: '#fff', fontSize: 14.5, fontWeight: '700' }}>Refazer</Text>
+          </Pressable>
+          <Pressable onPress={confirmPhoto}
+            style={{ flex: 1.4, height: 50, borderRadius: 13, backgroundColor: T.primary, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}>
+            <Icon name="check" size={17} color="#fff" />
+            <Text style={{ color: '#fff', fontSize: 14.5, fontWeight: '800' }}>Usar foto</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }

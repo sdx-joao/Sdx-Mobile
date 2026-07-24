@@ -505,13 +505,14 @@ export function WorkOrderDetailScreen() {
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text numberOfLines={1} style={{ fontSize: 13.5, color: T.text, fontWeight: '600' }}>
-                    {e.itemName || e.freeText || e.labelCode || 'Equipamento'}{e.itemAssetTag ? `  ·  ${e.itemAssetTag}` : ''}
+                    {e.itemName || e.freeText || e.labelCode || 'Equipamento'}{(e.itemAssetTag || e.labelCode) ? `  ·  ${e.itemAssetTag || e.labelCode}` : ''}
                   </Text>
-                  {(e.problemNote || e.itemUnitName || e.itemRoom) ? (
-                    <Text numberOfLines={1} style={{ fontSize: 11, color: T.faint }}>
-                      {[[e.itemUnitName, e.itemRoom].filter(Boolean).join(' / '), e.problemNote].filter(Boolean).join('  ·  ')}
-                    </Text>
-                  ) : null}
+                  {(() => {
+                    const local = [e.itemUnitName, e.itemRoom].filter(Boolean).join(' / ') || e.itemCurrentLocation || '';
+                    const line = [e.itemSerialNumber ? `SÉRIE ${e.itemSerialNumber}` : null, local ? `LOCAL ${local}` : null, e.problemNote]
+                      .filter(Boolean).join('  ·  ');
+                    return line ? <Text numberOfLines={2} style={{ fontSize: 11, color: T.faint }}>{line}</Text> : null;
+                  })()}
                 </View>
               </View>
             ))}

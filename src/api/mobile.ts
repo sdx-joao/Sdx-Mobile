@@ -47,6 +47,10 @@ export type InvolvedEquipmentInput = {
   problemNote?: string | null;
   itemName?: string | null;
   itemAssetTag?: string | null;
+  itemSerialNumber?: string | null;
+  itemUnitName?: string | null;
+  itemRoom?: string | null;
+  itemCurrentLocation?: string | null;
 };
 
 export type WorkOrderRequester = {

@@ -172,11 +172,12 @@ export function buildWorkOrderPrintHtml(
     : '';
 
   const involved = (wo.involvedEquipment?.length ?? 0)
-    ? `<section><h3>Equipamentos envolvidos</h3><table><thead><tr><th>Equipamento</th><th style="width:150px">Local</th><th style="width:180px">Problema</th></tr></thead><tbody>${wo.involvedEquipment!
+    ? `<section><h3>Equipamentos envolvidos</h3><table><thead><tr><th>Patrimônio</th><th>Equipamento</th><th style="width:110px">Nº de série</th><th style="width:140px">Local</th><th style="width:140px">Problema</th></tr></thead><tbody>${wo.involvedEquipment!
         .map(e => {
-          const nome = e.itemName ? `${esc(e.itemName)}${e.itemAssetTag ? ` (${esc(e.itemAssetTag)})` : ''}` : valueOrNA(e.freeText || e.labelCode);
-          const local = [e.itemUnitName, e.itemRoom].filter(Boolean).join(' · ') || NA;
-          return `<tr><td>${nome}</td><td>${esc(local)}</td><td>${valueOrNA(e.problemNote)}</td></tr>`;
+          const patrimonio = valueOrNA(e.itemAssetTag || e.labelCode);
+          const nome = e.itemName ? esc(e.itemName) : valueOrNA(e.freeText);
+          const local = [e.itemUnitName, e.itemRoom].filter(Boolean).join(' · ') || e.itemCurrentLocation || NA;
+          return `<tr><td>${esc(patrimonio)}</td><td>${nome}</td><td>${valueOrNA(e.itemSerialNumber)}</td><td>${esc(local)}</td><td>${valueOrNA(e.problemNote)}</td></tr>`;
         })
         .join('')}</tbody></table></section>`
     : '';

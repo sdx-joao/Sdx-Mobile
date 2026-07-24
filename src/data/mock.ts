@@ -62,8 +62,10 @@ export type WorkOrder = {
     problemNote?: string | null;
     itemName?: string | null;
     itemAssetTag?: string | null;
+    itemSerialNumber?: string | null;
     itemUnitName?: string | null;
     itemRoom?: string | null;
+    itemCurrentLocation?: string | null;
   }>;
 };
 
