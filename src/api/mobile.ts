@@ -589,19 +589,32 @@ export type NewInventoryItemInput = {
 export async function uploadInventoryPhoto(
   token: string | null,
   itemId: string,
-  input: { uri: string; role: 'main' | 'attachment' },
+  input: { uri: string; role: 'main' | 'attachment'; index?: number },
 ) {
+  // index (opcional) numa anexa = SUBSTITUI a foto nessa posição (troca), em vez de acrescentar.
+  const parameters: Record<string, string> = { role: input.role };
+  if (typeof input.index === 'number') parameters.index = String(input.index);
   const res = await FileSystem.uploadAsync(`${API_BASE_URL}/api/mobile/inventory/${itemId}/photo`, input.uri, {
     httpMethod: 'POST',
     uploadType: FileSystem.FileSystemUploadType.MULTIPART,
     fieldName: 'file',
     mimeType: 'image/jpeg',
-    parameters: { role: input.role },
+    parameters,
     headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
   });
   if (res.status < 200 || res.status >= 300) {
     throw new Error(`Falha ao enviar foto (${res.status}).`);
   }
+}
+
+/** Remove uma foto do item: principal (role:'main') ou anexa (index). */
+export async function deleteInventoryPhoto(
+  token: string | null,
+  itemId: string,
+  target: { role: 'main' } | { index: number },
+) {
+  const qs = 'role' in target ? 'role=main' : `index=${target.index}`;
+  return apiFetch<{ ok: true }>(`/api/mobile/inventory/${itemId}/photo?${qs}`, { method: 'DELETE', token });
 }
 
 export type CollectedSpecs = {

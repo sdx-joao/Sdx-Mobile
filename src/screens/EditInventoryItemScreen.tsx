@@ -14,7 +14,7 @@ import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
 import { API_BASE_URL } from '../api/client';
 import {
-  getInventoryItem, getOptions, updateInventoryItem, uploadInventoryPhoto,
+  getInventoryItem, getOptions, updateInventoryItem, uploadInventoryPhoto, deleteInventoryPhoto,
   getSpecSuggestions, mergeSpecsFillEmpty,
   type InventorySpec, type SelectOption, type SelectOptionKind, type SpecTwin,
 } from '../api/mobile';
@@ -84,12 +84,16 @@ export function EditInventoryItemScreen() {
   const [specs, setSpecs] = useState<InventorySpec[]>([]);
   const [specTwins, setSpecTwins] = useState<SpecTwin[]>([]);
   const [mainPhotoUrl, setMainPhotoUrl] = useState<string | null>(null);
+  // Fotos anexas do item (além da principal) — cada uma pode ser trocada/removida.
+  const [attachments, setAttachments] = useState<Array<{ name: string; url: string }>>([]);
 
+  // Alvo de uma foto: principal, anexa nova (append) ou anexa existente (index → troca).
+  type PhotoTarget = { role: 'main' | 'attachment'; index?: number };
   // Câmera embutida pra trocar/adicionar foto sem sair da tela.
   const [permission, requestPermission] = useCameraPermissions();
-  const [shooting, setShooting] = useState<null | 'main' | 'attachment'>(null);
+  const [shooting, setShooting] = useState<null | PhotoTarget>(null);
   // Foto capturada/escolhida aguardando confirmação antes de enviar.
-  const [preview, setPreview] = useState<null | { uri: string; role: 'main' | 'attachment' }>(null);
+  const [preview, setPreview] = useState<null | { uri: string } & PhotoTarget>(null);
   const [uploading, setUploading] = useState(false);
   const cameraRef = useRef<CameraView>(null);
 
@@ -117,6 +121,7 @@ export function EditInventoryItemScreen() {
       setNotes(i.notes || '');
       setSpecs(i.technicalSpecs || []);
       setMainPhotoUrl(i.mainPhotoUrl ?? null);
+      setAttachments((i.attachmentPhotos ?? []).map(p => ({ name: p.name, url: p.url })));
       setOptions(Array.isArray(opts) ? opts : []);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível carregar o item.');
@@ -152,13 +157,13 @@ export function EditInventoryItemScreen() {
   // 1) Captura → só mostra a PRÉVIA (não envia ainda). A câmera "sai" na hora,
   // dando lugar à tela de confirmação — corrige o bug de a câmera ficar aberta
   // presa no upload.
-  const capturePhoto = async (role: 'main' | 'attachment') => {
+  const capturePhoto = async (target: PhotoTarget) => {
     if (!cameraRef.current) return;
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.9 });
       if (!photo?.uri) return;
       setShooting(null);
-      setPreview({ uri: photo.uri, role });
+      setPreview({ uri: photo.uri, ...target });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao tirar a foto.');
       setShooting(null);
@@ -166,20 +171,21 @@ export function EditInventoryItemScreen() {
   };
 
   // Escolher da galeria → mesma tela de confirmação.
-  const pickFromGallery = async (role: 'main' | 'attachment') => {
+  const pickFromGallery = async (target: PhotoTarget) => {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) { setError('Permissão da galeria negada.'); return; }
       const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
       if (res.canceled || !res.assets?.[0]?.uri) return;
       setShooting(null);
-      setPreview({ uri: res.assets[0].uri, role });
+      setPreview({ uri: res.assets[0].uri, ...target });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao abrir a galeria.');
     }
   };
 
   // 2) Confirmar → redimensiona, ENVIA e fecha. Spinner enquanto sobe.
+  // index numa anexa = troca a foto naquela posição; sem index = anexa nova.
   const confirmPhoto = async () => {
     if (!preview || uploading) return;
     setUploading(true);
@@ -187,13 +193,28 @@ export function EditInventoryItemScreen() {
       const resized = await ImageManipulator.manipulateAsync(preview.uri, [{ resize: { width: 1600 } }], {
         compress: 0.8, format: ImageManipulator.SaveFormat.JPEG,
       });
-      await uploadInventoryPhoto(token, itemId, { uri: resized.uri, role: preview.role });
-      const role = preview.role;
+      await uploadInventoryPhoto(token, itemId, { uri: resized.uri, role: preview.role, index: preview.index });
+      const isReplace = preview.index != null;
       setPreview(null);
-      showToast(role === 'main' ? 'Foto principal atualizada.' : 'Foto anexada.');
+      showToast(preview.role === 'main' ? 'Foto principal atualizada.' : isReplace ? 'Foto trocada.' : 'Foto anexada.');
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao enviar a foto.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Remover uma foto (principal ou anexa por índice).
+  const removePhoto = async (target: { role: 'main' } | { index: number }) => {
+    if (uploading) return;
+    setUploading(true);
+    try {
+      await deleteInventoryPhoto(token, itemId, target);
+      showToast('Foto removida.');
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Falha ao remover a foto.');
     } finally {
       setUploading(false);
     }
@@ -245,7 +266,7 @@ export function EditInventoryItemScreen() {
             <Icon name="x" size={19} color="#fff" />
           </Pressable>
           <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
-            {shooting === 'main' ? 'Foto principal' : 'Foto anexa'}
+            {shooting.role === 'main' ? 'Foto principal' : shooting.index != null ? 'Trocar foto' : 'Foto anexa'}
           </Text>
           <View style={{ width: 38 }} />
         </View>
@@ -276,7 +297,7 @@ export function EditInventoryItemScreen() {
       <View style={{ flex: 1, backgroundColor: '#0A0E18' }}>
         <Image source={{ uri: preview.uri }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} resizeMode="contain" />
         <View style={{ paddingTop: 52, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Pressable onPress={() => { if (!uploading) { const r = preview.role; setPreview(null); setShooting(r); } }} style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: 'rgba(255,255,255,.14)', alignItems: 'center', justifyContent: 'center' }}>
+          <Pressable onPress={() => { if (!uploading) { const t = { role: preview.role, index: preview.index }; setPreview(null); setShooting(t); } }} style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: 'rgba(255,255,255,.14)', alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="x" size={19} color="#fff" />
           </Pressable>
           <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>Confirmar foto</Text>
@@ -284,7 +305,7 @@ export function EditInventoryItemScreen() {
         </View>
         <View style={{ flex: 1 }} />
         <View style={{ paddingBottom: 40, paddingHorizontal: 20, flexDirection: 'row', gap: 12 }}>
-          <Pressable onPress={() => { if (!uploading) { const r = preview.role; setPreview(null); setShooting(r); } }} disabled={uploading}
+          <Pressable onPress={() => { if (!uploading) { const t = { role: preview.role, index: preview.index }; setPreview(null); setShooting(t); } }} disabled={uploading}
             style={{ flex: 1, height: 50, borderRadius: 13, borderWidth: 1, borderColor: 'rgba(255,255,255,.4)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: uploading ? 0.5 : 1 }}>
             <Icon name="refresh" size={16} color="#fff" />
             <Text style={{ color: '#fff', fontSize: 14.5, fontWeight: '700' }}>Refazer</Text>
@@ -314,16 +335,47 @@ export function EditInventoryItemScreen() {
             )}
           </View>
           <View style={{ flex: 1, gap: 8 }}>
-            <Pressable onPress={() => setShooting('main')} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 10, borderRadius: 11, backgroundColor: T.primary }}>
+            <Pressable onPress={() => setShooting({ role: 'main' })} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 10, borderRadius: 11, backgroundColor: T.primary }}>
               <Icon name="camera" size={15} color="#fff" />
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{mainPhotoUrl ? 'Trocar principal' : 'Foto principal'}</Text>
             </Pressable>
-            <Pressable onPress={() => setShooting('attachment')} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 10, borderRadius: 11, borderWidth: 1, borderColor: T.border }}>
+            {mainPhotoUrl && (
+              <Pressable onPress={() => void removePhoto({ role: 'main' })} disabled={uploading} style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Icon name="trash" size={13} color={T.danger} />
+                <Text style={{ color: T.danger, fontSize: 12, fontWeight: '700' }}>Remover principal</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={() => setShooting({ role: 'attachment' })} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 10, borderRadius: 11, borderWidth: 1, borderColor: T.border }}>
               <Icon name="plus" size={15} color={T.primary} />
               <Text style={{ color: T.primary, fontWeight: '700', fontSize: 13 }}>Anexar foto</Text>
             </Pressable>
           </View>
         </View>
+
+        {/* Fotos anexas — cada uma pode ser trocada ou removida. */}
+        {attachments.length > 0 && (
+          <View style={{ marginTop: 14, gap: 10 }}>
+            <Text style={{ fontSize: 12, color: T.muted, fontWeight: '700' }}>Fotos anexas ({attachments.length})</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {attachments.map((a, i) => (
+                <View key={i} style={{ width: 96, gap: 5 }}>
+                  <View style={{ width: 96, height: 96, borderRadius: 11, overflow: 'hidden', borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted }}>
+                    <Image source={{ uri: `${API_BASE_URL}${a.url}`, headers: token ? { Authorization: `Bearer ${token}` } : undefined }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 2 }}>
+                    <Pressable onPress={() => setShooting({ role: 'attachment', index: i })} hitSlop={6} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                      <Icon name="camera" size={13} color={T.primary} />
+                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: T.primary }}>Trocar</Text>
+                    </Pressable>
+                    <Pressable onPress={() => void removePhoto({ index: i })} disabled={uploading} hitSlop={6}>
+                      <Icon name="trash" size={14} color={T.danger} />
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
       </SectionCard>
 
       <SectionCard title="Identificação">
