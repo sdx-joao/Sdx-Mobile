@@ -231,7 +231,10 @@ export function NewInventoryItemScreen() {
     if (!code) { setError('Cadastro só pode iniciar pela leitura de uma etiqueta.'); return; }
     const form: PendingForm = {
       primaryType, name, itemType: isEquip ? 'equipment' : 'consumable', category,
-      unitName, room, sku, assetTag, serialNumber, brand, model, equipmentStatus, operatingSystem,
+      unitName, room, sku, assetTag, serialNumber, brand, model, equipmentStatus,
+      // Sobressalente no CEDOC/ESTOQUE → nasce in_stock; senão em uso.
+      lifecycleStatus: isEquip ? (unitName.trim().toUpperCase() === 'CEDOC/ESTOQUE' ? 'in_stock' : 'in_use') : undefined,
+      operatingSystem,
       unit, minQty: Number(minQty) || 0, maxQty: Number(maxQty) || 0, initialQty: Number(initialQty) || 0,
       technicalSpecs: specs, notes,
       mainPhotoUri, attachmentUris,

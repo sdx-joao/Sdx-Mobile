@@ -20,6 +20,7 @@ export type PendingForm = {
   brand?: string;
   model?: string;
   equipmentStatus?: string;
+  lifecycleStatus?: 'in_use' | 'in_stock' | 'maintenance' | 'retired';
   operatingSystem?: string;
   unit?: string;
   minQty?: number;

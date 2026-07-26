@@ -234,6 +234,9 @@ export function EditInventoryItemScreen() {
         brand: brand.trim() || null,
         model: model.trim() || null,
         equipmentStatus: equipmentStatus.trim() || null,
+        // CEDOC/ESTOQUE → sobressalente (in_stock); senão em uso. (manutenção/baixa
+        // vêm do fluxo da O.S., não desta tela.)
+        lifecycleStatus: unitName.trim().toUpperCase() === 'CEDOC/ESTOQUE' ? 'in_stock' : 'in_use',
         operatingSystem: operatingSystem.trim() || null,
         unitName: unitName.trim() || null,
         room: room.trim() || null,

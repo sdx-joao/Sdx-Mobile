@@ -635,6 +635,8 @@ export type NewInventoryItemInput = {
   minQty?: number;
   maxQty?: number;
   initialQty?: number;
+  /** Ciclo de vida do equipamento: 'in_stock' quando é sobressalente (CEDOC). */
+  lifecycleStatus?: 'in_use' | 'in_stock' | 'maintenance' | 'retired';
 };
 
 /** Envia uma foto do item (principal ou anexo) — usado após o cadastro. */
@@ -710,6 +712,7 @@ export type UpdateInventoryItemInput = {
   brand?: string | null;
   model?: string | null;
   equipmentStatus?: string | null;
+  lifecycleStatus?: 'in_use' | 'in_stock' | 'maintenance' | 'retired';
   operatingSystem?: string | null;
   unitName?: string | null;
   room?: string | null;
