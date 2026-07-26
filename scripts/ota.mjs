@@ -50,9 +50,10 @@ console.log(`  ENV : ${profileEnv.EXPO_PUBLIC_APP_ENV}`);
 console.log(`  msg : ${message}`);
 console.log('────────────────────────────────────────\n');
 
-const res = spawnSync(
-  'npx',
-  ['eas', 'update', '--branch', branch, '--message', message],
-  { stdio: 'inherit', env, shell: true },
-);
+// shell:true é necessário no Windows (o binário do npx é um .cmd). Passamos UM
+// comando em string com a mensagem entre aspas — senão o shell re-divide a
+// mensagem em várias palavras (eas: "Unexpected arguments").
+const safeMsg = message.replace(/"/g, '\\"');
+const cmd = `npx eas update --branch ${branch} --message "${safeMsg}"`;
+const res = spawnSync(cmd, { stdio: 'inherit', env, shell: true });
 process.exit(res.status ?? 1);
