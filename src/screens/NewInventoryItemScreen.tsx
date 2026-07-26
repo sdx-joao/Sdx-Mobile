@@ -379,6 +379,34 @@ export function NewInventoryItemScreen() {
             <SuggestedInput label="Tipo do equipamento" value={category} onChangeText={setCategory} placeholder="Monitor, tablet, switch…" options={opts('inventory_equipment_category')} />
             <View><FieldLabel>SKU / código interno</FieldLabel><Field value={sku} onChangeText={setSku} placeholder="Opcional" onScan={() => setScanField('sku')} /></View>
             <View><FieldLabel>Patrimônio / etiqueta anterior(es)</FieldLabel><Field value={assetTag} onChangeText={setAssetTag} placeholder="Um por linha, ou separe por vírgula" multiline /></View>
+            {isEquip && (() => {
+              const inCedocStock = unitName.trim().toUpperCase() === 'CEDOC/ESTOQUE';
+              return (
+                <Pressable
+                  onPress={() => {
+                    if (inCedocStock) { setUnitName(''); setRoom(''); setEquipmentStatus('FUNCIONANDO'); }
+                    else { setUnitName('CEDOC/ESTOQUE'); setRoom('CEDOC/ESTOQUE'); setEquipmentStatus('EM ESTOQUE'); }
+                  }}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                    borderWidth: 1, borderColor: inCedocStock ? T.primary : T.border,
+                    backgroundColor: inCedocStock ? T.primary + '15' : T.surface,
+                    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: T.text, fontWeight: '700', fontSize: 14 }}>Em estoque (CEDOC/ESTOQUE)</Text>
+                    <Text style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>Sobressalente aguardando uso: local CEDOC/ESTOQUE + estado EM ESTOQUE.</Text>
+                  </View>
+                  <View style={{
+                    width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: inCedocStock ? T.primary : 'transparent', borderWidth: inCedocStock ? 0 : 1, borderColor: T.border,
+                  }}>
+                    {inCedocStock && <Icon name="check-circle" size={18} color="#fff" />}
+                  </View>
+                </Pressable>
+              );
+            })()}
             <SuggestedInput label="Unidade" required value={unitName} onChangeText={setUnitName} placeholder="Selecione a unidade" options={opts('work_order_unit')} />
             <SuggestedInput label="Departamento / Setor" required value={room} onChangeText={setRoom} placeholder="Ex.: CEDOC, Recepção, Centro Cirúrgico" options={opts('work_order_department')} />
             {isEquip ? (

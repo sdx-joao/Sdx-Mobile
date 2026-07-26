@@ -408,6 +408,34 @@ export function EditInventoryItemScreen() {
 
       <SectionCard title="Local">
         <View style={{ gap: 11 }}>
+          {(() => {
+            const inCedocStock = unitName.trim().toUpperCase() === 'CEDOC/ESTOQUE';
+            return (
+              <Pressable
+                onPress={() => {
+                  if (inCedocStock) { setUnitName(''); setRoom(''); setEquipmentStatus('FUNCIONANDO'); }
+                  else { setUnitName('CEDOC/ESTOQUE'); setRoom('CEDOC/ESTOQUE'); setEquipmentStatus('EM ESTOQUE'); }
+                }}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                  borderWidth: 1, borderColor: inCedocStock ? T.primary : T.border,
+                  backgroundColor: inCedocStock ? T.primary + '15' : T.surface,
+                  borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: T.text, fontWeight: '700', fontSize: 14 }}>Em estoque (CEDOC/ESTOQUE)</Text>
+                  <Text style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>Sobressalente aguardando uso: local CEDOC/ESTOQUE + estado EM ESTOQUE.</Text>
+                </View>
+                <View style={{
+                  width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: inCedocStock ? T.primary : 'transparent', borderWidth: inCedocStock ? 0 : 1, borderColor: T.border,
+                }}>
+                  {inCedocStock && <Icon name="check-circle" size={18} color="#fff" />}
+                </View>
+              </Pressable>
+            );
+          })()}
           <SuggestedInput label="Unidade" value={unitName} onChangeText={setUnitName} placeholder="Hospital do Olho" options={opts('work_order_unit')} />
           <SuggestedInput label="Departamento / Setor" value={room} onChangeText={setRoom} placeholder="CEDOC, Recepção…" options={opts('work_order_department')} />
           <View><FieldLabel>Detalhe do local</FieldLabel><Field value={currentLocation} onChangeText={setCurrentLocation} placeholder="Ex.: armário 3, mesa 2" /></View>
