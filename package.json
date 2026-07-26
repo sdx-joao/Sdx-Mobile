@@ -44,7 +44,9 @@
     "build:dev:android": "eas build --profile development --platform android",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "ota:prod": "node scripts/ota.mjs production",
+    "ota:test": "node scripts/ota.mjs test"
   },
   "private": true
 }
