@@ -59,6 +59,12 @@
         {
           "color": "#072AC8"
         }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "O Servus usa a agenda para importar o telefone do solicitante ao cadastrá-lo."
+        }
       ]
     ],
     "extra": {

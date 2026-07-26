@@ -70,7 +70,7 @@ export function StockMaterialsBlock({
         const available = bal ? bal.currentQty - bal.reservedQty : null;
         const shortfall = isOut && available != null && available - row.qty < 0;
         return (
-          <View key={index} style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
+          <View key={index} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
             <View style={{ flex: 1 }}>
               {fixed ? (
                 <View style={{ borderWidth: 1, borderColor: T.border, borderRadius: 10, backgroundColor: T.surfaceMuted, paddingHorizontal: 10, paddingVertical: 10 }}>
@@ -104,7 +104,7 @@ export function StockMaterialsBlock({
               />
             </View>
             {!fixed && rows.length > 1 && (
-              <Pressable onPress={() => remove(index)} style={{ padding: 8 }}>
+              <Pressable onPress={() => remove(index)} style={{ paddingHorizontal: 8, paddingVertical: 11 }}>
                 <Icon name="trash" size={18} color={T.muted} />
               </Pressable>
             )}

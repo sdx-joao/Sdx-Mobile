@@ -1,10 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import * as Contacts from 'expo-contacts';
 import { Icon } from './Icon';
 import { FieldLabel } from './ui';
 import { T } from '../theme/theme';
+import { showToast } from '../lib/toast';
 import { useKeyboardHeight } from './use-keyboard-height';
 import type { WorkOrderRequester } from '../api/mobile';
+
+// Só dígitos (com + inicial opcional) — normaliza o número vindo da agenda.
+const cleanPhone = (raw: string) => raw.replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '');
 
 function normalizeForSearch(value: string) {
   return value.toUpperCase().trim();
@@ -44,7 +49,31 @@ export function RequesterPicker({
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newDept, setNewDept] = useState('');
+  const [importing, setImporting] = useState(false);
   const keyboardHeight = useKeyboardHeight();
+
+  // Importa o telefone (e o nome, se vazio) de um contato da agenda do celular.
+  const importFromContacts = async () => {
+    if (importing) return;
+    setImporting(true);
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== 'granted') {
+        showToast('Permissão da agenda negada.');
+        return;
+      }
+      const contact = await Contacts.presentContactPickerAsync();
+      if (!contact) return; // usuário cancelou
+      const phone = contact.phoneNumbers?.find(p => p.number)?.number ?? '';
+      if (phone) setNewPhone(cleanPhone(phone));
+      if (!newName.trim() && contact.name) setNewName(contact.name);
+      if (!phone) showToast('Contato sem telefone.');
+    } catch {
+      showToast('Não foi possível abrir a agenda.');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const dept = normalizeForSearch(department);
   const filtered = useMemo(() => {
@@ -133,7 +162,17 @@ export function RequesterPicker({
                       <TextInput value={newName} onChangeText={setNewName} placeholder="Nome completo" placeholderTextColor={T.faint} autoFocus style={SHEET_INPUT} />
                     </View>
                     <View>
-                      <FieldLabel>Telefone</FieldLabel>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <FieldLabel>Telefone</FieldLabel>
+                        <Pressable
+                          onPress={importFromContacts}
+                          disabled={importing}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4, paddingHorizontal: 6, opacity: importing ? 0.5 : 1 }}
+                        >
+                          <Icon name="user" size={14} color={T.primary} />
+                          <Text style={{ color: T.primary, fontSize: 12, fontWeight: '700' }}>Importar da agenda</Text>
+                        </Pressable>
+                      </View>
                       <TextInput value={newPhone} onChangeText={setNewPhone} placeholder="(00) 00000-0000" placeholderTextColor={T.faint} keyboardType="phone-pad" style={SHEET_INPUT} />
                     </View>
                     <View>
