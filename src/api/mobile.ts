@@ -217,6 +217,9 @@ export function getWorkOrder(token: string | null, id: string) {
       outgoingDestination: string | null;
       appliedAt: string | null;
     }>;
+    /** Materiais de estoque atuais da OS (entrega/coleta) + vínculo do serviço. */
+    stockMaterials?: StockMaterialRow[];
+    serviceStock?: StockServiceLink | null;
   }>(`/api/mobile/work-orders/${id}`, { token });
 }
 
@@ -242,6 +245,47 @@ export async function getWorkOrderAttachments(token: string | null, id: string):
   return res.attachments ?? [];
 }
 
+// ─── Estoque de suprimentos movimentado por serviço (entrega/coleta) ───────────
+
+/** Vínculo de um tipo de serviço com o estoque. Ver docs/WORK_ORDER_STOCK_LINK.md. */
+export type StockServiceLink = {
+  serviceType: string;
+  direction: 'out' | 'in';
+  itemId: string | null;
+  itemName: string | null;
+  itemUnit: string | null;
+  currentQty: number | null;
+  isActive?: boolean;
+};
+
+export type StockConsumable = {
+  id: string;
+  name: string;
+  unit: string;
+  currentQty: number;
+  reservedQty: number;
+};
+
+/** Linha de material de estoque enviada no payload da OS. */
+export type StockMaterialInput = { itemId: string; qty: number };
+
+/** Material de estoque já vinculado à OS (vindo do GET do detalhe). */
+export type StockMaterialRow = {
+  itemId: string;
+  itemName: string | null;
+  qty: number;
+  direction: 'out' | 'in';
+  unit: string | null;
+};
+
+/** Vínculos serviço↔estoque + consumíveis, para montar a seção na OS. */
+export function fetchServiceStock(token: string | null) {
+  return apiFetch<{ links: StockServiceLink[]; consumables: StockConsumable[] }>(
+    '/api/mobile/work-orders/service-stock',
+    { token },
+  );
+}
+
 export type CreateWorkOrderInput = {
   serviceType: string;
   category: string;
@@ -255,6 +299,8 @@ export type CreateWorkOrderInput = {
   priority: WorkOrderPriority;
   /** Equipamentos envolvidos (opcional): quem deu problema. Link/QR ou texto. */
   involvedEquipment?: InvolvedEquipmentInput[];
+  /** Materiais de estoque (entrega/coleta) — direção vem do vínculo do serviço. */
+  stockMaterials?: StockMaterialInput[];
 };
 
 /** Ação de equipamento enviada pela OS (mesma forma do web). */
@@ -283,6 +329,8 @@ export type UpdateWorkOrderInput = Partial<CreateWorkOrderInput> & {
   finishedAt?: string | null;
   materials?: WorkOrder['materials'];
   equipmentActions?: WorkOrderEquipmentActionInput[];
+  /** Materiais de estoque (entrega/coleta). Enviar reescreve (estorna e reaplica). */
+  stockMaterials?: StockMaterialInput[];
 };
 
 export function createWorkOrder(token: string | null, input: CreateWorkOrderInput) {

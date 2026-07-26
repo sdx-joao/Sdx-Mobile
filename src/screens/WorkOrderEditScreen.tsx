@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,6 +9,7 @@ import { RequesterPicker } from '../components/RequesterPicker';
 import { WorkOrderEquipmentEditor, buildEquipmentActionsPayload, type EquipActionDraft } from '../components/WorkOrderEquipmentEditor';
 import { T, WO_PRIORITY, WO_RESOLUTION, WO_STATUS } from '../theme/theme';
 import {
+  fetchServiceStock,
   getInventory,
   getOptions,
   getWorkOrder,
@@ -17,9 +18,11 @@ import {
   type InvolvedEquipmentInput,
   type SelectOption,
   type SelectOptionKind,
+  type StockMaterialInput,
   type WorkOrderRequester,
 } from '../api/mobile';
 import { InvolvedEquipmentBlock } from '../components/InvolvedEquipmentBlock';
+import { StockMaterialsBlock, buildStockMaterialsPayload } from '../components/StockMaterialsBlock';
 import { useResource } from '../api/use-resource';
 import { useAuth } from '../auth/auth-context';
 import { showToast } from '../lib/toast';
@@ -149,12 +152,13 @@ export function WorkOrderEditScreen() {
   const { token, user } = useAuth();
   const canUploadPhotos = user?.permissions?.canUploadWorkOrderPhotos !== false;
   const loader = useCallback(async () => {
-    const [detail, options, requesters] = await Promise.all([
+    const [detail, options, requesters, stock] = await Promise.all([
       getWorkOrder(token, route.params.id),
       getOptions(token, OPTION_KINDS),
       getWorkOrderRequesters(token),
+      fetchServiceStock(token).catch(() => ({ links: [], consumables: [] })),
     ]);
-    return { detail, options, requesters };
+    return { detail, options, requesters, stock };
   }, [token, route.params.id]);
   const { data, loading, error } = useResource(loader);
   const order = data?.detail.workOrder;
@@ -180,6 +184,9 @@ export function WorkOrderEditScreen() {
   const [equipmentActions, setEquipmentActions] = useState<EquipActionDraft[]>([]);
   const [involvedEquipment, setInvolvedEquipment] = useState<InvolvedEquipmentInput[]>([]);
   const [consumables, setConsumables] = useState<InventoryItem[]>([]);
+  const [stockMaterials, setStockMaterials] = useState<StockMaterialInput[]>([]);
+  // Snapshot ao carregar — só reenvia o estoque (estorno+reaplica) se o usuário mexeu.
+  const initialStockRef = useRef<string>('[]');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -218,6 +225,12 @@ export function WorkOrderEditScreen() {
     () => (optionsByKind.get('work_order_service_type') ?? []).find((o) => o.value === serviceType)?.code === 'EQUIP',
     [optionsByKind, serviceType],
   );
+  // Vínculo de estoque ativo do serviço atual (entrega/coleta).
+  const stockLink = useMemo(
+    () => (data?.stock?.links ?? []).find((l) => l.serviceType === serviceType && l.isActive !== false)
+      ?? (serviceType === order?.serviceType ? data?.detail.serviceStock ?? null : null),
+    [data?.stock?.links, data?.detail.serviceStock, serviceType, order?.serviceType],
+  );
   const onChangeCategory = (v: string) => {
     setCategory(v);
     const all = optionsByKind.get('work_order_service_type') ?? [];
@@ -251,6 +264,12 @@ export function WorkOrderEditScreen() {
     setResolutionStatus(order.resolutionStatus || null);
     setPriority(order.priority || 'normal');
     setMaterials((order.materials || []).map(materialToDraft));
+    // Materiais de estoque atuais da OS (entrega/coleta).
+    {
+      const rows = (data?.detail.stockMaterials ?? []).map((m) => ({ itemId: m.itemId, qty: m.qty }));
+      setStockMaterials(rows);
+      initialStockRef.current = JSON.stringify(rows);
+    }
     setInvolvedEquipment((order.involvedEquipment ?? []).map((e) => ({
       itemId: e.itemId, labelCode: e.labelCode, freeText: e.freeText,
       problemNote: e.problemNote, itemName: e.itemName, itemAssetTag: e.itemAssetTag,
@@ -317,6 +336,8 @@ export function WorkOrderEditScreen() {
     }
     setSaving(true);
     setFormError(null);
+    // Estoque: só reenvia se o usuário mexeu (estorno+reaplica no servidor).
+    const stockChanged = JSON.stringify(stockMaterials.map((r) => ({ itemId: r.itemId, qty: r.qty }))) !== initialStockRef.current;
     try {
       await updateWorkOrder(token, order.id, {
         serviceType,
@@ -340,6 +361,7 @@ export function WorkOrderEditScreen() {
           })),
         equipmentActions: buildEquipmentActionsPayload(equipmentActions, unitName, department),
         involvedEquipment,
+        ...(stockChanged ? { stockMaterials: buildStockMaterialsPayload(stockMaterials, stockLink) } : {}),
       });
       showToast(`${order.code} salva.`);
       nav.goBack();
@@ -519,6 +541,17 @@ export function WorkOrderEditScreen() {
       <SectionCard title="Equipamentos envolvidos">
         <InvolvedEquipmentBlock token={token} value={involvedEquipment} onChange={setInvolvedEquipment} highlight={serviceIsEquip} />
       </SectionCard>
+
+      {stockLink && (
+        <SectionCard title="Materiais de estoque">
+          <StockMaterialsBlock
+            link={stockLink}
+            consumables={data?.stock?.consumables ?? []}
+            value={stockMaterials}
+            onChange={setStockMaterials}
+          />
+        </SectionCard>
+      )}
 
       <SectionCard title={`Ações de equipamento (${equipmentActions.length})`}>
         <Text style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>

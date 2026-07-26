@@ -11,15 +11,18 @@ import { T, WO_PRIORITY } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
 import {
   createWorkOrder,
+  fetchServiceStock,
   getInventory,
   getOptions,
   getWorkOrderRequesters,
   type InvolvedEquipmentInput,
   type SelectOption,
   type SelectOptionKind,
+  type StockMaterialInput,
   type WorkOrderRequester,
 } from '../api/mobile';
 import { InvolvedEquipmentBlock } from '../components/InvolvedEquipmentBlock';
+import { StockMaterialsBlock, buildStockMaterialsPayload } from '../components/StockMaterialsBlock';
 import { useResource } from '../api/use-resource';
 import type { WorkOrderPriority } from '../data/mock';
 import type { RootStackParamList } from '../navigation/types';
@@ -90,11 +93,12 @@ export function NewWorkOrderScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { token, user } = useAuth();
   const optionsLoader = useCallback(async () => {
-    const [options, requesters] = await Promise.all([
+    const [options, requesters, stock] = await Promise.all([
       getOptions(token, WORK_ORDER_OPTION_KINDS),
       getWorkOrderRequesters(token),
+      fetchServiceStock(token).catch(() => ({ links: [], consumables: [] })),
     ]);
-    return { options, requesters };
+    return { options, requesters, stock };
   }, [token]);
   const { data } = useResource(optionsLoader);
   const [serviceType, setServiceType] = useState('');
@@ -113,7 +117,13 @@ export function NewWorkOrderScreen() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [involvedEquipment, setInvolvedEquipment] = useState<InvolvedEquipmentInput[]>([]);
+  const [stockMaterials, setStockMaterials] = useState<StockMaterialInput[]>([]);
   const accent = T.primary;
+  // Vínculo de estoque ativo do serviço escolhido (entrega/coleta).
+  const stockLink = useMemo(
+    () => (data?.stock?.links ?? []).find((l) => l.serviceType === serviceType && l.isActive !== false) ?? null,
+    [data?.stock?.links, serviceType],
+  );
   const optionsByKind = useMemo(() => {
     const grouped = new Map<SelectOptionKind, SelectOption[]>();
     for (const option of data?.options ?? []) {
@@ -198,6 +208,7 @@ export function NewWorkOrderScreen() {
         technicianRequest,
         priority,
         involvedEquipment,
+        stockMaterials: buildStockMaterialsPayload(stockMaterials, stockLink),
       });
       showToast(`${result.code} aberta.`);
       nav.replace('WorkOrderDetail', { id: result.id });
@@ -233,6 +244,17 @@ export function NewWorkOrderScreen() {
       <SectionCard title="Equipamentos envolvidos">
         <InvolvedEquipmentBlock token={token} value={involvedEquipment} onChange={setInvolvedEquipment} highlight={serviceIsEquip} />
       </SectionCard>
+
+      {stockLink && (
+        <SectionCard title="Materiais de estoque">
+          <StockMaterialsBlock
+            link={stockLink}
+            consumables={data?.stock?.consumables ?? []}
+            value={stockMaterials}
+            onChange={setStockMaterials}
+          />
+        </SectionCard>
+      )}
 
       <SectionCard title="Prioridade">
         <View style={{ flexDirection: 'row', gap: 8 }}>
