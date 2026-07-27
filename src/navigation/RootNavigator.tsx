@@ -26,6 +26,7 @@ import { WorkOrderSignatureScreen } from '../screens/WorkOrderSignatureScreen';
 import { MyDataScreen } from '../screens/MyDataScreen';
 import { NuntiusUnlockFab } from '../components/NuntiusUnlockScanner';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
+import { LocationShowcaseScreen } from '../screens/LocationShowcaseScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -59,6 +60,7 @@ export function RootNavigator() {
       <Stack.Screen name="WorkOrderAttachmentCapture" component={WorkOrderAttachmentCaptureScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="WorkOrderPhotoViewer" component={WorkOrderPhotoViewerScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="InventoryDetail" component={InventoryDetailScreen} />
+      <Stack.Screen name="LocationShowcase" component={LocationShowcaseScreen} />
       <Stack.Screen name="EditInventoryItem" component={EditInventoryItemScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="NewInventoryItem" component={NewInventoryItemScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="InventoryCopyValidation" component={InventoryCopyValidationScreen} options={{ presentation: 'fullScreenModal' }} />

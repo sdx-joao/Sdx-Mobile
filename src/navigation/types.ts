@@ -18,6 +18,7 @@ export type RootStackParamList = {
   WorkOrderPhotoViewer: { id: string; startId?: string };
   NewWorkOrder: undefined;
   InventoryDetail: { id: string };
+  LocationShowcase: { code: string };
   /** Edição de item já cadastrado (completar informação/fotos em campo). */
   EditInventoryItem: { id: string };
   NewInventoryItem: { labelCode?: string; copies?: number; firstCopy?: number; resumeLabelCode?: string } | undefined;

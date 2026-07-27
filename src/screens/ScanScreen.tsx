@@ -101,6 +101,10 @@ export function ScanScreen() {
     const scan = parseLabelScan(code);
     if (scan && isLabelCode(scan.code)) {
       locked.current = true;
+      if (scan.code.startsWith('LOC-')) {
+        nav.replace('LocationShowcase', { code: scan.code });
+        return;
+      }
       try {
         const label = await resolveInventoryLabel(token, scan.code);
         if (label.status === 'assigned' && label.itemId) {

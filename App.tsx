@@ -50,6 +50,10 @@ async function handleInventoryDeepLink(url: string | null) {
   if (!scan) return;
   const token = await getToken();
   if (!token || !navigationRef.isReady()) return;
+  if (scan.code.startsWith('LOC-')) {
+    navigationRef.navigate('LocationShowcase', { code: scan.code });
+    return;
+  }
   try {
     const label = await resolveInventoryLabel(token, scan.code);
     if (label.status === 'assigned' && label.itemId) {

@@ -467,6 +467,30 @@ export function getInventoryItem(token: string | null, id: string) {
   return apiFetch<{ item: InventoryItem; movements: Movement[] }>(`/api/mobile/inventory/${id}`, { token });
 }
 
+export type PublicLocationItem = {
+  id: string;
+  name: string;
+  itemType: string;
+  category: string | null;
+  assetTag: string | null;
+  brand: string | null;
+  model: string | null;
+  condition: string;
+  situation: string;
+  photoUrl: string | null;
+};
+
+export type PublicLocationShowcase = {
+  location: { code: string; unitName: string; sectorName: string; roomName: string | null };
+  items: PublicLocationItem[];
+};
+
+export function getPublicLocationShowcase(code: string) {
+  return apiFetch<PublicLocationShowcase>(
+    `/api/public/locations/${encodeURIComponent(code.trim().toUpperCase())}`,
+  );
+}
+
 export type EquipmentInstallationPlan = {
   required: boolean;
   operation: 'install' | 'collect' | null;
