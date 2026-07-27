@@ -3,7 +3,13 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View 
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { Icon } from './Icon';
 import { T } from '../theme/theme';
-import { getInventory, resolveInventoryLabel, type InvolvedEquipmentInput } from '../api/mobile';
+import { getInventory, resolveInventoryLabel, type InvolvedEquipmentInput, type RetireDestination } from '../api/mobile';
+
+const RETIRE_DEST_LABEL: Record<RetireDestination, string> = {
+  estoque: 'Estoque',
+  setor: 'Outro setor',
+  manutencao: 'Manutenção',
+};
 
 // CAIXA ALTA sem acento — mesma convenção dos selects.
 const upper = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim().replace(/\s+/g, ' ');
@@ -15,12 +21,14 @@ const upper = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperC
  * docs/WORK_ORDER_EQUIPMENT_AND_TAXONOMY.md (repo do servidor).
  */
 export function InvolvedEquipmentBlock({
-  token, value, onChange, highlight,
+  token, value, onChange, highlight, retireDefault,
 }: {
   token: string | null;
   value: InvolvedEquipmentInput[];
   onChange: (next: InvolvedEquipmentInput[]) => void;
   highlight?: boolean;
+  /** Destino padrão de retirada quando o serviço tem o vínculo; null = sem retirada. */
+  retireDefault?: RetireDestination | null;
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Array<{ id: string; name: string; assetTag: string | null; serialNumber?: string | null; unitName?: string | null; room?: string | null; currentLocation?: string | null }>>([]);
@@ -62,9 +70,13 @@ export function InvolvedEquipmentBlock({
       itemId: it.id, itemName: it.name, itemAssetTag: it.assetTag,
       itemSerialNumber: it.serialNumber, itemUnitName: it.unitName, itemRoom: it.room, itemCurrentLocation: it.currentLocation,
       problemNote: null,
+      // Serviço com vínculo de retirada → já vem no destino padrão (opt-out).
+      retire: retireDefault ? { to: retireDefault, unit: null, room: null } : null,
     }]);
     setQuery(''); setPickerOpen(false);
   };
+  const setRetire = (i: number, retire: InvolvedEquipmentInput['retire']) =>
+    onChange(value.map((e, idx) => (idx === i ? { ...e, retire } : e)));
   // Texto de local a partir de unidade/setor/local livre.
   const localOf = (e: InvolvedEquipmentInput) => [e.itemUnitName, e.itemRoom].filter(Boolean).join(' / ') || e.itemCurrentLocation || '';
   const addFree = () => {
@@ -133,6 +145,35 @@ export function InvolvedEquipmentBlock({
             placeholderTextColor={T.faint}
             style={{ height: 38, borderRadius: 9, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, paddingHorizontal: 12, fontSize: 13, color: T.text }}
           />
+          {retireDefault && e.itemId && (
+            <View style={{ gap: 6, borderTopWidth: 1, borderTopColor: T.border, paddingTop: 8 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: T.muted }}>Retirar este equipamento?</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {([null, 'estoque', 'setor', 'manutencao'] as const).map((opt) => {
+                  const active = (e.retire?.to ?? null) === opt;
+                  return (
+                    <Pressable
+                      key={String(opt)}
+                      onPress={() => setRetire(i, opt ? { to: opt, unit: e.retire?.unit ?? null, room: e.retire?.room ?? null } : null)}
+                      style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: active ? T.primary : T.border, backgroundColor: active ? `${T.primary}15` : T.surface }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: active ? '800' : '600', color: active ? T.primary : T.muted }}>
+                        {opt ? RETIRE_DEST_LABEL[opt] : 'Não retirar'}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {e.retire?.to === 'setor' && (
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TextInput value={e.retire.unit ?? ''} onChangeText={(v) => setRetire(i, { ...e.retire!, unit: upper(v) })} placeholder="Unidade destino" placeholderTextColor={T.faint}
+                    style={{ flex: 1, height: 38, borderRadius: 9, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, paddingHorizontal: 12, fontSize: 13, color: T.text }} />
+                  <TextInput value={e.retire.room ?? ''} onChangeText={(v) => setRetire(i, { ...e.retire!, room: upper(v) })} placeholder="Setor destino" placeholderTextColor={T.faint}
+                    style={{ flex: 1, height: 38, borderRadius: 9, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, paddingHorizontal: 12, fontSize: 13, color: T.text }} />
+                </View>
+              )}
+            </View>
+          )}
         </View>
       ))}
 

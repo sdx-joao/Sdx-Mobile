@@ -12,6 +12,7 @@ import { useAuth } from '../auth/auth-context';
 import {
   createWorkOrder,
   fetchServiceStock,
+  fetchServiceEquipment,
   getInventory,
   getOptions,
   getWorkOrderRequesters,
@@ -93,12 +94,13 @@ export function NewWorkOrderScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { token, user } = useAuth();
   const optionsLoader = useCallback(async () => {
-    const [options, requesters, stock] = await Promise.all([
+    const [options, requesters, stock, equip] = await Promise.all([
       getOptions(token, WORK_ORDER_OPTION_KINDS),
       getWorkOrderRequesters(token),
       fetchServiceStock(token).catch(() => ({ links: [], consumables: [] })),
+      fetchServiceEquipment(token).catch(() => ({ links: [] })),
     ]);
-    return { options, requesters, stock };
+    return { options, requesters, stock, equip };
   }, [token]);
   const { data } = useResource(optionsLoader);
   const [serviceType, setServiceType] = useState('');
@@ -123,6 +125,11 @@ export function NewWorkOrderScreen() {
   const stockLink = useMemo(
     () => (data?.stock?.links ?? []).find((l) => l.serviceType === serviceType && l.isActive !== false) ?? null,
     [data?.stock?.links, serviceType],
+  );
+  // Destino padrão de retirada do equipamento envolvido (se o serviço tem vínculo).
+  const retireDefault = useMemo(
+    () => (data?.equip?.links ?? []).find((l) => l.serviceType === serviceType && l.isActive && l.allowRetire)?.defaultDestination ?? null,
+    [data?.equip?.links, serviceType],
   );
   const optionsByKind = useMemo(() => {
     const grouped = new Map<SelectOptionKind, SelectOption[]>();
@@ -242,7 +249,7 @@ export function NewWorkOrderScreen() {
       </SectionCard>
 
       <SectionCard title="Equipamentos envolvidos">
-        <InvolvedEquipmentBlock token={token} value={involvedEquipment} onChange={setInvolvedEquipment} highlight={serviceIsEquip} />
+        <InvolvedEquipmentBlock token={token} value={involvedEquipment} onChange={setInvolvedEquipment} highlight={serviceIsEquip} retireDefault={retireDefault} />
       </SectionCard>
 
       {stockLink && (

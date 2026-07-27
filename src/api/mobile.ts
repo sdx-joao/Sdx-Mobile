@@ -40,6 +40,9 @@ export type SelectOption = {
   code?: string | null;
 };
 
+export type RetireDestination = 'estoque' | 'setor' | 'manutencao';
+export type InvolvedRetire = { to: RetireDestination; unit?: string | null; room?: string | null };
+
 export type InvolvedEquipmentInput = {
   itemId?: string | null;
   labelCode?: string | null;
@@ -51,7 +54,24 @@ export type InvolvedEquipmentInput = {
   itemUnitName?: string | null;
   itemRoom?: string | null;
   itemCurrentLocation?: string | null;
+  /** Retirada do equipamento envolvido (só quando o serviço tem o vínculo). */
+  retire?: InvolvedRetire | null;
 };
+
+export type ServiceEquipmentLink = {
+  serviceType: string;
+  allowRetire: boolean;
+  defaultDestination: RetireDestination;
+  isActive: boolean;
+};
+
+/** Vínculos serviço→retirar equipamento envolvido, para o app decidir o controle. */
+export function fetchServiceEquipment(token: string | null) {
+  return apiFetch<{ links: ServiceEquipmentLink[] }>(
+    '/api/mobile/work-orders/service-equipment',
+    { token },
+  );
+}
 
 export type WorkOrderRequester = {
   id: string;
@@ -209,7 +229,7 @@ export function getWorkOrder(token: string | null, id: string) {
     /** Ações de equipamento já registradas na OS (para editar sem apagar). */
     equipmentActions?: Array<{
       id: string;
-      action: 'install' | 'move' | 'swap';
+      action: 'install' | 'move' | 'swap' | 'retire';
       incoming: { id: string; name: string; assetTag: string | null; unitName: string | null; room: string | null } | null;
       outgoing: { id: string; name: string; assetTag: string | null; unitName: string | null; room: string | null } | null;
       reason: string | null;

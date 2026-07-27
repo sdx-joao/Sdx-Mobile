@@ -10,6 +10,7 @@ import { WorkOrderEquipmentEditor, buildEquipmentActionsPayload, type EquipActio
 import { T, WO_PRIORITY, WO_RESOLUTION, WO_STATUS } from '../theme/theme';
 import {
   fetchServiceStock,
+  fetchServiceEquipment,
   getInventory,
   getOptions,
   getWorkOrder,
@@ -152,13 +153,14 @@ export function WorkOrderEditScreen() {
   const { token, user } = useAuth();
   const canUploadPhotos = user?.permissions?.canUploadWorkOrderPhotos !== false;
   const loader = useCallback(async () => {
-    const [detail, options, requesters, stock] = await Promise.all([
+    const [detail, options, requesters, stock, equip] = await Promise.all([
       getWorkOrder(token, route.params.id),
       getOptions(token, OPTION_KINDS),
       getWorkOrderRequesters(token),
       fetchServiceStock(token).catch(() => ({ links: [], consumables: [] })),
+      fetchServiceEquipment(token).catch(() => ({ links: [] })),
     ]);
-    return { detail, options, requesters, stock };
+    return { detail, options, requesters, stock, equip };
   }, [token, route.params.id]);
   const { data, loading, error } = useResource(loader);
   const order = data?.detail.workOrder;
@@ -231,6 +233,10 @@ export function WorkOrderEditScreen() {
       ?? (serviceType === order?.serviceType ? data?.detail.serviceStock ?? null : null),
     [data?.stock?.links, data?.detail.serviceStock, serviceType, order?.serviceType],
   );
+  const retireDefault = useMemo(
+    () => (data?.equip?.links ?? []).find((l) => l.serviceType === serviceType && l.isActive && l.allowRetire)?.defaultDestination ?? null,
+    [data?.equip?.links, serviceType],
+  );
   const onChangeCategory = (v: string) => {
     setCategory(v);
     const all = optionsByKind.get('work_order_service_type') ?? [];
@@ -270,16 +276,30 @@ export function WorkOrderEditScreen() {
       setStockMaterials(rows);
       initialStockRef.current = JSON.stringify(rows);
     }
-    setInvolvedEquipment((order.involvedEquipment ?? []).map((e) => ({
-      itemId: e.itemId, labelCode: e.labelCode, freeText: e.freeText,
-      problemNote: e.problemNote, itemName: e.itemName, itemAssetTag: e.itemAssetTag,
-    })));
+    // Reconstrói a retirada dos envolvidos a partir das ações 'retire' pendentes.
+    const retireByItem = new Map<string, 'estoque' | 'setor' | 'manutencao'>();
+    for (const a of (data?.detail.equipmentActions ?? [])) {
+      if (a.action !== 'retire' || a.appliedAt || !a.outgoing?.id) continue;
+      const dest = a.outgoingDestination === 'cedoc' ? 'estoque'
+        : a.outgoingDestination === 'setor' ? 'setor'
+        : a.outgoingDestination === 'manutencao' ? 'manutencao' : null;
+      if (dest) retireByItem.set(String(a.outgoing.id), dest);
+    }
+    setInvolvedEquipment((order.involvedEquipment ?? []).map((e) => {
+      const to = e.itemId ? retireByItem.get(String(e.itemId)) : undefined;
+      return {
+        itemId: e.itemId, labelCode: e.labelCode, freeText: e.freeText,
+        problemNote: e.problemNote, itemName: e.itemName, itemAssetTag: e.itemAssetTag,
+        retire: to ? { to, unit: e.itemUnitName ?? null, room: e.itemRoom ?? null } : null,
+      };
+    }));
     // Ações de equipamento já registradas (web ou app) — carrega pra editar sem
     // apagar. Só as não aplicadas são editáveis; as aplicadas ficam no histórico.
     setEquipmentActions((data?.detail.equipmentActions ?? [])
-      .filter(a => !a.appliedAt)
+      // 'retire' é gerido pelo bloco de envolvidos, não pelo editor de ações.
+      .filter(a => !a.appliedAt && a.action !== 'retire')
       .map((a): EquipActionDraft => ({
-        action: a.action,
+        action: a.action as EquipActionDraft['action'],
         incoming: a.incoming,
         outgoing: a.outgoing,
         reason: a.reason || '',
@@ -539,7 +559,7 @@ export function WorkOrderEditScreen() {
       </SectionCard>
 
       <SectionCard title="Equipamentos envolvidos">
-        <InvolvedEquipmentBlock token={token} value={involvedEquipment} onChange={setInvolvedEquipment} highlight={serviceIsEquip} />
+        <InvolvedEquipmentBlock token={token} value={involvedEquipment} onChange={setInvolvedEquipment} highlight={serviceIsEquip} retireDefault={retireDefault} />
       </SectionCard>
 
       {stockLink && (
