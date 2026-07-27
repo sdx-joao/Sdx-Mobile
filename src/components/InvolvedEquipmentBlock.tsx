@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { Icon } from './Icon';
 import { T } from '../theme/theme';
 import { getInventory, resolveInventoryLabel, type InvolvedEquipmentInput, type RetireDestination } from '../api/mobile';
+import { API_BASE_URL } from '../api/client';
 
 const RETIRE_DEST_LABEL: Record<RetireDestination, string> = {
   estoque: 'Estoque',
@@ -13,6 +14,31 @@ const RETIRE_DEST_LABEL: Record<RetireDestination, string> = {
 
 // CAIXA ALTA sem acento — mesma convenção dos selects.
 const upper = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim().replace(/\s+/g, ' ');
+
+type EquipmentLifecycleStatus = 'in_use' | 'in_stock' | 'maintenance' | 'retired';
+type EquipmentPickerItem = {
+  id: string;
+  name: string;
+  assetTag: string | null;
+  serialNumber?: string | null;
+  unitName?: string | null;
+  room?: string | null;
+  currentLocation?: string | null;
+  lifecycleStatus?: EquipmentLifecycleStatus | null;
+  mainPhotoUrl?: string | null;
+};
+
+const STATUS_CHIP: Record<EquipmentLifecycleStatus, { label: string; color: string; background: string }> = {
+  in_stock: { label: 'EM ESTOQUE', color: '#047857', background: '#D1FAE5' },
+  in_use: { label: 'EM USO', color: '#1D4ED8', background: '#DBEAFE' },
+  maintenance: { label: 'MANUTENÇÃO', color: '#B45309', background: '#FEF3C7' },
+  retired: { label: 'BAIXADO', color: '#B91C1C', background: '#FEE2E2' },
+};
+
+function absolutePhotoUrl(path?: string | null) {
+  if (!path) return null;
+  return /^https?:\/\//i.test(path) ? path : `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+}
 
 /**
  * Bloco "Equipamentos envolvidos" da OS (app) — lista opcional 0..N de quem deu
@@ -40,7 +66,7 @@ export function InvolvedEquipmentBlock({
   allowFreeText?: boolean;
 }) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Array<{ id: string; name: string; assetTag: string | null; serialNumber?: string | null; unitName?: string | null; room?: string | null; currentLocation?: string | null; lifecycleStatus?: string | null }>>([]);
+  const [results, setResults] = useState<EquipmentPickerItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [freeText, setFreeText] = useState('');
   const [scanOpen, setScanOpen] = useState(false);
@@ -72,6 +98,7 @@ export function InvolvedEquipmentBlock({
               id: i.id, name: i.name, assetTag: i.assetTag, serialNumber: i.serialNumber,
               unitName: i.unitName, room: i.room, currentLocation: i.currentLocation,
               lifecycleStatus: i.lifecycleStatus,
+              mainPhotoUrl: i.mainPhotoUrl,
             }));
           setResults(equipment);
         }
@@ -90,7 +117,7 @@ export function InvolvedEquipmentBlock({
     unit: retireDefault === 'setor' ? destinationUnit ?? null : null,
     room: retireDefault === 'setor' ? destinationRoom ?? null : null,
   } : null;
-  const addItem = (it: { id: string; name: string; assetTag: string | null; serialNumber?: string | null; unitName?: string | null; room?: string | null; currentLocation?: string | null }) => {
+  const addItem = (it: EquipmentPickerItem) => {
     if (!has(it.id)) onChange([...value, {
       itemId: it.id, itemName: it.name, itemAssetTag: it.assetTag,
       itemSerialNumber: it.serialNumber, itemUnitName: it.unitName, itemRoom: it.room, itemCurrentLocation: it.currentLocation,
@@ -266,19 +293,41 @@ export function InvolvedEquipmentBlock({
             <ScrollView keyboardShouldPersistTaps="handled" style={{ marginTop: 8 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8 }}>
               {results.map((it) => (
                 <Pressable key={it.id} onPress={() => addItem(it)} disabled={has(it.id)}
-                  style={{ paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: T.border, opacity: has(it.id) ? 0.4 : 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>
-                    {it.name}{it.assetTag ? `  ·  ${it.assetTag}` : ''}
-                  </Text>
-                  <Text style={{ fontSize: 11.5, color: T.faint }}>
-                    {[
-                      it.serialNumber ? `SÉRIE ${it.serialNumber}` : null,
-                      [it.unitName, it.room].filter(Boolean).join(' / ') || it.currentLocation || 'sem local',
-                    ].filter(Boolean).join('  ·  ')}
-                  </Text>
-                  {sourcePolicy === 'stock_first' && (it as { lifecycleStatus?: string }).lifecycleStatus === 'in_stock' && (
-                    <Text style={{ marginTop: 2, fontSize: 10.5, fontWeight: '800', color: '#047857' }}>DISPONÍVEL NO ESTOQUE</Text>
-                  )}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: T.border, opacity: has(it.id) ? 0.4 : 1 }}>
+                  <View style={{ width: 46, height: 46, borderRadius: 9, overflow: 'hidden', borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}>
+                    {absolutePhotoUrl(it.mainPhotoUrl) ? (
+                      <Image
+                        source={{
+                          uri: absolutePhotoUrl(it.mainPhotoUrl)!,
+                          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+                        }}
+                        resizeMode="cover"
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    ) : (
+                      <Icon name="monitor" size={19} color={T.faint} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                      <Text style={{ flexShrink: 1, fontSize: 13.5, fontWeight: '700', color: T.text }} numberOfLines={1}>
+                        {it.name}{it.assetTag ? `  ·  ${it.assetTag}` : ''}
+                      </Text>
+                      {it.lifecycleStatus && STATUS_CHIP[it.lifecycleStatus] && (
+                        <View style={{ borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2, backgroundColor: STATUS_CHIP[it.lifecycleStatus].background }}>
+                          <Text style={{ fontSize: 9.5, fontWeight: '900', color: STATUS_CHIP[it.lifecycleStatus].color }}>
+                            {STATUS_CHIP[it.lifecycleStatus].label}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={{ fontSize: 11, color: T.faint }} numberOfLines={2}>
+                      {[
+                        it.serialNumber ? `SÉRIE ${it.serialNumber}` : null,
+                        [it.unitName, it.room].filter(Boolean).join(' / ') || it.currentLocation || 'sem local',
+                      ].filter(Boolean).join('  ·  ')}
+                    </Text>
+                  </View>
                 </Pressable>
               ))}
               {!loading && results.length === 0 && (
