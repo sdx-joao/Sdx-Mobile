@@ -25,6 +25,7 @@ type EquipmentPickerItem = {
   room?: string | null;
   currentLocation?: string | null;
   lifecycleStatus?: EquipmentLifecycleStatus | null;
+  equipmentStatus?: string | null;
   mainPhotoUrl?: string | null;
 };
 
@@ -34,6 +35,14 @@ const STATUS_CHIP: Record<EquipmentLifecycleStatus, { label: string; color: stri
   maintenance: { label: 'MANUTENÇÃO', color: '#B45309', background: '#FEF3C7' },
   retired: { label: 'BAIXADO', color: '#B91C1C', background: '#FEE2E2' },
 };
+
+function isCedocStock(item: EquipmentPickerItem) {
+  const unit = upper(item.unitName || '');
+  const location = upper([item.room, item.currentLocation].filter(Boolean).join(' '));
+  return item.lifecycleStatus === 'in_stock'
+    && unit === 'HOSPITAL DO OLHO'
+    && (location.includes('CEDOC') || location.includes('ESTOQUE'));
+}
 
 function absolutePhotoUrl(path?: string | null) {
   if (!path) return null;
@@ -87,6 +96,7 @@ export function InvolvedEquipmentBlock({
         if (alive) {
           const equipment = items
             .filter((i) => (i as { itemType?: string }).itemType !== 'consumable')
+            .filter((i) => sourcePolicy !== 'stock_first' || isCedocStock(i))
             .sort((a, b) => {
               if (sourcePolicy !== 'stock_first') return a.name.localeCompare(b.name, 'pt-BR');
               const aStock = a.lifecycleStatus === 'in_stock' ? 0 : 1;
@@ -97,7 +107,10 @@ export function InvolvedEquipmentBlock({
             .map((i) => ({
               id: i.id, name: i.name, assetTag: i.assetTag, serialNumber: i.serialNumber,
               unitName: i.unitName, room: i.room, currentLocation: i.currentLocation,
-              lifecycleStatus: i.lifecycleStatus,
+              lifecycleStatus: upper(i.equipmentStatus || '').includes('NAO FUNCIONANDO')
+                ? 'maintenance'
+                : i.lifecycleStatus,
+              equipmentStatus: i.equipmentStatus,
               mainPhotoUrl: i.mainPhotoUrl,
             }));
           setResults(equipment);
