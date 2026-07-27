@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   Pressable,
   RefreshControl,
@@ -25,6 +26,7 @@ import { Icon } from '../components/Icon';
 import { T, INV_TYPE } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
 import { useResource } from '../api/use-resource';
+import { API_BASE_URL } from '../api/client';
 import {
   createStockMovement,
   getInventory,
@@ -69,17 +71,23 @@ function StockCard({
   onOpen: (item: InventoryItem) => void;
   onMove: (item: InventoryItem) => void;
 }) {
+  const { token } = useAuth();
   const type = INV_TYPE[item.primaryType];
   const typeColor = TYPE_COLOR[item.primaryType];
   const available = item.currentQty - (item.reservedQty || 0);
   const low = available <= 0 || (item.minQty > 0 && available <= item.minQty);
+  // Miniatura (w=144) com Bearer — igual ao InvCard. Reconhecer pela foto é rápido.
+  const photoUri = item.mainPhotoUrl
+    ? `${API_BASE_URL}${item.mainPhotoUrl}${item.mainPhotoUrl.includes('?') ? '&' : '?'}w=144`
+    : null;
   return (
     <Pressable
       onPress={() => onOpen(item)}
       style={{
-        backgroundColor: T.surface,
+        // Tint suave por tipo — diferencia equipamento/suprimento/material de relance.
+        backgroundColor: `${typeColor.color}0A`,
         borderWidth: 1,
-        borderColor: low ? '#F59E0B55' : T.border,
+        borderColor: low ? '#F59E0B55' : `${typeColor.color}33`,
         borderLeftWidth: 4,
         borderLeftColor: typeColor.color,
         borderRadius: 14,
@@ -88,8 +96,16 @@ function StockCard({
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 11 }}>
-        <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: typeColor.soft, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name={type?.icon || 'archive'} size={20} color={typeColor.color} />
+        <View style={{ width: 42, height: 42, borderRadius: 12, overflow: 'hidden', backgroundColor: typeColor.soft, alignItems: 'center', justifyContent: 'center' }}>
+          {photoUri ? (
+            <Image
+              source={{ uri: photoUri, headers: token ? { Authorization: `Bearer ${token}` } : undefined }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
+            />
+          ) : (
+            <Icon name={type?.icon || 'archive'} size={20} color={typeColor.color} />
+          )}
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text numberOfLines={2} style={{ color: T.text, fontSize: 14.5, fontWeight: '700', lineHeight: 19 }}>{item.name}</Text>
