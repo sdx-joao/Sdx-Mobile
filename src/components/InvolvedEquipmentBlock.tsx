@@ -36,10 +36,10 @@ const STATUS_CHIP: Record<EquipmentLifecycleStatus, { label: string; color: stri
   retired: { label: 'BAIXADO', color: '#B91C1C', background: '#FEE2E2' },
 };
 
-function isCedocStock(item: EquipmentPickerItem) {
+function isCedocStock(item: EquipmentPickerItem, includeMaintenance = false) {
   const unit = upper(item.unitName || '');
   const location = upper([item.room, item.currentLocation].filter(Boolean).join(' '));
-  return item.lifecycleStatus === 'in_stock'
+  return (item.lifecycleStatus === 'in_stock' || (includeMaintenance && item.lifecycleStatus === 'maintenance'))
     && unit === 'HOSPITAL DO OLHO'
     && (location.includes('CEDOC') || location.includes('ESTOQUE'));
 }
@@ -59,7 +59,7 @@ export function InvolvedEquipmentBlock({
   token, value, onChange, highlight, retireDefault, sourcePolicy = 'current',
   destinationUnit, destinationRoom, title = 'Equipamento envolvido',
   description = 'Opcional. Aponte o(s) equipamento(s) que deram problema — do inventário ou por descrição.',
-  allowFreeText = true,
+  allowFreeText = true, externalDelivery = false, reasonOptions = [],
 }: {
   token: string | null;
   value: InvolvedEquipmentInput[];
@@ -73,6 +73,8 @@ export function InvolvedEquipmentBlock({
   title?: string;
   description?: string;
   allowFreeText?: boolean;
+  externalDelivery?: boolean;
+  reasonOptions?: Array<{ value: string; label: string }>;
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<EquipmentPickerItem[]>([]);
@@ -96,7 +98,7 @@ export function InvolvedEquipmentBlock({
         if (alive) {
           const equipment = items
             .filter((i) => (i as { itemType?: string }).itemType !== 'consumable')
-            .filter((i) => sourcePolicy !== 'stock_first' || isCedocStock(i))
+            .filter((i) => sourcePolicy !== 'stock_first' || isCedocStock(i, externalDelivery))
             .sort((a, b) => {
               if (sourcePolicy !== 'stock_first') return a.name.localeCompare(b.name, 'pt-BR');
               const aStock = a.lifecycleStatus === 'in_stock' ? 0 : 1;
@@ -122,13 +124,15 @@ export function InvolvedEquipmentBlock({
       }
     }, term ? 350 : 0);
     return () => { alive = false; clearTimeout(timer); };
-  }, [query, token, pickerOpen, sourcePolicy]);
+  }, [query, token, pickerOpen, sourcePolicy, externalDelivery]);
 
   const has = (id: string) => value.some((e) => e.itemId === id);
   const retireOf = () => retireDefault ? {
     to: retireDefault,
     unit: retireDefault === 'setor' ? destinationUnit ?? null : null,
     room: retireDefault === 'setor' ? destinationRoom ?? null : null,
+    reason: null,
+    reasonNotes: null,
   } : null;
   const addItem = (it: EquipmentPickerItem) => {
     if (!has(it.id)) onChange([...value, {
@@ -234,20 +238,35 @@ export function InvolvedEquipmentBlock({
           <TextInput
             value={e.problemNote ?? ''}
             onChangeText={(v) => setProblem(i, v)}
-            placeholder="Qual o problema? (opcional)"
+            placeholder={externalDelivery ? 'Observação da baixa (opcional)' : 'Qual o problema? (opcional)'}
             placeholderTextColor={T.faint}
             style={{ height: 38, borderRadius: 9, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, paddingHorizontal: 12, fontSize: 13, color: T.text }}
           />
           {retireDefault && e.itemId && (
             <View style={{ gap: 6, borderTopWidth: 1, borderTopColor: T.border, paddingTop: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: T.muted }}>Retirar este equipamento?</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: T.muted }}>
+                {externalDelivery ? 'Motivo da baixa *' : 'Retirar este equipamento?'}
+              </Text>
+              {externalDelivery ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {reasonOptions.map(option => {
+                    const active = e.retire?.reason === option.value;
+                    return (
+                      <Pressable key={option.value}
+                        onPress={() => setRetire(i, { ...e.retire!, reason: option.value, reasonNotes: e.problemNote || null })}
+                        style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: active ? T.primary : T.border, backgroundColor: active ? `${T.primary}15` : T.surface }}>
+                        <Text style={{ fontSize: 12, fontWeight: active ? '800' : '600', color: active ? T.primary : T.muted }}>{option.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {([null, 'estoque', 'setor', 'manutencao'] as const).map((opt) => {
                   const active = (e.retire?.to ?? null) === opt;
                   return (
                     <Pressable
                       key={String(opt)}
-                      onPress={() => setRetire(i, opt ? { to: opt, unit: e.retire?.unit ?? null, room: e.retire?.room ?? null } : null)}
+                      onPress={() => setRetire(i, opt ? { ...e.retire, to: opt, unit: e.retire?.unit ?? null, room: e.retire?.room ?? null } : null)}
                       style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: active ? T.primary : T.border, backgroundColor: active ? `${T.primary}15` : T.surface }}
                     >
                       <Text style={{ fontSize: 12, fontWeight: active ? '800' : '600', color: active ? T.primary : T.muted }}>
@@ -256,7 +275,7 @@ export function InvolvedEquipmentBlock({
                     </Pressable>
                   );
                 })}
-              </View>
+              </View>}
               {e.retire?.to === 'setor' && (
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <TextInput value={e.retire.unit ?? ''} onChangeText={(v) => setRetire(i, { ...e.retire!, unit: upper(v) })} placeholder="Unidade destino" placeholderTextColor={T.faint}

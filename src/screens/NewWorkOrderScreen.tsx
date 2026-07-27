@@ -229,6 +229,9 @@ export function NewWorkOrderScreen() {
       [logistics?.external || 'Solicitante', requestedByName],
       ...(logistics && !isGenericEquipmentFlow ? [['Material de estoque', stockMaterialsPayload.length ? 'ok' : '']] : []),
       ...(isGenericEquipmentFlow ? [['Equipamento', involvedEquipment.some(item => !!item.itemId) ? 'ok' : '']] : []),
+      ...(equipmentFlow?.operation === 'deliver_from_stock'
+        ? [['Motivo da baixa', involvedEquipment.every(item => !item.itemId || !!item.retire?.reason) ? 'ok' : '']]
+        : []),
       ...(needsEquipmentDestination ? [['Setor de destino', department]] : []),
       ...(!logistics ? [['Setor', department], ['Descrição', technicianRequest]] : []),
     ].filter(([, value]) => !String(value).trim()).map(([label]) => label);
@@ -304,6 +307,8 @@ export function NewWorkOrderScreen() {
               ? 'Escolha um equipamento cadastrado. Itens disponíveis no estoque aparecem primeiro; você também pode buscar ou ler o QR.'
               : undefined}
             allowFreeText={!isGenericEquipmentFlow}
+            externalDelivery={equipmentFlow?.operation === 'deliver_from_stock'}
+            reasonOptions={(optionsByKind.get('work_order_movement_reason') ?? []).map(o => ({ value: o.value, label: o.label || o.value }))}
           />
         </SectionCard>
       )}

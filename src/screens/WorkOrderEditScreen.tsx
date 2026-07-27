@@ -356,6 +356,9 @@ export function WorkOrderEditScreen() {
       ['Solicitante', requestedByName],
       ['Solicitação', technicianRequest],
       ...(isGenericEquipmentFlow ? [['Equipamento', involvedEquipment.some(item => !!item.itemId) ? 'ok' : '']] : []),
+      ...(equipmentFlow?.operation === 'deliver_from_stock'
+        ? [['Motivo da baixa', involvedEquipment.every(item => !item.itemId || !!item.retire?.reason) ? 'ok' : '']]
+        : []),
     ].filter(([, value]) => !String(value).trim()).map(([label]) => label);
     if (missing.length) {
       setFormError(`Preencha: ${missing.join(', ')}.`);
@@ -584,6 +587,8 @@ export function WorkOrderEditScreen() {
             ? 'Estoque primeiro, com busca global e leitura do QR da etiqueta.'
             : undefined}
           allowFreeText={!isGenericEquipmentFlow}
+          externalDelivery={equipmentFlow?.operation === 'deliver_from_stock'}
+          reasonOptions={(optionsByKind.get('work_order_movement_reason') ?? []).map(o => ({ value: o.value, label: o.label || o.value }))}
         />
       </SectionCard>
 

@@ -41,7 +41,13 @@ export type SelectOption = {
 };
 
 export type RetireDestination = 'estoque' | 'setor' | 'manutencao';
-export type InvolvedRetire = { to: RetireDestination; unit?: string | null; room?: string | null };
+export type InvolvedRetire = {
+  to: RetireDestination;
+  unit?: string | null;
+  room?: string | null;
+  reason?: string | null;
+  reasonNotes?: string | null;
+};
 
 export type InvolvedEquipmentInput = {
   itemId?: string | null;
