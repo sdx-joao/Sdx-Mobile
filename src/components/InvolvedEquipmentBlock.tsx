@@ -99,19 +99,48 @@ export function InvolvedEquipmentBlock({
     if (scanLock.current) return;
     scanLock.current = true;
     setScanOpen(false);
+    const retireOf = () => (retireDefault ? { to: retireDefault, unit: null, room: null } : null);
+    // Extrai o código puro do QR (URL .../i/<code>?c=<n> ou texto direto).
+    const rawCode = () => String(data || '').split('/i/').pop()?.split('?')[0] || String(data || '');
     try {
-      // O QR guarda a URL .../i/<code>?c=<n>; resolveInventoryLabel normaliza.
+      // 1) Tenta o pool de etiquetas ETQ (resolveInventoryLabel normaliza a URL).
       const r = await resolveInventoryLabel(token, String(data || ''));
       if (r.itemId) {
-        if (!has(r.itemId)) onChange([...value, { itemId: r.itemId, labelCode: r.code, itemName: r.code, problemNote: null }]);
-      } else {
-        onChange([...value, { labelCode: r.code, freeText: r.code, problemNote: null }]);
+        if (!has(r.itemId)) onChange([...value, { itemId: r.itemId, labelCode: r.code, itemName: r.code, problemNote: null, retire: retireOf() }]);
+        return;
       }
+      // 2) Fallback: item cadastrado pelo próprio código (label_code HOJCB-…,
+      //    patrimônio ou série) — busca o equipamento e vincula de verdade.
+      const code = r.code || rawCode();
+      const found = await findEquipmentByCode(code);
+      if (found) { addItem(found); return; }
+      onChange([...value, { labelCode: r.code, freeText: r.code, problemNote: null }]);
     } catch {
-      // etiqueta não resolvida — guarda o texto lido como referência
-      const code = String(data || '').split('/i/').pop()?.split('?')[0] || String(data || '');
+      // resolveLabel deu 404/erro — ainda tenta achar o equipamento pelo código.
+      const code = rawCode();
+      try {
+        const found = await findEquipmentByCode(code);
+        if (found) { addItem(found); return; }
+      } catch { /* ignora */ }
       if (code) onChange([...value, { freeText: upper(code), problemNote: null }]);
     }
+  };
+  // Resolve um código escaneado (etiqueta HOJCB-…, patrimônio ou série) para um
+  // equipamento cadastrado — espelha a busca do web (label_code/asset_tag/serial).
+  const findEquipmentByCode = async (code: string) => {
+    const norm = upper(code);
+    if (!norm) return null;
+    const list = await getInventory(token, { q: code });
+    const eqs = list.filter((i) => i.itemType === 'equipment' && !has(i.id));
+    const exact = eqs.find((i) => [i.labelCode, i.assetTag, i.serialNumber, i.name]
+      .some((v) => v != null && upper(String(v)) === norm));
+    const chosen = exact ?? (eqs.length === 1 ? eqs[0] : null);
+    if (!chosen) return null;
+    return {
+      id: chosen.id, name: chosen.name, assetTag: chosen.assetTag ?? null,
+      serialNumber: chosen.serialNumber ?? null, unitName: chosen.unitName ?? null,
+      room: chosen.room ?? null, currentLocation: chosen.currentLocation ?? null,
+    };
   };
   const removeAt = (i: number) => onChange(value.filter((_, idx) => idx !== i));
   const setProblem = (i: number, note: string) => onChange(value.map((e, idx) => (idx === i ? { ...e, problemNote: note } : e)));
