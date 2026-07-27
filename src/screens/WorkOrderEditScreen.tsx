@@ -233,10 +233,16 @@ export function WorkOrderEditScreen() {
       ?? (serviceType === order?.serviceType ? data?.detail.serviceStock ?? null : null),
     [data?.stock?.links, data?.detail.serviceStock, serviceType, order?.serviceType],
   );
-  const retireDefault = useMemo(
-    () => (data?.equip?.links ?? []).find((l) => l.serviceType === serviceType && l.isActive && l.allowRetire)?.defaultDestination ?? null,
+  const equipmentFlow = useMemo(
+    () => (data?.equip?.links ?? []).find((l) => l.serviceType === serviceType && l.isActive && l.allowRetire) ?? null,
     [data?.equip?.links, serviceType],
   );
+  const retireDefault = equipmentFlow?.operation === 'collect_to_stock'
+    ? 'estoque'
+    : equipmentFlow?.operation === 'deliver_from_stock' || equipmentFlow?.operation === 'move_between_locations'
+      ? 'setor'
+      : equipmentFlow?.defaultDestination ?? null;
+  const isGenericEquipmentFlow = !!equipmentFlow && equipmentFlow.operation !== 'retire_involved';
   const onChangeCategory = (v: string) => {
     setCategory(v);
     const all = optionsByKind.get('work_order_service_type') ?? [];
@@ -349,6 +355,7 @@ export function WorkOrderEditScreen() {
       ['Setor', department],
       ['Solicitante', requestedByName],
       ['Solicitação', technicianRequest],
+      ...(isGenericEquipmentFlow ? [['Equipamento', involvedEquipment.some(item => !!item.itemId) ? 'ok' : '']] : []),
     ].filter(([, value]) => !String(value).trim()).map(([label]) => label);
     if (missing.length) {
       setFormError(`Preencha: ${missing.join(', ')}.`);
@@ -559,7 +566,24 @@ export function WorkOrderEditScreen() {
       </SectionCard>
 
       <SectionCard title="Equipamentos envolvidos">
-        <InvolvedEquipmentBlock token={token} value={involvedEquipment} onChange={setInvolvedEquipment} highlight={serviceIsEquip} retireDefault={retireDefault} />
+        <InvolvedEquipmentBlock
+          token={token}
+          value={involvedEquipment}
+          onChange={setInvolvedEquipment}
+          highlight={serviceIsEquip || isGenericEquipmentFlow}
+          retireDefault={retireDefault}
+          sourcePolicy={equipmentFlow?.sourcePolicy}
+          destinationUnit={unitName}
+          destinationRoom={department}
+          title={equipmentFlow?.operation === 'deliver_from_stock' ? 'Equipamento a entregar'
+            : equipmentFlow?.operation === 'collect_to_stock' ? 'Equipamento a coletar'
+              : equipmentFlow?.operation === 'move_between_locations' ? 'Equipamento a mudar de local'
+                : 'Equipamento envolvido'}
+          description={isGenericEquipmentFlow
+            ? 'Estoque primeiro, com busca global e leitura do QR da etiqueta.'
+            : undefined}
+          allowFreeText={!isGenericEquipmentFlow}
+        />
       </SectionCard>
 
       {stockLink && (

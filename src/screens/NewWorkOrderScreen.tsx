@@ -144,6 +144,24 @@ export function NewWorkOrderScreen() {
     () => (data?.equip?.links ?? []).find((l) => l.serviceType === serviceType && l.isActive && l.allowRetire)?.defaultDestination ?? null,
     [data?.equip?.links, serviceType],
   );
+  const equipmentFlow = useMemo(
+    () => (data?.equip?.links ?? []).find((l) => l.serviceType === serviceType && l.isActive && l.allowRetire) ?? null,
+    [data?.equip?.links, serviceType],
+  );
+  const isGenericEquipmentFlow = !!equipmentFlow && equipmentFlow.operation !== 'retire_involved';
+  const equipmentDestination = equipmentFlow?.operation === 'collect_to_stock'
+    ? 'estoque'
+    : equipmentFlow?.operation === 'deliver_from_stock' || equipmentFlow?.operation === 'move_between_locations'
+      ? 'setor'
+      : retireDefault;
+  const equipmentFlowTitle = equipmentFlow?.operation === 'deliver_from_stock'
+    ? 'Equipamento a entregar'
+    : equipmentFlow?.operation === 'collect_to_stock'
+      ? 'Equipamento a coletar'
+      : equipmentFlow?.operation === 'move_between_locations'
+        ? 'Equipamento a mudar de local'
+        : 'Equipamentos envolvidos';
+  const needsEquipmentDestination = isGenericEquipmentFlow && equipmentDestination === 'setor';
   const optionsByKind = useMemo(() => {
     const grouped = new Map<SelectOptionKind, SelectOption[]>();
     for (const option of data?.options ?? []) {
@@ -208,6 +226,8 @@ export function NewWorkOrderScreen() {
       [logistics?.unitLabel || 'Unidade', logistics?.unitFixed ? LOGISTICS_UNIT_DEFAULT : unitName],
       [logistics?.external || 'Solicitante', requestedByName],
       ...(logistics ? [['Material de estoque', stockMaterialsPayload.length ? 'ok' : '']] : []),
+      ...(isGenericEquipmentFlow ? [['Equipamento', involvedEquipment.some(item => !!item.itemId) ? 'ok' : '']] : []),
+      ...(needsEquipmentDestination ? [['Setor de destino', department]] : []),
       ...(!logistics ? [['Setor', department], ['Descrição', technicianRequest]] : []),
     ].filter(([, value]) => !String(value).trim()).map(([label]) => label);
     if (missing.length) {
@@ -228,7 +248,7 @@ export function NewWorkOrderScreen() {
         responsibleTechnicianName: user?.name || responsibleTechnicianName,
         technicianRequest: logistics ? `${serviceType}: ${requestedByName}` : technicianRequest,
         priority,
-        involvedEquipment: logistics ? [] : involvedEquipment,
+        involvedEquipment: logistics && !isGenericEquipmentFlow ? [] : involvedEquipment,
         stockMaterials: stockMaterialsPayload,
       });
       showToast(`${result.code} aberta.`);
@@ -249,10 +269,10 @@ export function NewWorkOrderScreen() {
           {!logistics?.unitFixed && (
             <SuggestedInput label={logistics?.unitLabel || 'Unidade'} required value={unitName} onChangeText={setUnitName} placeholder="Unidade" options={optionsByKind.get('work_order_unit') ?? []} />
           )}
-          {!logistics && (
+          {(!logistics || needsEquipmentDestination) && (
             <>
-              <SuggestedInput label="Setor" required value={department} onChangeText={selectDepartment} placeholder="Setor" options={optionsByKind.get('work_order_department') ?? []} />
-              <SuggestedInput label="Equipe técnica" value={technicalTeam} onChangeText={setTechnicalTeam} placeholder="Ex.: TI INTERNO" options={optionsByKind.get('work_order_technical_team') ?? []} />
+              <SuggestedInput label={needsEquipmentDestination ? 'Setor de destino' : 'Setor'} required value={department} onChangeText={logistics ? setDepartment : selectDepartment} placeholder="Setor" options={optionsByKind.get('work_order_department') ?? []} />
+              {!logistics && <SuggestedInput label="Equipe técnica" value={technicalTeam} onChangeText={setTechnicalTeam} placeholder="Ex.: TI INTERNO" options={optionsByKind.get('work_order_technical_team') ?? []} />}
             </>
           )}
           <View>
@@ -266,9 +286,23 @@ export function NewWorkOrderScreen() {
         </View>
       </SectionCard>
 
-      {!logistics && (
-        <SectionCard title="Equipamentos envolvidos">
-          <InvolvedEquipmentBlock token={token} value={involvedEquipment} onChange={setInvolvedEquipment} highlight={serviceIsEquip} retireDefault={retireDefault} />
+      {(!logistics || isGenericEquipmentFlow) && (
+        <SectionCard title={equipmentFlowTitle}>
+          <InvolvedEquipmentBlock
+            token={token}
+            value={involvedEquipment}
+            onChange={setInvolvedEquipment}
+            highlight={serviceIsEquip || isGenericEquipmentFlow}
+            retireDefault={equipmentDestination}
+            sourcePolicy={equipmentFlow?.sourcePolicy}
+            destinationUnit={unitName}
+            destinationRoom={department}
+            title={equipmentFlowTitle}
+            description={isGenericEquipmentFlow
+              ? 'Escolha um equipamento cadastrado. Itens disponíveis no estoque aparecem primeiro; você também pode buscar ou ler o QR.'
+              : undefined}
+            allowFreeText={!isGenericEquipmentFlow}
+          />
         </SectionCard>
       )}
 

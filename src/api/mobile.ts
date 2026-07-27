@@ -62,6 +62,10 @@ export type ServiceEquipmentLink = {
   serviceType: string;
   allowRetire: boolean;
   defaultDestination: RetireDestination;
+  operation?: 'retire_involved' | 'deliver_from_stock' | 'collect_to_stock' | 'move_between_locations';
+  selectionMode?: 'involved' | 'free' | 'preferred';
+  sourcePolicy?: 'current' | 'stock_first' | 'informed';
+  preferredItemId?: string | null;
   isActive: boolean;
 };
 

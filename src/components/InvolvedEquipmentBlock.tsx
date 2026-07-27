@@ -21,7 +21,10 @@ const upper = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperC
  * docs/WORK_ORDER_EQUIPMENT_AND_TAXONOMY.md (repo do servidor).
  */
 export function InvolvedEquipmentBlock({
-  token, value, onChange, highlight, retireDefault,
+  token, value, onChange, highlight, retireDefault, sourcePolicy = 'current',
+  destinationUnit, destinationRoom, title = 'Equipamento envolvido',
+  description = 'Opcional. Aponte o(s) equipamento(s) que deram problema — do inventário ou por descrição.',
+  allowFreeText = true,
 }: {
   token: string | null;
   value: InvolvedEquipmentInput[];
@@ -29,9 +32,15 @@ export function InvolvedEquipmentBlock({
   highlight?: boolean;
   /** Destino padrão de retirada quando o serviço tem o vínculo; null = sem retirada. */
   retireDefault?: RetireDestination | null;
+  sourcePolicy?: 'current' | 'stock_first' | 'informed';
+  destinationUnit?: string | null;
+  destinationRoom?: string | null;
+  title?: string;
+  description?: string;
+  allowFreeText?: boolean;
 }) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Array<{ id: string; name: string; assetTag: string | null; serialNumber?: string | null; unitName?: string | null; room?: string | null; currentLocation?: string | null }>>([]);
+  const [results, setResults] = useState<Array<{ id: string; name: string; assetTag: string | null; serialNumber?: string | null; unitName?: string | null; room?: string | null; currentLocation?: string | null; lifecycleStatus?: string | null }>>([]);
   const [loading, setLoading] = useState(false);
   const [freeText, setFreeText] = useState('');
   const [scanOpen, setScanOpen] = useState(false);
@@ -50,10 +59,21 @@ export function InvolvedEquipmentBlock({
       try {
         const items = await getInventory(token, term ? { q: term } : {});
         if (alive) {
-          setResults(items
+          const equipment = items
             .filter((i) => (i as { itemType?: string }).itemType !== 'consumable')
-            .slice(0, 12)
-            .map((i) => ({ id: i.id, name: i.name, assetTag: i.assetTag, serialNumber: i.serialNumber, unitName: i.unitName, room: i.room, currentLocation: (i as { currentLocation?: string | null }).currentLocation })));
+            .sort((a, b) => {
+              if (sourcePolicy !== 'stock_first') return a.name.localeCompare(b.name, 'pt-BR');
+              const aStock = a.lifecycleStatus === 'in_stock' ? 0 : 1;
+              const bStock = b.lifecycleStatus === 'in_stock' ? 0 : 1;
+              return aStock - bStock || a.name.localeCompare(b.name, 'pt-BR');
+            })
+            .slice(0, 20)
+            .map((i) => ({
+              id: i.id, name: i.name, assetTag: i.assetTag, serialNumber: i.serialNumber,
+              unitName: i.unitName, room: i.room, currentLocation: i.currentLocation,
+              lifecycleStatus: i.lifecycleStatus,
+            }));
+          setResults(equipment);
         }
       } catch {
         if (alive) setResults([]);
@@ -62,16 +82,21 @@ export function InvolvedEquipmentBlock({
       }
     }, term ? 350 : 0);
     return () => { alive = false; clearTimeout(timer); };
-  }, [query, token, pickerOpen]);
+  }, [query, token, pickerOpen, sourcePolicy]);
 
   const has = (id: string) => value.some((e) => e.itemId === id);
+  const retireOf = () => retireDefault ? {
+    to: retireDefault,
+    unit: retireDefault === 'setor' ? destinationUnit ?? null : null,
+    room: retireDefault === 'setor' ? destinationRoom ?? null : null,
+  } : null;
   const addItem = (it: { id: string; name: string; assetTag: string | null; serialNumber?: string | null; unitName?: string | null; room?: string | null; currentLocation?: string | null }) => {
     if (!has(it.id)) onChange([...value, {
       itemId: it.id, itemName: it.name, itemAssetTag: it.assetTag,
       itemSerialNumber: it.serialNumber, itemUnitName: it.unitName, itemRoom: it.room, itemCurrentLocation: it.currentLocation,
       problemNote: null,
       // Serviço com vínculo de retirada → já vem no destino padrão (opt-out).
-      retire: retireDefault ? { to: retireDefault, unit: null, room: null } : null,
+      retire: retireOf(),
     }]);
     setQuery(''); setPickerOpen(false);
   };
@@ -99,7 +124,6 @@ export function InvolvedEquipmentBlock({
     if (scanLock.current) return;
     scanLock.current = true;
     setScanOpen(false);
-    const retireOf = () => (retireDefault ? { to: retireDefault, unit: null, room: null } : null);
     // Extrai o código puro do QR (URL .../i/<code>?c=<n> ou texto direto).
     const rawCode = () => String(data || '').split('/i/').pop()?.split('?')[0] || String(data || '');
     try {
@@ -148,7 +172,7 @@ export function InvolvedEquipmentBlock({
   return (
     <View style={{ gap: 10, borderRadius: 12, borderWidth: highlight ? 1.5 : 0, borderColor: highlight ? T.primary : 'transparent', padding: highlight ? 10 : 0, backgroundColor: highlight ? `${T.primary}0D` : 'transparent' }}>
       <Text style={{ fontSize: 12, color: T.muted }}>
-        Opcional. Aponte o(s) equipamento(s) que deram problema — do inventário ou por descrição.
+        {description}
       </Text>
 
       {value.map((e, i) => (
@@ -221,7 +245,7 @@ export function InvolvedEquipmentBlock({
               <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: T.border }} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 10 }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: T.text }}>Equipamento envolvido</Text>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: T.text }}>{title}</Text>
               <Pressable onPress={() => setPickerOpen(false)} hitSlop={10}><Icon name="x" size={20} color={T.muted} /></Pressable>
             </View>
 
@@ -252,6 +276,9 @@ export function InvolvedEquipmentBlock({
                       [it.unitName, it.room].filter(Boolean).join(' / ') || it.currentLocation || 'sem local',
                     ].filter(Boolean).join('  ·  ')}
                   </Text>
+                  {sourcePolicy === 'stock_first' && (it as { lifecycleStatus?: string }).lifecycleStatus === 'in_stock' && (
+                    <Text style={{ marginTop: 2, fontSize: 10.5, fontWeight: '800', color: '#047857' }}>DISPONÍVEL NO ESTOQUE</Text>
+                  )}
                 </Pressable>
               ))}
               {!loading && results.length === 0 && (
@@ -259,14 +286,14 @@ export function InvolvedEquipmentBlock({
               )}
             </ScrollView>
 
-            <View style={{ paddingHorizontal: 16, paddingTop: 8, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            {allowFreeText && <View style={{ paddingHorizontal: 16, paddingTop: 8, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
               <TextInput value={freeText} onChangeText={setFreeText} placeholder="Sem cadastro? Descreva…" placeholderTextColor={T.faint} onSubmitEditing={addFree}
                 style={{ flex: 1, height: 44, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, paddingHorizontal: 12, fontSize: 13.5, color: T.text }} />
               <Pressable onPress={addFree} disabled={!freeText.trim()}
                 style={{ height: 44, paddingHorizontal: 16, borderRadius: 11, backgroundColor: T.primary, alignItems: 'center', justifyContent: 'center', opacity: freeText.trim() ? 1 : 0.5 }}>
                 <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>Adicionar</Text>
               </Pressable>
-            </View>
+            </View>}
           </Pressable>
         </Pressable>
       </Modal>
