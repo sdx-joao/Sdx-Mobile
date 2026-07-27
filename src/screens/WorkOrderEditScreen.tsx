@@ -239,10 +239,11 @@ export function WorkOrderEditScreen() {
   );
   const retireDefault = equipmentFlow?.operation === 'collect_to_stock'
     ? 'estoque'
-    : equipmentFlow?.operation === 'install_from_stock' || equipmentFlow?.operation === 'deliver_from_stock' || equipmentFlow?.operation === 'move_between_locations'
+    : equipmentFlow?.operation === 'install_from_stock' || equipmentFlow?.operation === 'deliver_from_stock' || equipmentFlow?.operation === 'move_between_locations' || equipmentFlow?.operation === 'exchange_between_locations'
       ? 'setor'
       : equipmentFlow?.defaultDestination ?? null;
   const isGenericEquipmentFlow = !!equipmentFlow && equipmentFlow.operation !== 'retire_involved';
+  const isExchangeFlow = equipmentFlow?.operation === 'exchange_between_locations';
   const onChangeCategory = (v: string) => {
     setCategory(v);
     const all = optionsByKind.get('work_order_service_type') ?? [];
@@ -364,6 +365,28 @@ export function WorkOrderEditScreen() {
       setFormError(`Preencha: ${missing.join(', ')}.`);
       return;
     }
+    if (isExchangeFlow) {
+      if (!equipmentActions.length || equipmentActions.some((action) =>
+        action.action !== 'swap' || !action.incoming || !action.outgoing || !action.reason
+      )) {
+        setFormError('Na troca, leia os dois equipamentos de cada conjunto e informe o motivo.');
+        return;
+      }
+      const normalize = (value?: string | null) => String(value || '').trim().toUpperCase();
+      for (const action of equipmentActions) {
+        const incomingPlace = `${normalize(action.incoming?.unitName)}|${normalize(action.incoming?.room)}`;
+        const outgoingPlace = `${normalize(action.outgoing?.unitName)}|${normalize(action.outgoing?.room)}`;
+        if (incomingPlace === outgoingPlace) {
+          setFormError('Os equipamentos da troca precisam estar em locais diferentes.');
+          return;
+        }
+        const requested = `${normalize(unitName)}|${normalize(department)}`;
+        if (incomingPlace !== requested && outgoingPlace !== requested) {
+          setFormError('Um dos lados da troca deve corresponder ao local solicitado na O.S.');
+          return;
+        }
+      }
+    }
     setSaving(true);
     setFormError(null);
     // Estoque: só reenvia se o usuário mexeu (estorno+reaplica no servidor).
@@ -389,7 +412,7 @@ export function WorkOrderEditScreen() {
             unit: item.unit || null,
             inventoryItemId: item.inventoryItemId ?? null,
           })),
-        equipmentActions: buildEquipmentActionsPayload(equipmentActions, unitName, department),
+        equipmentActions: buildEquipmentActionsPayload(equipmentActions, unitName, department, isExchangeFlow),
         involvedEquipment,
         ...(stockChanged ? { stockMaterials: buildStockMaterialsPayload(stockMaterials, stockLink) } : {}),
       });
@@ -582,6 +605,7 @@ export function WorkOrderEditScreen() {
             : equipmentFlow?.operation === 'deliver_from_stock' ? 'Equipamento a entregar'
             : equipmentFlow?.operation === 'collect_to_stock' ? 'Equipamento a coletar'
               : equipmentFlow?.operation === 'move_between_locations' ? 'Equipamento a mudar de local'
+                : equipmentFlow?.operation === 'exchange_between_locations' ? 'Equipamentos a trocar'
                 : 'Equipamento envolvido'}
           description={isGenericEquipmentFlow
             ? 'Estoque primeiro, com busca global e leitura do QR da etiqueta.'
@@ -613,6 +637,7 @@ export function WorkOrderEditScreen() {
           unitName={unitName}
           department={department}
           token={token}
+          exchangeMode={isExchangeFlow}
           reasonOptions={(optionsByKind.get('work_order_movement_reason') ?? []).map(o => ({ value: o.value, label: o.label || o.value }))}
         />
       </SectionCard>

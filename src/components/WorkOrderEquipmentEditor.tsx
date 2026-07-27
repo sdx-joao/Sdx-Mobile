@@ -49,7 +49,7 @@ export function newEquipAction(action: EquipActionKind): EquipActionDraft {
 
 /** Mapeia os rascunhos para o payload da API (igual ao web). */
 export function buildEquipmentActionsPayload(
-  actions: EquipActionDraft[], unitName: string, department: string,
+  actions: EquipActionDraft[], unitName: string, department: string, exchangeMode = false,
 ): WorkOrderEquipmentActionInput[] {
   return actions
     .filter(a => a.incoming || a.outgoing)
@@ -64,12 +64,15 @@ export function buildEquipmentActionsPayload(
         outgoingItemId: a.outgoing?.id ?? null,
         reason: a.reason || null,
         reasonNotes: a.reasonNotes || null,
-        toUnit: unitName || null,
-        toRoom: department || null,
+        // Na troca, cada equipamento vai para o local de origem do outro.
+        // Fora dela, o destino continua sendo o setor solicitado na O.S.
+        toUnit: exchangeMode && a.outgoing ? a.outgoing.unitName || null : unitName || null,
+        toRoom: exchangeMode && a.outgoing ? a.outgoing.room || null : department || null,
         toStatus: 'FUNCIONANDO',
-        outgoingDestination: a.action === 'swap' ? a.outgoingDestination : null,
-        outgoingToRoom: a.action === 'swap' ? outRoom : null,
-        outgoingToStatus: a.action === 'swap' ? outStatus : null,
+        outgoingDestination: a.action === 'swap' ? (exchangeMode ? 'setor' : a.outgoingDestination) : null,
+        outgoingToUnit: a.action === 'swap' && exchangeMode ? a.incoming?.unitName || null : null,
+        outgoingToRoom: a.action === 'swap' ? (exchangeMode ? a.incoming?.room || null : outRoom) : null,
+        outgoingToStatus: a.action === 'swap' ? (exchangeMode ? null : outStatus) : null,
       };
     });
 }
@@ -116,7 +119,7 @@ function SlotRow({ item, label, onScan, onClear }: { item: EquipSlot | null; lab
 }
 
 export function WorkOrderEquipmentEditor({
-  actions, onChange, unitName, department, token, reasonOptions,
+  actions, onChange, unitName, department, token, reasonOptions, exchangeMode = false,
 }: {
   actions: EquipActionDraft[];
   onChange: (next: EquipActionDraft[]) => void;
@@ -125,6 +128,7 @@ export function WorkOrderEquipmentEditor({
   token: string | null;
   /** Motivos vindos de Catálogos (work_order_movement_reason). Vazio = fallback. */
   reasonOptions?: Array<{ value: string; label: string }>;
+  exchangeMode?: boolean;
 }) {
   const reasons = reasonOptions?.length ? reasonOptions : FALLBACK_REASONS;
   const actionsRef = useRef(actions);
@@ -183,16 +187,19 @@ export function WorkOrderEquipmentEditor({
   return (
     <View style={{ gap: 12 }}>
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        {(['install', 'move', 'swap'] as EquipActionKind[]).map(k => (
+        {(exchangeMode ? ['swap'] : ['install', 'move', 'swap'] as EquipActionKind[]).map((k) => {
+          const kind = k as EquipActionKind;
+          return (
           <Pressable
-            key={k}
-            onPress={() => addAction(k)}
+            key={kind}
+            onPress={() => addAction(kind)}
             style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderWidth: 1, borderColor: T.border, borderRadius: 10, paddingVertical: 9 }}
           >
-            <Icon name={k === 'swap' ? 'shuffle' : k === 'move' ? 'chevron-right' : 'plus'} size={14} color={T.primary} />
-            <Text style={{ fontSize: 12.5, fontWeight: '700', color: T.primary }}>{ACTION_LABEL[k]}</Text>
+            <Icon name={kind === 'swap' ? 'shuffle' : kind === 'move' ? 'chevron-right' : 'plus'} size={14} color={T.primary} />
+            <Text style={{ fontSize: 12.5, fontWeight: '700', color: T.primary }}>{ACTION_LABEL[kind]}</Text>
           </Pressable>
-        ))}
+          );
+        })}
       </View>
 
       {actions.length === 0 && (
@@ -213,13 +220,22 @@ export function WorkOrderEquipmentEditor({
               {action.action === 'swap' ? 'Máquina nova (entra)' : 'Máquina'}
             </Text>
             <SlotRow item={action.incoming} label={action.action === 'swap' ? 'a nova' : 'a máquina'} onScan={() => setScanFor({ index, slot: 'incoming' })} onClear={() => update(index, { incoming: null })} />
-            <Text style={{ fontSize: 10.5, color: T.faint }}>Destino: {[unitName, department].filter(Boolean).join(' · ') || 'Setor da OS'}</Text>
+            <Text style={{ fontSize: 10.5, color: T.faint }}>
+              Destino: {exchangeMode && action.outgoing
+                ? [action.outgoing.unitName, action.outgoing.room].filter(Boolean).join(' · ')
+                : [unitName, department].filter(Boolean).join(' · ') || 'Setor da OS'}
+            </Text>
           </View>
 
           {action.action === 'swap' && (
             <View style={{ gap: 5 }}>
               <Text style={{ fontSize: 10.5, color: T.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>Máquina antiga (sai)</Text>
               <SlotRow item={action.outgoing} label="a antiga" onScan={() => setScanFor({ index, slot: 'outgoing' })} onClear={() => update(index, { outgoing: null })} />
+              {exchangeMode && action.incoming && (
+                <Text style={{ fontSize: 10.5, color: T.faint }}>
+                  Destino: {[action.incoming.unitName, action.incoming.room].filter(Boolean).join(' · ') || 'Origem da primeira máquina'}
+                </Text>
+              )}
             </View>
           )}
 
@@ -233,7 +249,7 @@ export function WorkOrderEquipmentEditor({
             </ScrollView>
           </View>
 
-          {action.action === 'swap' && (
+          {action.action === 'swap' && !exchangeMode && (
             <View style={{ gap: 6 }}>
               <Text style={{ fontSize: 10.5, color: T.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>Antiga vai para</Text>
               <View style={{ flexDirection: 'row', gap: 6 }}>
