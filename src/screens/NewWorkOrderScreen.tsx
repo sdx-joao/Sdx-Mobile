@@ -225,7 +225,7 @@ export function NewWorkOrderScreen() {
       ['Categoria', category],
       [logistics?.unitLabel || 'Unidade', logistics?.unitFixed ? LOGISTICS_UNIT_DEFAULT : unitName],
       [logistics?.external || 'Solicitante', requestedByName],
-      ...(logistics ? [['Material de estoque', stockMaterialsPayload.length ? 'ok' : '']] : []),
+      ...(logistics && !isGenericEquipmentFlow ? [['Material de estoque', stockMaterialsPayload.length ? 'ok' : '']] : []),
       ...(isGenericEquipmentFlow ? [['Equipamento', involvedEquipment.some(item => !!item.itemId) ? 'ok' : '']] : []),
       ...(needsEquipmentDestination ? [['Setor de destino', department]] : []),
       ...(!logistics ? [['Setor', department], ['Descrição', technicianRequest]] : []),
@@ -249,7 +249,7 @@ export function NewWorkOrderScreen() {
         technicianRequest: logistics ? `${serviceType}: ${requestedByName}` : technicianRequest,
         priority,
         involvedEquipment: logistics && !isGenericEquipmentFlow ? [] : involvedEquipment,
-        stockMaterials: stockMaterialsPayload,
+        stockMaterials: isGenericEquipmentFlow ? [] : stockMaterialsPayload,
       });
       showToast(`${result.code} aberta.`);
       nav.replace('WorkOrderDetail', { id: result.id });
@@ -306,7 +306,7 @@ export function NewWorkOrderScreen() {
         </SectionCard>
       )}
 
-      {stockLink && (
+      {stockLink && !isGenericEquipmentFlow && (
         <SectionCard title="Materiais de estoque">
           <StockMaterialsBlock
             link={stockLink}

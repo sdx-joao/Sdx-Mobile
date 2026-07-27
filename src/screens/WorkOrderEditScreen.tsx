@@ -586,7 +586,7 @@ export function WorkOrderEditScreen() {
         />
       </SectionCard>
 
-      {stockLink && (
+      {stockLink && !isGenericEquipmentFlow && (
         <SectionCard title="Materiais de estoque">
           <StockMaterialsBlock
             link={stockLink}
