@@ -346,7 +346,8 @@ export function WorkOrderSignatureScreen() {
   }
 
   const isSignStep = step === 'tech' || step === 'requester';
-  const title = step === 'location' ? 'Validar local da instalação'
+  const title = step === 'location'
+    ? (installationPlan?.operation === 'collect' ? 'Confirmar chegada ao estoque' : 'Validar local da instalação')
     : step === 'resolution' ? 'Situação e solução'
     : step === 'tech' ? 'Assinatura do técnico'
     : step === 'document' ? 'Documento do solicitante'
@@ -388,12 +389,18 @@ export function WorkOrderSignatureScreen() {
       ) : step === 'location' ? (
         <View style={{ flex: 1, gap: 14, justifyContent: 'center' }}>
           <View style={{ borderRadius: 16, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, padding: 18, gap: 8 }}>
-            <Text style={{ color: SUBTLE, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>DESTINO PREVISTO</Text>
+            <Text style={{ color: SUBTLE, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>
+              {installationPlan?.operation === 'collect' ? 'DESTINO OBRIGATÓRIO' : 'DESTINO PREVISTO'}
+            </Text>
             <Text style={{ color: TXT, fontSize: 17, fontWeight: '800' }}>
-              {[installationPlan?.expected.unitName, installationPlan?.expected.sectorName].filter(Boolean).join(' / ')}
+              {installationPlan?.operation === 'collect'
+                ? 'HOSPITAL DO OLHO / CEDOC / CEDOC/ESTOQUE'
+                : [installationPlan?.expected.unitName, installationPlan?.expected.sectorName].filter(Boolean).join(' / ')}
             </Text>
             <Text style={{ color: MUTED, fontSize: 12.5 }}>
-              Ao chegar, leia a etiqueta fixa da sala. Um QR de outro local será bloqueado.
+              {installationPlan?.operation === 'collect'
+                ? 'Depois de retirar o equipamento do setor, leia a etiqueta fixa do CEDOC/Estoque.'
+                : 'Ao chegar, leia a etiqueta fixa da sala. Um QR de outro local será bloqueado.'}
             </Text>
           </View>
           {installationPlan?.location ? (
@@ -410,7 +417,9 @@ export function WorkOrderSignatureScreen() {
             <Pressable onPress={() => void openLocationScanner()}
               style={{ height: 56, borderRadius: 14, borderWidth: 1.5, borderColor: T.primary, backgroundColor: `${T.primary}12`, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9 }}>
               <Icon name="qr" size={20} color={T.primary} />
-              <Text style={{ color: T.primary, fontSize: 15, fontWeight: '800' }}>Ler QR da sala</Text>
+              <Text style={{ color: T.primary, fontSize: 15, fontWeight: '800' }}>
+                {installationPlan?.operation === 'collect' ? 'Ler QR do CEDOC/Estoque' : 'Ler QR da sala'}
+              </Text>
             </Pressable>
           )}
         </View>
@@ -543,7 +552,9 @@ export function WorkOrderSignatureScreen() {
             <Pressable onPress={() => setLocationScannerOpen(false)} style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,.16)', alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="x" size={20} color="#fff" />
             </Pressable>
-            <Text style={{ flex: 1, color: '#fff', textAlign: 'center', fontSize: 16, fontWeight: '800', marginRight: 42 }}>QR da sala de destino</Text>
+            <Text style={{ flex: 1, color: '#fff', textAlign: 'center', fontSize: 16, fontWeight: '800', marginRight: 42 }}>
+              {installationPlan?.operation === 'collect' ? 'QR do CEDOC/Estoque' : 'QR da sala de destino'}
+            </Text>
           </View>
           <View pointerEvents="none" style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <View style={{ width: 260, height: 260, borderWidth: 3, borderColor: '#fff', borderRadius: 22 }} />

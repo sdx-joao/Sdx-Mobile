@@ -463,6 +463,7 @@ export function getInventoryItem(token: string | null, id: string) {
 
 export type EquipmentInstallationPlan = {
   required: boolean;
+  operation: 'install' | 'collect' | null;
   validated: boolean;
   expected: { unitName: string; sectorName: string };
   location: {
