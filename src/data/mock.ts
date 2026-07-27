@@ -82,6 +82,7 @@ export type InventoryItem = {
   category: string;
   unit: string;
   currentQty: number;
+  reservedQty?: number;
   minQty: number;
   maxQty: number;
   /** Patrimônio ANTERIOR do hospital (pode ter vários, separados por \n). */
@@ -95,6 +96,7 @@ export type InventoryItem = {
   brand: string | null;
   model: string | null;
   equipmentStatus: string | null;
+  lifecycleStatus?: 'in_use' | 'in_stock' | 'maintenance' | 'retired';
   operatingSystem: string | null;
   technicalSpecs: TechnicalSpec[];
   mainPhotoUrl?: string | null;

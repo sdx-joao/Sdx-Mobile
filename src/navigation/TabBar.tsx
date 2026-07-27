@@ -8,6 +8,7 @@ const META: Record<string, { label: string; icon: string }> = {
   Home: { label: 'Início', icon: 'home' },
   Orders: { label: 'Ordens', icon: 'clipboard' },
   Inventory: { label: 'Inventário', icon: 'package' },
+  Stock: { label: 'Estoque', icon: 'archive' },
   Profile: { label: 'Perfil', icon: 'user' },
 };
 

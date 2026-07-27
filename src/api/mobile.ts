@@ -457,6 +457,47 @@ export function getInventoryItem(token: string | null, id: string) {
   return apiFetch<{ item: InventoryItem; movements: Movement[] }>(`/api/mobile/inventory/${id}`, { token });
 }
 
+export type StockMovement = {
+  id: string;
+  itemId: string;
+  itemName?: string;
+  movementType: 'in' | 'out' | 'adjustment' | 'transfer';
+  qty: number;
+  sourceKind: string;
+  sourceLabel: string | null;
+  destinationLabel: string | null;
+  reason: string | null;
+  userName: string | null;
+  notes: string | null;
+  createdAt: string;
+};
+
+export async function getStockMovements(token: string | null, limit = 60) {
+  const res = await apiFetch<{ movements: StockMovement[] }>(
+    `/api/mobile/inventory/movements?limit=${limit}`,
+    { token },
+  );
+  return res.movements ?? [];
+}
+
+export function createStockMovement(
+  token: string | null,
+  input: {
+    itemId: string;
+    movementType: 'in' | 'out';
+    qty: number;
+    reason?: string;
+    destinationLabel?: string;
+    notes?: string;
+  },
+) {
+  return apiFetch<{ ok: true }>('/api/mobile/inventory/movements', {
+    method: 'POST',
+    token,
+    body: input,
+  });
+}
+
 export type SpecTwin = { id: string; name: string; createdAt: string | null; technicalSpecs: Array<{ key: string; value: string }> };
 
 /** Aparelhos-gêmeos (mesma marca+modelo+categoria) com specs, pra importar o molde. */

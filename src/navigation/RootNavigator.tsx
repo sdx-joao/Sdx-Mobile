@@ -6,6 +6,7 @@ import type { RootStackParamList, TabParamList } from './types';
 import { HomeScreen } from '../screens/HomeScreen';
 import { WorkOrdersScreen } from '../screens/WorkOrdersScreen';
 import { InventoryScreen } from '../screens/InventoryScreen';
+import { StockScreen } from '../screens/StockScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { WorkOrderDetailScreen } from '../screens/WorkOrderDetailScreen';
 import { WorkOrderEditScreen } from '../screens/WorkOrderEditScreen';
@@ -39,6 +40,7 @@ function Tabs() {
         <Tab.Screen name="Home" component={HomeScreen} />
         <Tab.Screen name="Orders" component={WorkOrdersScreen} />
         <Tab.Screen name="Inventory" component={InventoryScreen} />
+        <Tab.Screen name="Stock" component={StockScreen} />
         <Tab.Screen name="Profile" component={ProfileScreen} />
       </Tab.Navigator>
       <NuntiusUnlockFab />

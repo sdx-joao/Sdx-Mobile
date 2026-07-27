@@ -21,7 +21,15 @@ export function InventoryScreen() {
   useFocusEffect(useCallback(() => { let a = true; listPending().then((l) => { if (a) setPendingCount(l.length); }); return () => { a = false; }; }, []));
   const loader = useCallback(() => getInventory(token), [token]);
   const { data, loading, refreshing, error, reload } = useResource(loader, { reloadOnFocus: true });
-  const inventory = data ?? [];
+  // Inventário = equipamentos ativos em uso/manutenção. Itens disponíveis para
+  // retirada e consumíveis vivem na aba Estoque.
+  const inventory = useMemo(
+    () => (data ?? []).filter(item =>
+      item.itemType === 'equipment'
+      && item.lifecycleStatus !== 'in_stock'
+      && item.lifecycleStatus !== 'retired'),
+    [data],
+  );
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: inventory.length };
@@ -32,10 +40,6 @@ export function InventoryScreen() {
   const chips: Chip[] = [
     { key: 'all', label: 'Todos', count: counts.all },
     { key: 'EQUIPAMENTO', label: 'Equipamentos', count: counts.EQUIPAMENTO },
-    { key: 'MATERIAL', label: 'Materiais', count: counts.MATERIAL },
-    { key: 'SUPRIMENTO', label: 'Suprimentos', count: counts.SUPRIMENTO },
-    { key: 'PERIFERICO', label: 'Periféricos', count: counts.PERIFERICO },
-    { key: 'FERRAMENTA', label: 'Ferramentas', count: counts.FERRAMENTA },
   ].filter((c) => c.count);
 
   // useMemo: sem isto o filtro roda e recria o array a cada render (inclusive a

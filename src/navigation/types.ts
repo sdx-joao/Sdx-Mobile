@@ -4,6 +4,7 @@ export type TabParamList = {
   Home: undefined;
   Orders: { filter?: string } | undefined;
   Inventory: undefined;
+  Stock: undefined;
   Profile: undefined;
 };
 
