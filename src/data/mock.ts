@@ -85,6 +85,9 @@ export type InventoryItem = {
   reservedQty?: number;
   minQty: number;
   maxQty: number;
+  reorderPoint?: number | null;
+  supplierId?: string | null;
+  supplierName?: string | null;
   /** Patrimônio ANTERIOR do hospital (pode ter vários, separados por \n). */
   assetTag: string | null;
   /** A NOSSA etiqueta (ETQ-/HOJCB-…) — é a que está colada e o QR resolve. */

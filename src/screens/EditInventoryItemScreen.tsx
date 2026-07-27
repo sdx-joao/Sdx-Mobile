@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
@@ -15,7 +15,7 @@ import { useAuth } from '../auth/auth-context';
 import { API_BASE_URL } from '../api/client';
 import {
   getInventoryItem, getOptions, updateInventoryItem, uploadInventoryPhoto, deleteInventoryPhoto,
-  getSpecSuggestions, mergeSpecsFillEmpty,
+  getSpecSuggestions, mergeSpecsFillEmpty, fetchInventorySuppliers,
   type InventorySpec, type SelectOption, type SelectOptionKind, type SpecTwin,
 } from '../api/mobile';
 import { showToast } from '../lib/toast';
@@ -26,15 +26,16 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 const OPTION_KINDS: SelectOptionKind[] = [
   'work_order_unit', 'work_order_department',
   'inventory_equipment_category', 'inventory_equipment_status', 'inventory_operating_system', 'inventory_brand',
+  'inventory_category', 'inventory_unit',
 ];
 
-function Field({ value, onChangeText, placeholder, multiline, onScan }: {
-  value: string; onChangeText: (v: string) => void; placeholder: string; multiline?: boolean; onScan?: () => void;
+function Field({ value, onChangeText, placeholder, multiline, onScan, keyboardType }: {
+  value: string; onChangeText: (v: string) => void; placeholder: string; multiline?: boolean; onScan?: () => void; keyboardType?: 'default' | 'numeric';
 }) {
   const input = (
     <TextInput
       value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={T.faint}
-      multiline={multiline} autoCorrect={false}
+      multiline={multiline} autoCorrect={false} keyboardType={keyboardType}
       style={{ flex: onScan ? 1 : undefined, minHeight: multiline ? 76 : 44, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface, paddingHorizontal: 13, paddingVertical: multiline ? 11 : 0, fontSize: 14, color: T.text }}
     />
   );
@@ -86,6 +87,17 @@ export function EditInventoryItemScreen() {
   const [mainPhotoUrl, setMainPhotoUrl] = useState<string | null>(null);
   // Fotos anexas do item (além da principal) — cada uma pode ser trocada/removida.
   const [attachments, setAttachments] = useState<Array<{ name: string; url: string }>>([]);
+  // Consumível (suprimento/material): a edição mostra campos de ESTOQUE, não de
+  // equipamento (série/marca/local/specs). Espelha o cadastro da web.
+  const [itemType, setItemType] = useState<'equipment' | 'consumable'>('equipment');
+  const [unit, setUnit] = useState('UN');
+  const [minQty, setMinQty] = useState('0');
+  const [reorderPoint, setReorderPoint] = useState('');
+  const [maxQty, setMaxQty] = useState('0');
+  const [supplierId, setSupplierId] = useState<string | null>(null);
+  const [suppliers, setSuppliers] = useState<Array<{ id: string; name: string }>>([]);
+  const [supplierPickerOpen, setSupplierPickerOpen] = useState(false);
+  const isConsumable = itemType === 'consumable';
 
   // Alvo de uma foto: principal, anexa nova (append) ou anexa existente (index → troca).
   type PhotoTarget = { role: 'main' | 'attachment'; index?: number };
@@ -105,6 +117,15 @@ export function EditInventoryItemScreen() {
         getOptions(token, OPTION_KINDS),
       ]);
       const i = detail.item;
+      setItemType(i.itemType === 'consumable' ? 'consumable' : 'equipment');
+      setUnit(i.unit || 'UN');
+      setMinQty(String(i.minQty ?? 0));
+      setMaxQty(String(i.maxQty ?? 0));
+      setReorderPoint(i.reorderPoint != null ? String(i.reorderPoint) : '');
+      setSupplierId(i.supplierId ?? null);
+      if (i.itemType === 'consumable') {
+        fetchInventorySuppliers(token).then(r => setSuppliers(r.suppliers ?? [])).catch(() => {});
+      }
       setLabelCode(i.labelCode ?? null);
       setName(i.name || '');
       setCategory(i.category || '');
@@ -225,29 +246,42 @@ export function EditInventoryItemScreen() {
     setSaving(true);
     setError(null);
     try {
-      await updateInventoryItem(token, itemId, {
-        name: name.trim(),
-        category: category.trim() || null,
-        assetTag: assetTag.trim() || null,
-        serialNumber: serialNumber.trim() || null,
-        sku: sku.trim() || null,
-        brand: brand.trim() || null,
-        model: model.trim() || null,
-        equipmentStatus: equipmentStatus.trim() || null,
-        // Situação de uso e estado técnico são independentes. CEDOC/ESTOQUE é
-        // setor; a unidade canônica continua sendo HOSPITAL DO OLHO.
-        lifecycleStatus: equipmentStatus.trim().toUpperCase() === 'NAO FUNCIONANDO'
-          ? 'maintenance'
-          : equipmentStatus.trim().toUpperCase() === 'EM ESTOQUE' && room.trim().toUpperCase() === 'CEDOC/ESTOQUE'
-            ? 'in_stock'
-            : 'in_use',
-        operatingSystem: operatingSystem.trim() || null,
-        unitName: unitName.trim() || null,
-        room: room.trim() || null,
-        currentLocation: currentLocation.trim() || null,
-        notes: notes.trim() || null,
-        technicalSpecs: specs.filter(s => s.key.trim() && s.value.trim()),
-      });
+      // Consumível → campos de estoque; equipamento → campos de patrimônio.
+      const payload = isConsumable
+        ? {
+            name: name.trim(),
+            category: category.trim() || null,
+            unit: unit.trim() || 'UN',
+            minQty: Number(minQty) || 0,
+            maxQty: Number(maxQty) || 0,
+            reorderPoint: reorderPoint.trim() === '' ? null : Number(reorderPoint),
+            supplierId: supplierId || null,
+            notes: notes.trim() || null,
+          }
+        : {
+            name: name.trim(),
+            category: category.trim() || null,
+            assetTag: assetTag.trim() || null,
+            serialNumber: serialNumber.trim() || null,
+            sku: sku.trim() || null,
+            brand: brand.trim() || null,
+            model: model.trim() || null,
+            equipmentStatus: equipmentStatus.trim() || null,
+            // Situação de uso e estado técnico são independentes. CEDOC/ESTOQUE é
+            // setor; a unidade canônica continua sendo HOSPITAL DO OLHO.
+            lifecycleStatus: (equipmentStatus.trim().toUpperCase() === 'NAO FUNCIONANDO'
+              ? 'maintenance'
+              : equipmentStatus.trim().toUpperCase() === 'EM ESTOQUE' && room.trim().toUpperCase() === 'CEDOC/ESTOQUE'
+                ? 'in_stock'
+                : 'in_use') as 'in_use' | 'in_stock' | 'maintenance',
+            operatingSystem: operatingSystem.trim() || null,
+            unitName: unitName.trim() || null,
+            room: room.trim() || null,
+            currentLocation: currentLocation.trim() || null,
+            notes: notes.trim() || null,
+            technicalSpecs: specs.filter(s => s.key.trim() && s.value.trim()),
+          };
+      await updateInventoryItem(token, itemId, payload);
       showToast('Item atualizado.');
       nav.goBack();
     } catch (e) {
@@ -396,14 +430,45 @@ export function EditInventoryItemScreen() {
               </View>
             </View>
           )}
-          <View><FieldLabel required>Nome</FieldLabel><Field value={name} onChangeText={setName} placeholder="Ex.: GABINETE DELL OPTIPLEX" /></View>
-          <SuggestedInput label="Tipo do equipamento" value={category} onChangeText={setCategory} placeholder="Monitor, gabinete, switch…" options={opts('inventory_equipment_category')} />
-          <View><FieldLabel>Patrimônio anterior</FieldLabel><Field value={assetTag} onChangeText={setAssetTag} placeholder="Um por linha" multiline onScan={() => setScanField('assetTag')} /></View>
-          <View><FieldLabel>Número de série</FieldLabel><Field value={serialNumber} onChangeText={setSerialNumber} placeholder="Opcional" onScan={() => setScanField('serial')} /></View>
+          <View><FieldLabel required>Nome</FieldLabel><Field value={name} onChangeText={setName} placeholder={isConsumable ? 'Ex.: RESMA A4 75G' : 'Ex.: GABINETE DELL OPTIPLEX'} /></View>
+          <SuggestedInput
+            label={isConsumable ? 'Categoria' : 'Tipo do equipamento'}
+            value={category} onChangeText={setCategory}
+            placeholder={isConsumable ? 'Papel, toner, cabo…' : 'Monitor, gabinete, switch…'}
+            options={opts(isConsumable ? 'inventory_category' : 'inventory_equipment_category')}
+          />
+          {!isConsumable && <View><FieldLabel>Patrimônio anterior</FieldLabel><Field value={assetTag} onChangeText={setAssetTag} placeholder="Um por linha" multiline onScan={() => setScanField('assetTag')} /></View>}
+          {!isConsumable && <View><FieldLabel>Número de série</FieldLabel><Field value={serialNumber} onChangeText={setSerialNumber} placeholder="Opcional" onScan={() => setScanField('serial')} /></View>}
           <View><FieldLabel>SKU / código interno</FieldLabel><Field value={sku} onChangeText={setSku} placeholder="Opcional" onScan={() => setScanField('sku')} /></View>
         </View>
       </SectionCard>
 
+      {isConsumable && (
+        <SectionCard title="Estoque">
+          <View style={{ gap: 11 }}>
+            <SuggestedInput label="Unidade de medida" value={unit} onChangeText={setUnit} placeholder="UN, CX, M…" options={opts('inventory_unit')} />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}><FieldLabel>Mínimo</FieldLabel><Field value={minQty} onChangeText={setMinQty} placeholder="0" keyboardType="numeric" /></View>
+              <View style={{ flex: 1 }}><FieldLabel>Repor em</FieldLabel><Field value={reorderPoint} onChangeText={setReorderPoint} placeholder="—" keyboardType="numeric" /></View>
+              <View style={{ flex: 1 }}><FieldLabel>Máximo</FieldLabel><Field value={maxQty} onChangeText={setMaxQty} placeholder="—" keyboardType="numeric" /></View>
+            </View>
+            <View>
+              <FieldLabel>Fornecedor</FieldLabel>
+              <Pressable
+                onPress={() => setSupplierPickerOpen(true)}
+                style={{ minHeight: 46, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <Text style={{ fontSize: 14, color: supplierId ? T.text : T.faint }}>
+                  {supplierId ? (suppliers.find(s => s.id === supplierId)?.name || 'Fornecedor') : 'Sem fornecedor'}
+                </Text>
+                <Icon name="chevron-down" size={16} color={T.muted} />
+              </Pressable>
+            </View>
+          </View>
+        </SectionCard>
+      )}
+
+      {!isConsumable && (<>
       <SectionCard title="Equipamento">
         <View style={{ gap: 11 }}>
           <SuggestedInput label="Marca" value={brand} onChangeText={setBrand} placeholder="Dell, HP…" options={opts('inventory_brand')} />
@@ -489,6 +554,7 @@ export function EditInventoryItemScreen() {
           ))}
         </View>
       </SectionCard>
+      </>)}
 
       <SectionCard title="Observação">
         <Field value={notes} onChangeText={setNotes} placeholder="Observações gerais sobre o item." multiline />
@@ -498,6 +564,30 @@ export function EditInventoryItemScreen() {
       <PrimaryButton label={saving ? 'Salvando…' : 'Salvar alterações'} icon="check" accent={T.primary} onPress={save} />
       {saving && <ActivityIndicator style={{ marginTop: 10 }} color={T.primary} />}
       <View style={{ height: 12 }} />
+
+      <Modal visible={supplierPickerOpen} transparent animationType="slide" onRequestClose={() => setSupplierPickerOpen(false)}>
+        <Pressable onPress={() => setSupplierPickerOpen(false)} style={{ flex: 1, backgroundColor: 'rgba(15,23,42,.45)', justifyContent: 'flex-end' }}>
+          <Pressable onPress={() => {}} style={{ backgroundColor: T.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%', paddingTop: 12, paddingBottom: 24 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 10 }}>
+              <Text style={{ color: T.text, fontWeight: '800', fontSize: 16 }}>Fornecedor</Text>
+              <Pressable onPress={() => setSupplierPickerOpen(false)} hitSlop={10}><Icon name="x" size={20} color={T.muted} /></Pressable>
+            </View>
+            <ScrollView>
+              <Pressable onPress={() => { setSupplierId(null); setSupplierPickerOpen(false); }} style={{ paddingVertical: 13, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: T.border }}>
+                <Text style={{ color: T.muted, fontSize: 14 }}>— Sem fornecedor —</Text>
+              </Pressable>
+              {suppliers.map(s => (
+                <Pressable key={s.id} onPress={() => { setSupplierId(s.id); setSupplierPickerOpen(false); }}
+                  style={{ paddingVertical: 13, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: T.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: T.text, fontSize: 14, fontWeight: '600', flex: 1 }}>{s.name}</Text>
+                  {supplierId === s.id && <Icon name="check" size={17} color={T.primary} />}
+                </Pressable>
+              ))}
+              {suppliers.length === 0 && <Text style={{ color: T.faint, textAlign: 'center', paddingVertical: 20 }}>Nenhum fornecedor cadastrado.</Text>}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <ScanFieldModal
         visible={scanField !== null}

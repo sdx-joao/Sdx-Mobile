@@ -839,11 +839,25 @@ export type UpdateInventoryItemInput = {
   currentLocation?: string | null;
   notes?: string | null;
   technicalSpecs?: InventorySpec[];
+  // Campos de consumível (estoque) — editáveis pelo app, espelhando a web.
+  unit?: string | null;
+  minQty?: number;
+  maxQty?: number;
+  reorderPoint?: number | null;
+  supplierId?: string | null;
 };
 
 /** Edita um item já cadastrado. A nossa etiqueta (labelCode) não é editável. */
 export function updateInventoryItem(token: string | null, id: string, input: UpdateInventoryItemInput) {
   return apiFetch<{ ok: true }>(`/api/mobile/inventory/${id}`, { method: 'PATCH', token, body: input });
+}
+
+/** Fornecedores (id + nome) para o picker de consumível na edição. */
+export function fetchInventorySuppliers(token: string | null) {
+  return apiFetch<{ suppliers: Array<{ id: string; name: string }> }>(
+    '/api/mobile/inventory/suppliers',
+    { token },
+  );
 }
 
 /** Cadastra um equipamento pelo celular (vinculando a etiqueta genérica). */
