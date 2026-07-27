@@ -37,11 +37,17 @@ export function RequesterPicker({
   department,
   requesters,
   onPick,
+  label = 'Solicitante',
+  placeholder = 'Quem solicitou',
+  showDepartment = true,
 }: {
   value: string;
   department: string;
   requesters: WorkOrderRequester[];
   onPick: (requester: WorkOrderRequester) => void;
+  label?: string;
+  placeholder?: string;
+  showDepartment?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -130,13 +136,13 @@ export function RequesterPicker({
 
   return (
     <View>
-      <FieldLabel required>Solicitante</FieldLabel>
+      <FieldLabel required>{label}</FieldLabel>
       <Pressable
         onPress={() => { reset(); setOpen(true); }}
         style={{ ...SHEET_INPUT, flexDirection: 'row', alignItems: 'center', gap: 8 }}
       >
         <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, color: value ? T.text : T.faint }}>
-          {value || 'Quem solicitou'}
+          {value || placeholder}
         </Text>
         <Icon name="chevron-down" size={18} color={T.muted} />
       </Pressable>
@@ -149,7 +155,7 @@ export function RequesterPicker({
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 10 }}>
                 <Text style={{ fontSize: 15.5, fontWeight: '800', color: T.text }}>
-                  {adding ? 'Novo solicitante' : 'Solicitante'}
+                  {adding ? `Novo: ${label.toLowerCase()}` : label}
                 </Text>
                 <Pressable onPress={close} hitSlop={10}><Icon name="x" size={20} color={T.muted} /></Pressable>
               </View>
@@ -175,16 +181,18 @@ export function RequesterPicker({
                       </View>
                       <TextInput value={newPhone} onChangeText={setNewPhone} placeholder="(00) 00000-0000" placeholderTextColor={T.faint} keyboardType="phone-pad" style={SHEET_INPUT} />
                     </View>
-                    <View>
-                      <FieldLabel>Setor sugerido</FieldLabel>
-                      <TextInput value={newDept} onChangeText={setNewDept} placeholder="Setor" placeholderTextColor={T.faint} style={SHEET_INPUT} />
-                    </View>
+                    {showDepartment && (
+                      <View>
+                        <FieldLabel>Setor sugerido</FieldLabel>
+                        <TextInput value={newDept} onChangeText={setNewDept} placeholder="Setor" placeholderTextColor={T.faint} style={SHEET_INPUT} />
+                      </View>
+                    )}
                     <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
                       <Pressable onPress={() => setAdding(false)} style={{ flex: 1, height: 46, borderRadius: 12, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center' }}>
                         <Text style={{ fontSize: 14, fontWeight: '600', color: T.text }}>Voltar</Text>
                       </Pressable>
                       <Pressable onPress={confirmNew} disabled={!newName.trim()} style={{ flex: 1, height: 46, borderRadius: 12, backgroundColor: T.primary, alignItems: 'center', justifyContent: 'center', opacity: newName.trim() ? 1 : 0.5 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>Usar solicitante</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>Usar nome</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -208,7 +216,9 @@ export function RequesterPicker({
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 13, paddingHorizontal: 13, borderRadius: 11, marginBottom: 8, borderWidth: 1, borderColor: T.primary, backgroundColor: `${T.primary}10` }}
                       >
                         <Icon name="plus" size={17} color={T.primary} />
-                        <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: T.primary }} numberOfLines={1}>Adicionar “{trimmed}” (nome, telefone, setor)</Text>
+                        <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: T.primary }} numberOfLines={1}>
+                          Adicionar “{trimmed}”{showDepartment ? ' (nome, telefone, setor)' : ''}
+                        </Text>
                       </Pressable>
                     )}
                     {filtered.length === 0 && !canAdd ? (

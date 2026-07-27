@@ -37,6 +37,15 @@ const WORK_ORDER_OPTION_KINDS: SelectOptionKind[] = [
   'work_order_responsible_technician',
 ];
 
+const LOGISTICS_UNIT_DEFAULT = 'HOSPITAL DO OLHO';
+const LOGISTICS_DEPARTMENT_DEFAULT = 'CEDOC/ESTOQUE';
+
+function logisticsLabels(direction: 'in' | 'out') {
+  return direction === 'in'
+    ? { internal: 'Quem recebeu / foi buscar', external: 'Quem entregou', unitLabel: 'Unidade (entrada)', unitFixed: true }
+    : { internal: 'Quem levou / entregou', external: 'Quem recebeu', unitLabel: 'Unidade de destino', unitFixed: false };
+}
+
 function Input({
   value,
   onChangeText,
@@ -126,6 +135,10 @@ export function NewWorkOrderScreen() {
     () => (data?.stock?.links ?? []).find((l) => l.serviceType === serviceType && l.isActive !== false) ?? null,
     [data?.stock?.links, serviceType],
   );
+  const logistics = useMemo(
+    () => stockLink ? { ...logisticsLabels(stockLink.direction), direction: stockLink.direction } : null,
+    [stockLink],
+  );
   // Destino padrão de retirada do equipamento envolvido (se o serviço tem vínculo).
   const retireDefault = useMemo(
     () => (data?.equip?.links ?? []).find((l) => l.serviceType === serviceType && l.isActive && l.allowRetire)?.defaultDestination ?? null,
@@ -171,7 +184,7 @@ export function NewWorkOrderScreen() {
 
   const pickRequester = (requester: WorkOrderRequester) => {
     setRequestedByName(requester.name);
-    if (requester.department) setDepartment(requester.department);
+    if (!logistics && requester.department) setDepartment(requester.department);
     if (requester.phone) setRequesterContact(requester.phone);
   };
 
@@ -188,13 +201,14 @@ export function NewWorkOrderScreen() {
   };
 
   async function submit() {
+    const stockMaterialsPayload = buildStockMaterialsPayload(stockMaterials, stockLink);
     const missing = [
       ['Tipo de serviço', serviceType],
       ['Categoria', category],
-      ['Unidade', unitName],
-      ['Setor', department],
-      ['Solicitante', requestedByName],
-      ['Descrição', technicianRequest],
+      [logistics?.unitLabel || 'Unidade', logistics?.unitFixed ? LOGISTICS_UNIT_DEFAULT : unitName],
+      [logistics?.external || 'Solicitante', requestedByName],
+      ...(logistics ? [['Material de estoque', stockMaterialsPayload.length ? 'ok' : '']] : []),
+      ...(!logistics ? [['Setor', department], ['Descrição', technicianRequest]] : []),
     ].filter(([, value]) => !String(value).trim()).map(([label]) => label);
     if (missing.length) {
       setError(`Preencha: ${missing.join(', ')}.`);
@@ -206,16 +220,16 @@ export function NewWorkOrderScreen() {
       const result = await createWorkOrder(token, {
         serviceType,
         category,
-        unitName,
-        department,
+        unitName: logistics?.unitFixed ? LOGISTICS_UNIT_DEFAULT : unitName,
+        department: logistics ? LOGISTICS_DEPARTMENT_DEFAULT : department,
         requestedByName,
         requesterContact,
-        technicalTeam,
-        responsibleTechnicianName,
-        technicianRequest,
+        technicalTeam: logistics ? '' : technicalTeam,
+        responsibleTechnicianName: user?.name || responsibleTechnicianName,
+        technicianRequest: logistics ? `${serviceType}: ${requestedByName}` : technicianRequest,
         priority,
-        involvedEquipment,
-        stockMaterials: buildStockMaterialsPayload(stockMaterials, stockLink),
+        involvedEquipment: logistics ? [] : involvedEquipment,
+        stockMaterials: stockMaterialsPayload,
       });
       showToast(`${result.code} aberta.`);
       nav.replace('WorkOrderDetail', { id: result.id });
@@ -232,13 +246,17 @@ export function NewWorkOrderScreen() {
         <View style={{ gap: 14 }}>
           <SuggestedInput label="Categoria (área)" required value={category} onChangeText={onChangeCategory} placeholder="Ex.: TI, Predial…" options={optionsByKind.get('work_order_category') ?? []} />
           <SuggestedInput label="Tipo de serviço" required value={serviceType} onChangeText={setServiceType} placeholder={category ? 'Ex.: Manutenção de impressora' : 'Escolha a área primeiro'} options={serviceTypeOptions} />
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <View style={{ flex: 1 }}><SuggestedInput label="Unidade" required value={unitName} onChangeText={setUnitName} placeholder="Unidade" options={optionsByKind.get('work_order_unit') ?? []} /></View>
-            <View style={{ flex: 1 }}><SuggestedInput label="Setor" required value={department} onChangeText={selectDepartment} placeholder="Setor" options={optionsByKind.get('work_order_department') ?? []} /></View>
-          </View>
-          <SuggestedInput label="Equipe técnica" value={technicalTeam} onChangeText={setTechnicalTeam} placeholder="Ex.: TI INTERNO" options={optionsByKind.get('work_order_technical_team') ?? []} />
+          {!logistics?.unitFixed && (
+            <SuggestedInput label={logistics?.unitLabel || 'Unidade'} required value={unitName} onChangeText={setUnitName} placeholder="Unidade" options={optionsByKind.get('work_order_unit') ?? []} />
+          )}
+          {!logistics && (
+            <>
+              <SuggestedInput label="Setor" required value={department} onChangeText={selectDepartment} placeholder="Setor" options={optionsByKind.get('work_order_department') ?? []} />
+              <SuggestedInput label="Equipe técnica" value={technicalTeam} onChangeText={setTechnicalTeam} placeholder="Ex.: TI INTERNO" options={optionsByKind.get('work_order_technical_team') ?? []} />
+            </>
+          )}
           <View>
-            <FieldLabel>Técnico responsável</FieldLabel>
+            <FieldLabel>{logistics?.internal || 'Técnico responsável'}</FieldLabel>
             <View style={{ height: 46, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Icon name="lock" size={13} color={T.muted} />
               <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{user?.name || '—'}</Text>
@@ -248,9 +266,11 @@ export function NewWorkOrderScreen() {
         </View>
       </SectionCard>
 
-      <SectionCard title="Equipamentos envolvidos">
-        <InvolvedEquipmentBlock token={token} value={involvedEquipment} onChange={setInvolvedEquipment} highlight={serviceIsEquip} retireDefault={retireDefault} />
-      </SectionCard>
+      {!logistics && (
+        <SectionCard title="Equipamentos envolvidos">
+          <InvolvedEquipmentBlock token={token} value={involvedEquipment} onChange={setInvolvedEquipment} highlight={serviceIsEquip} retireDefault={retireDefault} />
+        </SectionCard>
+      )}
 
       {stockLink && (
         <SectionCard title="Materiais de estoque">
@@ -263,7 +283,7 @@ export function NewWorkOrderScreen() {
         </SectionCard>
       )}
 
-      <SectionCard title="Prioridade">
+      {!logistics && <SectionCard title="Prioridade">
         <View style={{ flexDirection: 'row', gap: 8 }}>
           {Object.entries(WO_PRIORITY).map(([k, p]) => {
             const on = priority === k;
@@ -281,18 +301,21 @@ export function NewWorkOrderScreen() {
             );
           })}
         </View>
-      </SectionCard>
+      </SectionCard>}
 
-      <SectionCard title="Solicitante">
+      <SectionCard title={logistics ? 'De quem → para quem' : 'Solicitante'}>
         <View style={{ gap: 14 }}>
           <RequesterPicker
             value={requestedByName}
             department={department}
             requesters={data?.requesters ?? []}
             onPick={pickRequester}
+            label={logistics?.external}
+            placeholder={logistics?.external}
+            showDepartment={!logistics}
           />
           <View><FieldLabel>Contato</FieldLabel><Input value={requesterContact} onChangeText={setRequesterContact} placeholder="(85) 9 0000-0000" /></View>
-          <View><FieldLabel required>Descrição</FieldLabel><Input value={technicianRequest} onChangeText={setTechnicianRequest} placeholder="Descreva o problema ou a solicitação" multiline /></View>
+          {!logistics && <View><FieldLabel required>Descrição</FieldLabel><Input value={technicianRequest} onChangeText={setTechnicianRequest} placeholder="Descreva o problema ou a solicitação" multiline /></View>}
         </View>
       </SectionCard>
 
