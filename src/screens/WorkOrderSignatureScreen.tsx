@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, PanResponder, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import * as NavigationBar from 'expo-navigation-bar';
 import * as Print from 'expo-print';
@@ -12,7 +13,14 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
-import { getWorkOrder, getWorkOrderPrintHtml, updateWorkOrderStatus } from '../api/mobile';
+import {
+  getEquipmentInstallationPlan,
+  getWorkOrder,
+  getWorkOrderPrintHtml,
+  updateWorkOrderStatus,
+  validateEquipmentInstallationLocation,
+  type EquipmentInstallationPlan,
+} from '../api/mobile';
 import { IS_TEST_BUILD } from '../api/client';
 import { showToast } from '../lib/toast';
 import type { RootStackParamList } from '../navigation/types';
@@ -107,7 +115,7 @@ function maskDoc(value: string, type: DocType | null): string {
   return chars.map((c, i) => (/[0-9A-Za-z]/.test(c) ? (reveal.has(i) ? c : '•') : c)).join('');
 }
 
-type Step = 'resolution' | 'tech' | 'document' | 'requester' | 'review';
+type Step = 'location' | 'resolution' | 'tech' | 'document' | 'requester' | 'review';
 type Resolution = 'resolved' | 'partial' | 'unresolved';
 const RESOLUTIONS: Array<{ key: Resolution; label: string; color: string }> = [
   { key: 'resolved', label: 'Resolvida', color: '#059669' },
@@ -132,6 +140,11 @@ export function WorkOrderSignatureScreen() {
 
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<Step>('resolution');
+  const [installationPlan, setInstallationPlan] = useState<EquipmentInstallationPlan | null>(null);
+  const [locationScannerOpen, setLocationScannerOpen] = useState(false);
+  const [locationBusy, setLocationBusy] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const locationScanLock = useRef(false);
   const [strokes, setStrokes] = useState<Point[][]>([]);
   const [saving, setSaving] = useState(false);
   const [padSize, setPadSize] = useState({ width: PAD_WIDTH, height: PAD_HEIGHT });
@@ -182,7 +195,10 @@ export function WorkOrderSignatureScreen() {
     let alive = true;
     (async () => {
       try {
-        const { workOrder, requesterDocument } = await getWorkOrder(token, route.params.id);
+        const [{ workOrder, requesterDocument }, plan] = await Promise.all([
+          getWorkOrder(token, route.params.id),
+          getEquipmentInstallationPlan(token, route.params.id).catch(() => null),
+        ]);
         if (!alive) return;
         setCode(workOrder.code || '');
         // O técnico responsável pela conclusão é SEMPRE o dono do celular que está
@@ -193,6 +209,10 @@ export function WorkOrderSignatureScreen() {
         if (requesterDocument?.document) {
           const dt = (requesterDocument.documentType as DocType | null) || null;
           existingDoc.current = { document: requesterDocument.document, documentType: dt };
+        }
+        if (plan) {
+          setInstallationPlan(plan);
+          if (plan.required && !plan.validated) setStep('location');
         }
       } catch { /* segue com defaults */ }
       finally { if (alive) setLoading(false); }
@@ -227,6 +247,43 @@ export function WorkOrderSignatureScreen() {
   const docForSignature = existingDoc.current
     ? { value: existingDoc.current.document, type: existingDoc.current.documentType }
     : (docType ? { value: docValue, type: docType } : null);
+
+  async function openLocationScanner() {
+    if (!cameraPermission?.granted) {
+      const result = await requestCameraPermission();
+      if (!result.granted) {
+        Alert.alert('Câmera necessária', 'Autorize a câmera para validar o QR da sala.');
+        return;
+      }
+    }
+    locationScanLock.current = false;
+    setLocationScannerOpen(true);
+  }
+
+  async function onLocationScanned({ data }: BarcodeScanningResult) {
+    if (locationScanLock.current) return;
+    locationScanLock.current = true;
+    setLocationBusy(true);
+    try {
+      const result = await validateEquipmentInstallationLocation(token, route.params.id, data);
+      setInstallationPlan(current => current ? { ...current, validated: true, location: result.location } : current);
+      setLocationScannerOpen(false);
+      showToast(`Local validado: ${result.location.roomName}.`);
+    } catch (error) {
+      Alert.alert('Local não corresponde à O.S.', error instanceof Error ? error.message : 'Leia a etiqueta da sala prevista.');
+      setTimeout(() => { locationScanLock.current = false; }, 900);
+    } finally {
+      setLocationBusy(false);
+    }
+  }
+
+  function advanceFromLocation() {
+    if (!installationPlan?.validated) {
+      Alert.alert('Validação obrigatória', 'Leia o QR da sala de destino para continuar.');
+      return;
+    }
+    setStep('resolution');
+  }
 
   // Passo 0: situação + solução adotada.
   function advanceFromResolution() {
@@ -289,17 +346,20 @@ export function WorkOrderSignatureScreen() {
   }
 
   const isSignStep = step === 'tech' || step === 'requester';
-  const title = step === 'resolution' ? 'Situação e solução'
+  const title = step === 'location' ? 'Validar local da instalação'
+    : step === 'resolution' ? 'Situação e solução'
     : step === 'tech' ? 'Assinatura do técnico'
     : step === 'document' ? 'Documento do solicitante'
     : step === 'requester' ? 'Assinatura do solicitante'
     : 'Revisar e concluir';
-  const primaryLabel = step === 'resolution' ? 'Avançar — assinatura do técnico'
+  const primaryLabel = step === 'location' ? 'Local confirmado — avançar'
+    : step === 'resolution' ? 'Avançar — assinatura do técnico'
     : step === 'tech' ? 'Avançar'
     : step === 'document' ? 'Avançar — assinatura'
     : step === 'requester' ? 'Avançar — revisão'
     : 'Confirmar e concluir OS';
-  const onPrimary = step === 'resolution' ? advanceFromResolution
+  const onPrimary = step === 'location' ? advanceFromLocation
+    : step === 'resolution' ? advanceFromResolution
     : step === 'tech' ? advanceFromTech
     : step === 'document' ? advanceFromDocument
     : step === 'requester' ? advanceFromRequester
@@ -325,6 +385,35 @@ export function WorkOrderSignatureScreen() {
 
       {loading ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color={T.primary} /></View>
+      ) : step === 'location' ? (
+        <View style={{ flex: 1, gap: 14, justifyContent: 'center' }}>
+          <View style={{ borderRadius: 16, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, padding: 18, gap: 8 }}>
+            <Text style={{ color: SUBTLE, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>DESTINO PREVISTO</Text>
+            <Text style={{ color: TXT, fontSize: 17, fontWeight: '800' }}>
+              {[installationPlan?.expected.unitName, installationPlan?.expected.sectorName].filter(Boolean).join(' / ')}
+            </Text>
+            <Text style={{ color: MUTED, fontSize: 12.5 }}>
+              Ao chegar, leia a etiqueta fixa da sala. Um QR de outro local será bloqueado.
+            </Text>
+          </View>
+          {installationPlan?.location ? (
+            <View style={{ borderRadius: 14, padding: 15, backgroundColor: '#D1FAE5', borderWidth: 1, borderColor: '#6EE7B7', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Icon name="check" size={20} color="#047857" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#047857', fontSize: 12, fontWeight: '800' }}>LOCAL VALIDADO</Text>
+                <Text style={{ color: '#065F46', fontSize: 14, fontWeight: '700' }}>
+                  {installationPlan.location.unitName} / {installationPlan.location.sectorName} / {installationPlan.location.roomName}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Pressable onPress={() => void openLocationScanner()}
+              style={{ height: 56, borderRadius: 14, borderWidth: 1.5, borderColor: T.primary, backgroundColor: `${T.primary}12`, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9 }}>
+              <Icon name="qr" size={20} color={T.primary} />
+              <Text style={{ color: T.primary, fontSize: 15, fontWeight: '800' }}>Ler QR da sala</Text>
+            </Pressable>
+          )}
+        </View>
       ) : step === 'resolution' ? (
         <View style={{ flex: 1, gap: 12, justifyContent: 'center' }}>
           <Text style={{ color: MUTED, fontSize: 13, fontWeight: '600' }}>Como a OS foi concluída?</Text>
@@ -438,6 +527,31 @@ export function WorkOrderSignatureScreen() {
         {saving ? <ActivityIndicator color="#fff" /> : <Icon name={step === 'review' ? 'check' : 'arrow-right'} size={18} color="#fff" />}
         <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>{primaryLabel}</Text>
       </Pressable>
+
+      <Modal visible={locationScannerOpen} animationType="slide" onRequestClose={() => setLocationScannerOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: '#0A0E18' }}>
+          {cameraPermission?.granted && (
+            <CameraView
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+              onBarcodeScanned={onLocationScanned}
+            />
+          )}
+          <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,11,20,.38)' }} />
+          <View style={{ paddingTop: insets.top + 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center' }}>
+            <Pressable onPress={() => setLocationScannerOpen(false)} style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,.16)', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="x" size={20} color="#fff" />
+            </Pressable>
+            <Text style={{ flex: 1, color: '#fff', textAlign: 'center', fontSize: 16, fontWeight: '800', marginRight: 42 }}>QR da sala de destino</Text>
+          </View>
+          <View pointerEvents="none" style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: 260, height: 260, borderWidth: 3, borderColor: '#fff', borderRadius: 22 }} />
+            <Text style={{ color: '#fff', fontSize: 13, marginTop: 18, fontWeight: '700' }}>Aponte para a etiqueta fixa LOC-</Text>
+            {locationBusy && <ActivityIndicator color="#fff" style={{ marginTop: 14 }} />}
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

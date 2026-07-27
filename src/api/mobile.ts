@@ -62,7 +62,7 @@ export type ServiceEquipmentLink = {
   serviceType: string;
   allowRetire: boolean;
   defaultDestination: RetireDestination;
-  operation?: 'retire_involved' | 'deliver_from_stock' | 'collect_to_stock' | 'move_between_locations';
+  operation?: 'retire_involved' | 'install_from_stock' | 'deliver_from_stock' | 'collect_to_stock' | 'move_between_locations';
   selectionMode?: 'involved' | 'free' | 'preferred';
   sourcePolicy?: 'current' | 'stock_first' | 'informed';
   preferredItemId?: string | null;
@@ -459,6 +459,30 @@ export async function getInventory(
 
 export function getInventoryItem(token: string | null, id: string) {
   return apiFetch<{ item: InventoryItem; movements: Movement[] }>(`/api/mobile/inventory/${id}`, { token });
+}
+
+export type EquipmentInstallationPlan = {
+  required: boolean;
+  validated: boolean;
+  expected: { unitName: string; sectorName: string };
+  location: {
+    roomId: string;
+    unitName: string;
+    sectorName: string;
+    roomName: string;
+    validatedAt?: string | null;
+  } | null;
+};
+
+export function getEquipmentInstallationPlan(token: string | null, id: string) {
+  return apiFetch<EquipmentInstallationPlan>(`/api/mobile/work-orders/${id}/equipment-plan`, { token });
+}
+
+export function validateEquipmentInstallationLocation(token: string | null, id: string, code: string) {
+  return apiFetch<{ ok: true; location: NonNullable<EquipmentInstallationPlan['location']> }>(
+    `/api/mobile/work-orders/${id}/equipment-plan`,
+    { method: 'POST', token, body: { code } },
+  );
 }
 
 export type StockMovement = {

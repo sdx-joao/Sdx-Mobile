@@ -151,11 +151,13 @@ export function NewWorkOrderScreen() {
   const isGenericEquipmentFlow = !!equipmentFlow && equipmentFlow.operation !== 'retire_involved';
   const equipmentDestination = equipmentFlow?.operation === 'collect_to_stock'
     ? 'estoque'
-    : equipmentFlow?.operation === 'deliver_from_stock' || equipmentFlow?.operation === 'move_between_locations'
+    : equipmentFlow?.operation === 'install_from_stock' || equipmentFlow?.operation === 'deliver_from_stock' || equipmentFlow?.operation === 'move_between_locations'
       ? 'setor'
       : retireDefault;
-  const equipmentFlowTitle = equipmentFlow?.operation === 'deliver_from_stock'
-    ? 'Equipamento a entregar'
+  const equipmentFlowTitle = equipmentFlow?.operation === 'install_from_stock'
+    ? 'Equipamento a instalar'
+    : equipmentFlow?.operation === 'deliver_from_stock'
+      ? 'Equipamento a entregar'
     : equipmentFlow?.operation === 'collect_to_stock'
       ? 'Equipamento a coletar'
       : equipmentFlow?.operation === 'move_between_locations'

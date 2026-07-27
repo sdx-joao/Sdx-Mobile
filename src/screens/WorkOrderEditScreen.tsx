@@ -239,7 +239,7 @@ export function WorkOrderEditScreen() {
   );
   const retireDefault = equipmentFlow?.operation === 'collect_to_stock'
     ? 'estoque'
-    : equipmentFlow?.operation === 'deliver_from_stock' || equipmentFlow?.operation === 'move_between_locations'
+    : equipmentFlow?.operation === 'install_from_stock' || equipmentFlow?.operation === 'deliver_from_stock' || equipmentFlow?.operation === 'move_between_locations'
       ? 'setor'
       : equipmentFlow?.defaultDestination ?? null;
   const isGenericEquipmentFlow = !!equipmentFlow && equipmentFlow.operation !== 'retire_involved';
@@ -575,7 +575,8 @@ export function WorkOrderEditScreen() {
           sourcePolicy={equipmentFlow?.sourcePolicy}
           destinationUnit={unitName}
           destinationRoom={department}
-          title={equipmentFlow?.operation === 'deliver_from_stock' ? 'Equipamento a entregar'
+          title={equipmentFlow?.operation === 'install_from_stock' ? 'Equipamento a instalar'
+            : equipmentFlow?.operation === 'deliver_from_stock' ? 'Equipamento a entregar'
             : equipmentFlow?.operation === 'collect_to_stock' ? 'Equipamento a coletar'
               : equipmentFlow?.operation === 'move_between_locations' ? 'Equipamento a mudar de local'
                 : 'Equipamento envolvido'}
