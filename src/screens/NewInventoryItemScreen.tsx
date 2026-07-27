@@ -232,8 +232,15 @@ export function NewInventoryItemScreen() {
     const form: PendingForm = {
       primaryType, name, itemType: isEquip ? 'equipment' : 'consumable', category,
       unitName, room, sku, assetTag, serialNumber, brand, model, equipmentStatus,
-      // Sobressalente no CEDOC/ESTOQUE → nasce in_stock; senão em uso.
-      lifecycleStatus: isEquip ? (unitName.trim().toUpperCase() === 'CEDOC/ESTOQUE' ? 'in_stock' : 'in_use') : undefined,
+      // CEDOC/ESTOQUE é setor, não unidade. Só o controle explícito de estoque
+      // coloca o equipamento no pool disponível para entrega.
+      lifecycleStatus: isEquip
+        ? (equipmentStatus.trim().toUpperCase() === 'NAO FUNCIONANDO'
+          ? 'maintenance'
+          : equipmentStatus.trim().toUpperCase() === 'EM ESTOQUE' && room.trim().toUpperCase() === 'CEDOC/ESTOQUE'
+            ? 'in_stock'
+            : 'in_use')
+        : undefined,
       operatingSystem,
       unit, minQty: Number(minQty) || 0, maxQty: Number(maxQty) || 0, initialQty: Number(initialQty) || 0,
       technicalSpecs: specs, notes,
@@ -383,12 +390,13 @@ export function NewInventoryItemScreen() {
             <View><FieldLabel>SKU / código interno</FieldLabel><Field value={sku} onChangeText={setSku} placeholder="Opcional" onScan={() => setScanField('sku')} /></View>
             <View><FieldLabel>Patrimônio / etiqueta anterior(es)</FieldLabel><Field value={assetTag} onChangeText={setAssetTag} placeholder="Um por linha, ou separe por vírgula" multiline /></View>
             {isEquip && (() => {
-              const inCedocStock = unitName.trim().toUpperCase() === 'CEDOC/ESTOQUE';
+              const inCedocStock = equipmentStatus.trim().toUpperCase() === 'EM ESTOQUE'
+                && room.trim().toUpperCase() === 'CEDOC/ESTOQUE';
               return (
                 <Pressable
                   onPress={() => {
                     if (inCedocStock) { setUnitName(''); setRoom(''); setEquipmentStatus('FUNCIONANDO'); }
-                    else { setUnitName('CEDOC/ESTOQUE'); setRoom('CEDOC/ESTOQUE'); setEquipmentStatus('EM ESTOQUE'); }
+                    else { setUnitName('HOSPITAL DO OLHO'); setRoom('CEDOC/ESTOQUE'); setEquipmentStatus('EM ESTOQUE'); }
                   }}
                   style={{
                     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10,

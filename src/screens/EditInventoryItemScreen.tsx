@@ -234,9 +234,13 @@ export function EditInventoryItemScreen() {
         brand: brand.trim() || null,
         model: model.trim() || null,
         equipmentStatus: equipmentStatus.trim() || null,
-        // CEDOC/ESTOQUE → sobressalente (in_stock); senão em uso. (manutenção/baixa
-        // vêm do fluxo da O.S., não desta tela.)
-        lifecycleStatus: unitName.trim().toUpperCase() === 'CEDOC/ESTOQUE' ? 'in_stock' : 'in_use',
+        // Situação de uso e estado técnico são independentes. CEDOC/ESTOQUE é
+        // setor; a unidade canônica continua sendo HOSPITAL DO OLHO.
+        lifecycleStatus: equipmentStatus.trim().toUpperCase() === 'NAO FUNCIONANDO'
+          ? 'maintenance'
+          : equipmentStatus.trim().toUpperCase() === 'EM ESTOQUE' && room.trim().toUpperCase() === 'CEDOC/ESTOQUE'
+            ? 'in_stock'
+            : 'in_use',
         operatingSystem: operatingSystem.trim() || null,
         unitName: unitName.trim() || null,
         room: room.trim() || null,
@@ -412,12 +416,13 @@ export function EditInventoryItemScreen() {
       <SectionCard title="Local">
         <View style={{ gap: 11 }}>
           {(() => {
-            const inCedocStock = unitName.trim().toUpperCase() === 'CEDOC/ESTOQUE';
+            const inCedocStock = equipmentStatus.trim().toUpperCase() === 'EM ESTOQUE'
+              && room.trim().toUpperCase() === 'CEDOC/ESTOQUE';
             return (
               <Pressable
                 onPress={() => {
                   if (inCedocStock) { setUnitName(''); setRoom(''); setEquipmentStatus('FUNCIONANDO'); }
-                  else { setUnitName('CEDOC/ESTOQUE'); setRoom('CEDOC/ESTOQUE'); setEquipmentStatus('EM ESTOQUE'); }
+                  else { setUnitName('HOSPITAL DO OLHO'); setRoom('CEDOC/ESTOQUE'); setEquipmentStatus('EM ESTOQUE'); }
                 }}
                 style={{
                   flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10,
