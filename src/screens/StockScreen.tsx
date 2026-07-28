@@ -233,7 +233,7 @@ export function StockScreen() {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
   const [selected, setSelected] = useState<InventoryItem | null>(null);
-  const [movementType, setMovementType] = useState<'in' | 'out'>('out');
+  const [movementType, setMovementType] = useState<'in' | 'out' | 'adjustment'>('out');
   const [qty, setQty] = useState('1');
   const [reason, setReason] = useState('');
   const [destination, setDestination] = useState('');
@@ -242,6 +242,9 @@ export function StockScreen() {
   const [formError, setFormError] = useState('');
   const canMove = user?.role === 'SuperAdministrador' || user?.permissions?.canManageInventory === true;
   const canEntry = user?.role === 'SuperAdministrador' || user?.permissions?.canManageInventoryStock === true;
+  const canAdjust = user?.role === 'SuperAdministrador'
+    || user?.username?.trim().toUpperCase() === 'RGASPAR'
+    || user?.name?.trim().toUpperCase() === 'ROCHELLE GASPAR FAVILLA';
 
   const loader = useCallback(async () => {
     const [items, movements] = await Promise.all([
@@ -286,8 +289,8 @@ export function StockScreen() {
 
   const openMovement = (item: InventoryItem) => {
     setSelected(item);
-    setMovementType('out');
-    setQty('1');
+    setMovementType(canAdjust ? 'adjustment' : 'out');
+    setQty(canAdjust ? String(item.currentQty) : '1');
     setReason('');
     setDestination('');
     setNotes('');
@@ -297,8 +300,8 @@ export function StockScreen() {
   const submit = async () => {
     if (!selected) return;
     const amount = Number(qty.replace(',', '.'));
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setFormError('Informe uma quantidade válida.');
+    if (!Number.isFinite(amount) || (movementType === 'adjustment' ? amount < 0 : amount <= 0)) {
+      setFormError(movementType === 'adjustment' ? 'Informe um novo saldo válido.' : 'Informe uma quantidade válida.');
       return;
     }
     if (movementType === 'out' && amount > selected.currentQty - (selected.reservedQty || 0)) {
@@ -311,14 +314,20 @@ export function StockScreen() {
       await createStockMovement(token, {
         itemId: selected.id,
         movementType,
-        qty: amount,
+        qty: movementType === 'adjustment' ? 0 : amount,
+        targetQty: movementType === 'adjustment' ? amount : undefined,
         reason,
         destinationLabel: destination,
         notes,
       });
       setSelected(null);
       await reload();
-      Alert.alert('Movimentação registrada', movementType === 'in' ? 'A entrada foi adicionada ao saldo.' : 'A saída foi descontada do saldo.');
+      Alert.alert(
+        movementType === 'adjustment' ? 'Saldo ajustado' : 'Movimentação registrada',
+        movementType === 'adjustment'
+          ? `O novo saldo é ${fmtQty(amount)}.`
+          : movementType === 'in' ? 'A entrada foi adicionada ao saldo.' : 'A saída foi descontada do saldo.',
+      );
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Não foi possível movimentar o estoque.');
     } finally {
@@ -351,8 +360,8 @@ export function StockScreen() {
         {loading ? <LoadingState /> : error ? <EmptyState icon="alert" text={error} /> : list.length === 0
           ? <EmptyState icon="archive" text="Nenhum item disponível neste grupo." />
           : <>
-            {printerSupplyGroups.map(([key, group]) => <PrinterSupplyGroupCard key={key} category={group.category} model={group.model} items={group.items} canMove={canMove} onOpen={current => nav.navigate('InventoryDetail', { id: current.id })} onMove={openMovement} />)}
-            {regularList.map(item => <StockCard key={item.id} item={item} canMove={canMove} onOpen={current => nav.navigate('InventoryDetail', { id: current.id })} onMove={openMovement} />)}
+            {printerSupplyGroups.map(([key, group]) => <PrinterSupplyGroupCard key={key} category={group.category} model={group.model} items={group.items} canMove={canMove || canAdjust} onOpen={current => nav.navigate('InventoryDetail', { id: current.id })} onMove={openMovement} />)}
+            {regularList.map(item => <StockCard key={item.id} item={item} canMove={canMove || canAdjust} onOpen={current => nav.navigate('InventoryDetail', { id: current.id })} onMove={openMovement} />)}
           </>}
       </View>
       {!!data?.movements?.length && (
@@ -374,8 +383,8 @@ export function StockScreen() {
               <Pressable onPress={() => setSelected(null)} hitSlop={10}><Icon name="x" size={20} color={T.muted} /></Pressable>
             </View>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-              {(['out', 'in'] as const).map(type => {
-                const disabled = type === 'in' && !canEntry;
+              {(['out', 'in', 'adjustment'] as const).map(type => {
+                const disabled = type === 'adjustment' ? !canAdjust : (!canMove || (type === 'in' && !canEntry));
                 const active = movementType === type;
                 return (
                   <Pressable
@@ -384,15 +393,17 @@ export function StockScreen() {
                     onPress={() => setMovementType(type)}
                     style={{ flex: 1, height: 44, borderRadius: 11, borderWidth: 1.5, borderColor: active ? T.primary : T.border, backgroundColor: active ? `${T.primary}12` : T.surface, alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.45 : 1 }}
                   >
-                    <Text style={{ color: active ? T.primary : T.muted, fontSize: 13, fontWeight: '800' }}>{type === 'in' ? 'Entrada' : 'Saída'}</Text>
+                    <Text style={{ color: active ? T.primary : T.muted, fontSize: 13, fontWeight: '800' }}>
+                      {type === 'in' ? 'Entrada' : type === 'out' ? 'Saída' : 'Ajustar'}
+                    </Text>
                   </Pressable>
                 );
               })}
             </View>
             <View style={{ gap: 12 }}>
               <View>
-                <FieldLabel required>Quantidade</FieldLabel>
-                <TextInput value={qty} onChangeText={setQty} keyboardType="decimal-pad" placeholder="1" placeholderTextColor={T.faint} style={{ height: 44, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface, paddingHorizontal: 13, color: T.text }} />
+                <FieldLabel required>{movementType === 'adjustment' ? 'Novo saldo' : 'Quantidade'}</FieldLabel>
+                <TextInput value={qty} onChangeText={setQty} keyboardType="decimal-pad" placeholder={movementType === 'adjustment' ? '0' : '1'} placeholderTextColor={T.faint} style={{ height: 44, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface, paddingHorizontal: 13, color: T.text }} />
               </View>
               <View>
                 <FieldLabel>Motivo</FieldLabel>

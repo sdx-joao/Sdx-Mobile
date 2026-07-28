@@ -547,8 +547,9 @@ export function createStockMovement(
   token: string | null,
   input: {
     itemId: string;
-    movementType: 'in' | 'out';
+    movementType: 'in' | 'out' | 'adjustment';
     qty: number;
+    targetQty?: number;
     reason?: string;
     destinationLabel?: string;
     notes?: string;
