@@ -29,8 +29,12 @@ import { useResource } from '../api/use-resource';
 import { API_BASE_URL } from '../api/client';
 import {
   createStockMovement,
+  createTonerGroup,
+  fetchInventorySuppliers,
   getInventory,
+  getOptions,
   getStockMovements,
+  type SelectOption,
   type StockMovement,
 } from '../api/mobile';
 import type { InventoryItem } from '../data/mock';
@@ -51,6 +55,13 @@ const TYPE_COLOR: Record<InventoryItem['primaryType'], { color: string; soft: st
   MATERIAL: { color: '#047857', soft: '#D1FAE5' },
   SUPRIMENTO: { color: '#B45309', soft: '#FEF3C7' },
 };
+
+const TONER_COLORS = [
+  { value: 'PRETO', label: 'Preto', color: '#111827' },
+  { value: 'CIANO', label: 'Ciano', color: '#06B6D4' },
+  { value: 'MAGENTA', label: 'Magenta', color: '#DB2777' },
+  { value: 'AMARELO', label: 'Amarelo', color: '#EAB308' },
+] as const;
 
 function isStockItem(item: InventoryItem) {
   return item.itemType !== 'equipment' || item.lifecycleStatus === 'in_stock';
@@ -159,6 +170,55 @@ function MovementRow({ movement }: { movement: StockMovement }) {
   );
 }
 
+function TonerGroupCard({
+  model,
+  items,
+  canMove,
+  onOpen,
+  onMove,
+}: {
+  model: string;
+  items: InventoryItem[];
+  canMove: boolean;
+  onOpen: (item: InventoryItem) => void;
+  onMove: (item: InventoryItem) => void;
+}) {
+  const total = items.reduce((sum, item) => sum + item.currentQty - (item.reservedQty || 0), 0);
+  return (
+    <View style={{ borderWidth: 1, borderColor: '#D9770638', borderLeftWidth: 4, borderLeftColor: '#D97706', borderRadius: 14, backgroundColor: '#FFFBEB', padding: 14, marginBottom: 10 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: T.text, fontSize: 14.5, fontWeight: '800' }}>TONER · {model}</Text>
+          <Text style={{ color: T.muted, fontSize: 11.5, marginTop: 3 }}>Saldo separado por cor</Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={{ color: T.text, fontSize: 20, fontWeight: '900' }}>{fmtQty(total)}</Text>
+          <Text style={{ color: T.faint, fontSize: 10.5 }}>UN disponíveis</Text>
+        </View>
+      </View>
+      <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: '#D9770622' }}>
+        {TONER_COLORS.map(color => {
+          const item = items.find(current => current.tonerColor === color.value);
+          if (!item) return null;
+          const available = item.currentQty - (item.reservedQty || 0);
+          return (
+            <Pressable key={color.value} onPress={() => onOpen(item)} style={{ minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderBottomColor: '#D9770615' }}>
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color.color, borderWidth: 1, borderColor: '#0002' }} />
+              <Text style={{ flex: 1, color: T.textSoft, fontSize: 12.5, fontWeight: '700' }}>{color.label}</Text>
+              <Text style={{ color: T.text, fontSize: 13, fontWeight: '900' }}>{fmtQty(available)}</Text>
+              {canMove && (
+                <Pressable onPress={event => { event.stopPropagation(); onMove(item); }} style={{ padding: 7 }}>
+                  <Icon name="shuffle" size={14} color={T.primary} />
+                </Pressable>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 export function StockScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { token, user } = useAuth();
@@ -172,15 +232,24 @@ export function StockScreen() {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [tonerModal, setTonerModal] = useState(false);
+  const [tonerModel, setTonerModel] = useState('');
+  const [tonerColorMode, setTonerColorMode] = useState(false);
+  const [tonerQty, setTonerQty] = useState<Record<string, string>>({ PRETO: '', CIANO: '', MAGENTA: '', AMARELO: '' });
+  const [tonerSupplier, setTonerSupplier] = useState('');
+  const [tonerError, setTonerError] = useState('');
+  const [tonerSaving, setTonerSaving] = useState(false);
   const canMove = user?.role === 'SuperAdministrador' || user?.permissions?.canManageInventory === true;
   const canEntry = user?.role === 'SuperAdministrador' || user?.permissions?.canManageInventoryStock === true;
 
   const loader = useCallback(async () => {
-    const [items, movements] = await Promise.all([
+    const [items, movements, options, supplierData] = await Promise.all([
       getInventory(token),
       getStockMovements(token, 40),
+      getOptions(token, ['inventory_printer_model']),
+      fetchInventorySuppliers(token).catch(() => ({ suppliers: [] })),
     ]);
-    return { items, movements };
+    return { items, movements, options, suppliers: supplierData.suppliers };
   }, [token]);
   const { data, loading, refreshing, error, reload } = useResource(loader, { reloadOnFocus: true });
   const stock = useMemo(() => (data?.items ?? []).filter(isStockItem), [data?.items]);
@@ -198,6 +267,19 @@ export function StockScreen() {
     const text = `${item.name} ${item.category || ''} ${item.sku || ''} ${item.brand || ''} ${item.locationLabel || ''}`.toLowerCase();
     return !q || text.includes(q.toLowerCase());
   }), [stock, filter, q]);
+  const tonerGroups = useMemo(() => {
+    const groups = new Map<string, InventoryItem[]>();
+    list.filter(item => item.category?.toUpperCase() === 'TONER').forEach(item => {
+      const model = item.printerModel?.trim() || 'MODELO NÃO INFORMADO';
+      groups.set(model, [...(groups.get(model) ?? []), item]);
+    });
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b, 'pt-BR'));
+  }, [list]);
+  const regularList = useMemo(() => list.filter(item => item.category?.toUpperCase() !== 'TONER'), [list]);
+  const printerModels = useMemo(
+    () => ((data?.options ?? []) as SelectOption[]).map(option => option.label || option.value),
+    [data?.options],
+  );
   const totalUnits = stock.reduce((sum, item) => sum + Math.max(0, item.currentQty - (item.reservedQty || 0)), 0);
   const lowCount = stock.filter(item => {
     const available = item.currentQty - (item.reservedQty || 0);
@@ -246,6 +328,24 @@ export function StockScreen() {
     }
   };
 
+  const submitToner = async () => {
+    const activeColors = tonerColorMode ? TONER_COLORS : TONER_COLORS.slice(0, 1);
+    const quantities = Object.fromEntries(TONER_COLORS.map(color => [color.value, activeColors.some(active => active.value === color.value) ? Number(tonerQty[color.value]) || 0 : 0])) as Record<'PRETO' | 'CIANO' | 'MAGENTA' | 'AMARELO', number>;
+    if (!tonerModel.trim()) { setTonerError('Informe o modelo da impressora.'); return; }
+    if (!Object.values(quantities).some(value => value > 0)) { setTonerError('Informe a quantidade de pelo menos uma cor.'); return; }
+    setTonerSaving(true); setTonerError('');
+    try {
+      await createTonerGroup(token, { printerModel: tonerModel, quantities, supplierId: tonerSupplier || null });
+      setTonerModal(false); setTonerModel(''); setTonerQty({ PRETO: '', CIANO: '', MAGENTA: '', AMARELO: '' });
+      await reload();
+      Alert.alert('Toner cadastrado', 'Os saldos foram separados por cor.');
+    } catch (error) {
+      setTonerError(error instanceof Error ? error.message : 'Não foi possível cadastrar.');
+    } finally {
+      setTonerSaving(false);
+    }
+  };
+
   return (
     <ModuleScreen
       title="Estoque"
@@ -266,18 +366,21 @@ export function StockScreen() {
         <SearchField value={q} onChange={setQ} placeholder="Buscar item, categoria ou local…" />
       </View>
       <ChipRow chips={chips} active={filter} onPick={setFilter} accent={T.primary} />
+      {canEntry && (
+        <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>
+          <Pressable onPress={() => setTonerModal(true)} style={{ height: 44, borderRadius: 12, backgroundColor: `${T.primary}12`, borderWidth: 1, borderColor: `${T.primary}44`, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+            <Icon name="plus" size={16} color={T.primary} />
+            <Text style={{ color: T.primary, fontSize: 13, fontWeight: '800' }}>Cadastrar toner</Text>
+          </Pressable>
+        </View>
+      )}
       <View style={{ padding: 16, paddingBottom: 4 }}>
         {loading ? <LoadingState /> : error ? <EmptyState icon="alert" text={error} /> : list.length === 0
           ? <EmptyState icon="archive" text="Nenhum item disponível neste grupo." />
-          : list.map(item => (
-            <StockCard
-              key={item.id}
-              item={item}
-              canMove={canMove}
-              onOpen={current => nav.navigate('InventoryDetail', { id: current.id })}
-              onMove={openMovement}
-            />
-          ))}
+          : <>
+            {tonerGroups.map(([model, tonerItems]) => <TonerGroupCard key={model} model={model} items={tonerItems} canMove={canMove} onOpen={current => nav.navigate('InventoryDetail', { id: current.id })} onMove={openMovement} />)}
+            {regularList.map(item => <StockCard key={item.id} item={item} canMove={canMove} onOpen={current => nav.navigate('InventoryDetail', { id: current.id })} onMove={openMovement} />)}
+          </>}
       </View>
       {!!data?.movements?.length && (
         <View style={{ paddingHorizontal: 16, paddingBottom: 24 }}>
@@ -336,6 +439,36 @@ export function StockScreen() {
               <Pressable disabled={saving} onPress={submit} style={{ height: 48, borderRadius: 13, backgroundColor: T.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1 }}>
                 {saving ? <ActivityIndicator color="#fff" /> : <Icon name="check" size={18} color="#fff" />}
                 <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800' }}>{saving ? 'Salvando…' : 'Confirmar movimentação'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={tonerModal} transparent animationType="slide" onRequestClose={() => setTonerModal(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(15,23,42,.48)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: T.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 18, paddingBottom: 32, maxHeight: '88%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+              <View><Text style={{ color: T.text, fontSize: 17, fontWeight: '800' }}>Cadastrar toner</Text><Text style={{ color: T.muted, fontSize: 12, marginTop: 3 }}>Um saldo independente para cada cor</Text></View>
+              <Pressable onPress={() => setTonerModal(false)}><Icon name="x" size={20} color={T.muted} /></Pressable>
+            </View>
+            <View style={{ gap: 13 }}>
+              <View>
+                <FieldLabel required>Modelo da impressora</FieldLabel>
+                <TextInput value={tonerModel} onChangeText={setTonerModel} placeholder="Ex.: HP LASERJET M428" placeholderTextColor={T.faint} style={{ height: 44, borderRadius: 11, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface, paddingHorizontal: 13, color: T.text }} />
+                {!!printerModels.length && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 7 }}>{printerModels.slice(0, 8).map(model => <Pressable key={model} onPress={() => setTonerModel(model)} style={{ borderRadius: 999, borderWidth: 1, borderColor: T.border, paddingHorizontal: 9, paddingVertical: 5 }}><Text style={{ color: T.textSoft, fontSize: 10.5 }}>{model}</Text></Pressable>)}</View>}
+              </View>
+              <Pressable onPress={() => setTonerColorMode(value => !value)} style={{ height: 42, borderRadius: 11, borderWidth: 1.5, borderColor: tonerColorMode ? T.primary : T.border, backgroundColor: tonerColorMode ? `${T.primary}12` : T.surface, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: tonerColorMode ? T.primary : T.textSoft, fontSize: 12.5, fontWeight: '800' }}>{tonerColorMode ? 'Colorido — CMYK' : 'Monocromático — Preto'}</Text>
+              </Pressable>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 9 }}>
+                {(tonerColorMode ? TONER_COLORS : TONER_COLORS.slice(0, 1)).map(color => <View key={color.value} style={{ width: tonerColorMode ? '47%' : '100%' }}><FieldLabel>{color.label}</FieldLabel><TextInput value={tonerQty[color.value]} onChangeText={value => setTonerQty(current => ({ ...current, [color.value]: value }))} keyboardType="number-pad" placeholder="0" placeholderTextColor={T.faint} style={{ height: 42, borderRadius: 10, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface, paddingHorizontal: 12, color: T.text }} /></View>)}
+              </View>
+              {!!data?.suppliers?.length && <View><FieldLabel>Fornecedor</FieldLabel><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>{data.suppliers.map(supplier => <Pressable key={supplier.id} onPress={() => setTonerSupplier(current => current === supplier.id ? '' : supplier.id)} style={{ borderRadius: 999, borderWidth: 1.5, borderColor: tonerSupplier === supplier.id ? T.primary : T.border, backgroundColor: tonerSupplier === supplier.id ? `${T.primary}12` : T.surface, paddingHorizontal: 10, paddingVertical: 7 }}><Text style={{ color: tonerSupplier === supplier.id ? T.primary : T.textSoft, fontSize: 11.5, fontWeight: '700' }}>{supplier.name}</Text></Pressable>)}</View></View>}
+              {!!tonerError && <Text style={{ color: T.danger, fontSize: 12.5 }}>{tonerError}</Text>}
+              <Pressable disabled={tonerSaving} onPress={submitToner} style={{ height: 48, borderRadius: 13, backgroundColor: T.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: tonerSaving ? 0.7 : 1 }}>
+                {tonerSaving ? <ActivityIndicator color="#fff" /> : <Icon name="check" size={18} color="#fff" />}
+                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800' }}>{tonerSaving ? 'Salvando…' : 'Cadastrar por cor'}</Text>
               </Pressable>
             </View>
           </View>

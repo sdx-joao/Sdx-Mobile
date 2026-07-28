@@ -98,6 +98,8 @@ export type InventoryItem = {
   room?: string | null;
   brand: string | null;
   model: string | null;
+  printerModel?: string | null;
+  tonerColor?: string | null;
   equipmentStatus: string | null;
   lifecycleStatus?: 'in_use' | 'in_stock' | 'maintenance' | 'retired';
   operatingSystem: string | null;
