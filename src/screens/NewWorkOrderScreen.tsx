@@ -35,6 +35,8 @@ const WORK_ORDER_OPTION_KINDS: SelectOptionKind[] = [
   'work_order_department',
   'work_order_technical_team',
   'work_order_responsible_technician',
+  'work_order_movement_reason',
+  'work_order_retirement_reason',
 ];
 
 const LOGISTICS_UNIT_DEFAULT = 'HOSPITAL DO OLHO';
@@ -308,7 +310,11 @@ export function NewWorkOrderScreen() {
               : undefined}
             allowFreeText={!isGenericEquipmentFlow}
             externalDelivery={equipmentFlow?.operation === 'deliver_from_stock'}
-            reasonOptions={(optionsByKind.get('work_order_movement_reason') ?? []).map(o => ({ value: o.value, label: o.label || o.value }))}
+            reasonOptions={(optionsByKind.get(
+              equipmentFlow?.operation === 'deliver_from_stock'
+                ? 'work_order_retirement_reason'
+                : 'work_order_movement_reason',
+            ) ?? []).map(o => ({ value: o.value, label: o.label || o.value }))}
           />
         </SectionCard>
       )}

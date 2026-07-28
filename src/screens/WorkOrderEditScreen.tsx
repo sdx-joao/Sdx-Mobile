@@ -48,6 +48,9 @@ const OPTION_KINDS: SelectOptionKind[] = [
   'work_order_material',
   'work_order_material_unit',
   'work_order_movement_reason',
+  'work_order_retirement_reason',
+  'work_order_maintenance_reason',
+  'work_order_reversal_reason',
 ];
 
 type MaterialDraft = {
@@ -612,7 +615,11 @@ export function WorkOrderEditScreen() {
             : undefined}
           allowFreeText={!isGenericEquipmentFlow}
           externalDelivery={equipmentFlow?.operation === 'deliver_from_stock'}
-          reasonOptions={(optionsByKind.get('work_order_movement_reason') ?? []).map(o => ({ value: o.value, label: o.label || o.value }))}
+          reasonOptions={(optionsByKind.get(
+            equipmentFlow?.operation === 'deliver_from_stock'
+              ? 'work_order_retirement_reason'
+              : 'work_order_movement_reason',
+          ) ?? []).map(o => ({ value: o.value, label: o.label || o.value }))}
         />
       </SectionCard>
 

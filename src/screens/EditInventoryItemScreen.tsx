@@ -26,7 +26,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 const OPTION_KINDS: SelectOptionKind[] = [
   'work_order_unit', 'work_order_department',
   'inventory_equipment_category', 'inventory_equipment_status', 'inventory_operating_system', 'inventory_brand',
-  'inventory_category', 'inventory_unit',
+  'inventory_category', 'unit_of_measure',
 ];
 
 function Field({ value, onChangeText, placeholder, multiline, onScan, keyboardType }: {
@@ -446,7 +446,7 @@ export function EditInventoryItemScreen() {
       {isConsumable && (
         <SectionCard title="Estoque">
           <View style={{ gap: 11 }}>
-            <SuggestedInput label="Unidade de medida" value={unit} onChangeText={setUnit} placeholder="UN, CX, M…" options={opts('inventory_unit')} />
+            <SuggestedInput label="Unidade de medida" value={unit} onChangeText={setUnit} placeholder="UN, CX, M…" options={opts('unit_of_measure')} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}><FieldLabel>Mínimo</FieldLabel><Field value={minQty} onChangeText={setMinQty} placeholder="0" keyboardType="numeric" /></View>
               <View style={{ flex: 1 }}><FieldLabel>Repor em</FieldLabel><Field value={reorderPoint} onChangeText={setReorderPoint} placeholder="—" keyboardType="numeric" /></View>

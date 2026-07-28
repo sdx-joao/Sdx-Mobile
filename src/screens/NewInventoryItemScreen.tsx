@@ -28,7 +28,7 @@ type Step = 0 | 1 | 2 | 3;
 
 const OPTION_KINDS = [
   'inventory_item_type', 'inventory_equipment_category', 'work_order_unit', 'work_order_department',
-  'inventory_brand', 'inventory_model', 'inventory_equipment_status', 'inventory_unit', 'inventory_spec_key',
+  'inventory_brand', 'inventory_model', 'inventory_equipment_status', 'unit_of_measure', 'inventory_spec_key',
 ] as const;
 
 function Field({ value, onChangeText, placeholder, multiline, keyboardType, onScan }: {
@@ -430,7 +430,7 @@ export function NewInventoryItemScreen() {
               </>
             ) : (
               <>
-                <SuggestedInput label="Unidade de medida" value={unit} onChangeText={setUnit} placeholder="UN, CX, M…" options={opts('inventory_unit')} />
+                <SuggestedInput label="Unidade de medida" value={unit} onChangeText={setUnit} placeholder="UN, CX, M…" options={opts('unit_of_measure')} />
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <View style={{ flex: 1 }}><FieldLabel>Qtd. inicial</FieldLabel><Field value={initialQty} onChangeText={setInitialQty} placeholder="0" keyboardType="number-pad" /></View>
                   <View style={{ flex: 1 }}><FieldLabel>Mínimo</FieldLabel><Field value={minQty} onChangeText={setMinQty} placeholder="0" keyboardType="number-pad" /></View>
