@@ -8,7 +8,7 @@ import { Icon } from '../components/Icon';
 import { T, INV_TYPE } from '../theme/theme';
 import type { InventoryItem } from '../data/mock';
 import { useAuth } from '../auth/auth-context';
-import { getInventory, resolveAsset, resolveInventoryLabel, resolveMachinePairToken } from '../api/mobile';
+import { getInventory, resolveAsset, resolveInventoryLabel } from '../api/mobile';
 import { parseLabelScan, isLabelCode, parseMachinePairScan } from '../lib/label-scan';
 import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
@@ -80,18 +80,7 @@ export function ScanScreen() {
     const pairToken = parseMachinePairScan(code);
     if (pairToken) {
       locked.current = true;
-      try {
-        const res = await resolveMachinePairToken(token, pairToken);
-        if (res.itemId) {
-          setTimeout(() => nav.replace('InventoryDetail', { id: res.itemId as string }), 400);
-          return;
-        }
-        const nome = [res.machine.brand, res.machine.model].filter(Boolean).join(' ')
-          || res.machine.hostname || 'Máquina';
-        setScanError(`${nome} está aguardando cadastro. Escaneie a ETIQUETA colada nela para começar — os dados dela entram automaticamente.`);
-      } catch {
-        setScanError('QR da máquina expirado. Abra o SDX Nuntius nela ou use a lista de máquinas no cadastro.');
-      }
+      setScanError('Este QR pertence ao SDX Nuntius e não pode ser lido pelo Inventário. Use o leitor próprio de desbloqueio do Nuntius ou escaneie a etiqueta patrimonial colada no equipamento.');
       locked.current = false;
       return;
     }
