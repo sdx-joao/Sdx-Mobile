@@ -8,8 +8,8 @@ import { Icon } from '../components/Icon';
 import { T, INV_TYPE } from '../theme/theme';
 import type { InventoryItem } from '../data/mock';
 import { useAuth } from '../auth/auth-context';
-import { getInventory, resolveAsset, resolveInventoryLabel } from '../api/mobile';
-import { parseLabelScan, isLabelCode, parseMachinePairScan } from '../lib/label-scan';
+import { getInventory, resolveAsset, resolveInventoryLabel, resolveMachinePairToken } from '../api/mobile';
+import { parseLabelScan, isLabelCode, parseMachinePairScan, parseMachineUnlockScan } from '../lib/label-scan';
 import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -73,14 +73,32 @@ export function ScanScreen() {
     if (locked.current) return;
     setScanError(null);
 
-    // QR da tela do PC (SDX Nuntius): identifica a MÁQUINA, não a etiqueta.
-    // ⚠️ Precisa vir ANTES de parseLabelScan, que casaria "/i/m" como etiqueta.
-    // O cadastro continua começando pela etiqueta (§5.12): aqui só informamos o
-    // caminho, para o técnico não achar que o QR está com defeito.
+    // O QR /i/u/ é temporário e serve exclusivamente para desbloquear a janela
+    // do Nuntius. No leitor de Inventário ele precisa ser recusado antes que o
+    // parser genérico confunda o segmento "u" com uma etiqueta.
+    const unlockToken = parseMachineUnlockScan(code);
+    if (unlockToken) {
+      setScanError('Este é o QR de bloqueio/desbloqueio do SDX Nuntius. Use o botão flutuante de desbloqueio; para cadastrar, leia o QR de cadastro exibido pela máquina.');
+      return;
+    }
+
+    // O QR /i/m/ identifica a máquina para o fluxo de cadastro/pareamento.
+    // Precisa vir antes de parseLabelScan, que casaria "/i/m" como etiqueta.
     const pairToken = parseMachinePairScan(code);
     if (pairToken) {
       locked.current = true;
-      setScanError('Este QR pertence ao SDX Nuntius e não pode ser lido pelo Inventário. Use o leitor próprio de desbloqueio do Nuntius ou escaneie a etiqueta patrimonial colada no equipamento.');
+      try {
+        const res = await resolveMachinePairToken(token, pairToken);
+        if (res.itemId) {
+          setTimeout(() => nav.replace('InventoryDetail', { id: res.itemId as string }), 400);
+          return;
+        }
+        const nome = [res.machine.brand, res.machine.model].filter(Boolean).join(' ')
+          || res.machine.hostname || 'Máquina';
+        setScanError(`${nome} está aguardando cadastro. Escaneie a ETIQUETA colada nela para começar — os dados dela entram automaticamente.`);
+      } catch {
+        setScanError('QR de cadastro da máquina expirado. Abra o SDX Nuntius nela ou use a lista de máquinas no cadastro.');
+      }
       locked.current = false;
       return;
     }
