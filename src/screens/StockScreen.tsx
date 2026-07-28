@@ -58,6 +58,7 @@ const TONER_COLORS = [
   { value: 'MAGENTA', label: 'Magenta', color: '#DB2777' },
   { value: 'AMARELO', label: 'Amarelo', color: '#EAB308' },
 ] as const;
+const PRINTER_SUPPLY_CATEGORIES = new Set(['TONER', 'CILINDRO', 'FUSOR']);
 
 function isStockItem(item: InventoryItem) {
   return item.itemType !== 'equipment' || item.lifecycleStatus === 'in_stock';
@@ -166,13 +167,15 @@ function MovementRow({ movement }: { movement: StockMovement }) {
   );
 }
 
-function TonerGroupCard({
+function PrinterSupplyGroupCard({
+  category,
   model,
   items,
   canMove,
   onOpen,
   onMove,
 }: {
+  category: string;
   model: string;
   items: InventoryItem[];
   canMove: boolean;
@@ -184,8 +187,8 @@ function TonerGroupCard({
     <View style={{ borderWidth: 1, borderColor: '#D9770638', borderLeftWidth: 4, borderLeftColor: '#D97706', borderRadius: 14, backgroundColor: '#FFFBEB', padding: 14, marginBottom: 10 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: T.text, fontSize: 14.5, fontWeight: '800' }}>TONER · {model}</Text>
-          <Text style={{ color: T.muted, fontSize: 11.5, marginTop: 3 }}>Saldo separado por cor</Text>
+          <Text style={{ color: T.text, fontSize: 14.5, fontWeight: '800' }}>{category} · {model}</Text>
+          <Text style={{ color: T.muted, fontSize: 11.5, marginTop: 3 }}>{category === 'TONER' ? 'Saldo separado por cor' : 'Insumo vinculado à impressora'}</Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={{ color: T.text, fontSize: 20, fontWeight: '900' }}>{fmtQty(total)}</Text>
@@ -193,7 +196,7 @@ function TonerGroupCard({
         </View>
       </View>
       <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: '#D9770622' }}>
-        {TONER_COLORS.map(color => {
+        {category === 'TONER' ? TONER_COLORS.map(color => {
           const item = items.find(current => current.tonerColor === color.value);
           if (!item) return null;
           const available = item.currentQty - (item.reservedQty || 0);
@@ -207,6 +210,15 @@ function TonerGroupCard({
                   <Icon name="shuffle" size={14} color={T.primary} />
                 </Pressable>
               )}
+            </Pressable>
+          );
+        }) : items.map(item => {
+          const available = item.currentQty - (item.reservedQty || 0);
+          return (
+            <Pressable key={item.id} onPress={() => onOpen(item)} style={{ minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ flex: 1, color: T.textSoft, fontSize: 12.5, fontWeight: '700' }}>Saldo disponível</Text>
+              <Text style={{ color: T.text, fontSize: 13, fontWeight: '900' }}>{fmtQty(available)}</Text>
+              {canMove && <Pressable onPress={event => { event.stopPropagation(); onMove(item); }} style={{ padding: 7 }}><Icon name="shuffle" size={14} color={T.primary} /></Pressable>}
             </Pressable>
           );
         })}
@@ -254,15 +266,18 @@ export function StockScreen() {
     const text = `${item.name} ${item.category || ''} ${item.sku || ''} ${item.brand || ''} ${item.locationLabel || ''}`.toLowerCase();
     return !q || text.includes(q.toLowerCase());
   }), [stock, filter, q]);
-  const tonerGroups = useMemo(() => {
-    const groups = new Map<string, InventoryItem[]>();
-    list.filter(item => item.category?.toUpperCase() === 'TONER').forEach(item => {
+  const printerSupplyGroups = useMemo(() => {
+    const groups = new Map<string, { category: string; model: string; items: InventoryItem[] }>();
+    list.filter(item => PRINTER_SUPPLY_CATEGORIES.has(item.category?.toUpperCase() || '')).forEach(item => {
+      const category = item.category?.toUpperCase() || '';
       const model = item.printerModel?.trim() || 'MODELO NÃO INFORMADO';
-      groups.set(model, [...(groups.get(model) ?? []), item]);
+      const key = `${category}:${model}`;
+      const current = groups.get(key);
+      groups.set(key, { category, model, items: [...(current?.items ?? []), item] });
     });
     return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b, 'pt-BR'));
   }, [list]);
-  const regularList = useMemo(() => list.filter(item => item.category?.toUpperCase() !== 'TONER'), [list]);
+  const regularList = useMemo(() => list.filter(item => !PRINTER_SUPPLY_CATEGORIES.has(item.category?.toUpperCase() || '')), [list]);
   const totalUnits = stock.reduce((sum, item) => sum + Math.max(0, item.currentQty - (item.reservedQty || 0)), 0);
   const lowCount = stock.filter(item => {
     const available = item.currentQty - (item.reservedQty || 0);
@@ -336,7 +351,7 @@ export function StockScreen() {
         {loading ? <LoadingState /> : error ? <EmptyState icon="alert" text={error} /> : list.length === 0
           ? <EmptyState icon="archive" text="Nenhum item disponível neste grupo." />
           : <>
-            {tonerGroups.map(([model, tonerItems]) => <TonerGroupCard key={model} model={model} items={tonerItems} canMove={canMove} onOpen={current => nav.navigate('InventoryDetail', { id: current.id })} onMove={openMovement} />)}
+            {printerSupplyGroups.map(([key, group]) => <PrinterSupplyGroupCard key={key} category={group.category} model={group.model} items={group.items} canMove={canMove} onOpen={current => nav.navigate('InventoryDetail', { id: current.id })} onMove={openMovement} />)}
             {regularList.map(item => <StockCard key={item.id} item={item} canMove={canMove} onOpen={current => nav.navigate('InventoryDetail', { id: current.id })} onMove={openMovement} />)}
           </>}
       </View>
