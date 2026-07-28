@@ -30,7 +30,6 @@ export type SelectOptionKind =
   | 'inventory_equipment_status'
   | 'inventory_brand'
   | 'inventory_model'
-  | 'inventory_printer_model'
   | 'inventory_spec_key'
   | 'inventory_operating_system';
 
@@ -764,18 +763,6 @@ export type NewInventoryItemInput = {
   lifecycleStatus?: 'in_use' | 'in_stock' | 'maintenance' | 'retired';
 };
 
-export function createTonerGroup(token: string | null, input: {
-  printerModel: string;
-  quantities: Record<'PRETO' | 'CIANO' | 'MAGENTA' | 'AMARELO', number>;
-  supplierId?: string | null;
-  minQty?: number;
-  maxQty?: number;
-  notes?: string | null;
-}) {
-  return apiFetch<{ ok: true; itemIds: string[] }>('/api/mobile/inventory/toners', {
-    method: 'POST', token, body: input,
-  });
-}
 
 /** Envia uma foto do item (principal ou anexo) — usado após o cadastro. */
 export async function uploadInventoryPhoto(
