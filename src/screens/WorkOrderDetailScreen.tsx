@@ -113,6 +113,18 @@ export function WorkOrderDetailScreen() {
   );
   const canManage = user?.role === 'SuperAdministrador' || !!user?.capabilities?.canManageWorkOrders;
   const cancelPending = !!wo.cancelRequestedAt && !finished;
+  const materialIds = new Set(wo.materials.map(material => material.inventoryItemId).filter(Boolean));
+  const requestedMaterials = [
+    ...wo.materials,
+    ...(data?.stockMaterials ?? [])
+      .filter(material => !materialIds.has(material.itemId))
+      .map(material => ({
+        description: material.itemName || 'Item de estoque',
+        quantity: material.qty,
+        unit: material.unit,
+        inventoryItemId: material.itemId,
+      })),
+  ];
 
   const submitCancelRequest = async () => {
     if (cancelBusy) return;
@@ -520,10 +532,10 @@ export function WorkOrderDetailScreen() {
         </SectionCard>
       )}
 
-      {wo.materials.length > 0 && (
-        <SectionCard title={`Materiais (${wo.materials.length})`}>
+      {requestedMaterials.length > 0 && (
+        <SectionCard title={`Materiais/Insumos solicitados (${requestedMaterials.length})`}>
           <View style={{ gap: 9 }}>
-            {wo.materials.map((m, i) => (
+            {requestedMaterials.map((m, i) => (
               <View key={i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
                   <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: T.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}>

@@ -152,6 +152,7 @@ export function WorkOrderSignatureScreen() {
   // Dados coletados ao longo do assistente.
   const [resolution, setResolution] = useState<Resolution>('resolved');
   const [solution, setSolution] = useState('');
+  const [materialDelivered, setMaterialDelivered] = useState<boolean | null>(null);
   const [code, setCode] = useState('');
   const [techName, setTechName] = useState(user?.name || '');
   const [techSig, setTechSig] = useState<string | null>(null);
@@ -161,6 +162,7 @@ export function WorkOrderSignatureScreen() {
   const [docValue, setDocValue] = useState('');
   const existingDoc = useRef<{ document: string; documentType: DocType | null } | null>(null);
   const isDelivery = useRef(false);
+  const isMaterialDelivery = useRef(false);
   const finishedAt = useRef(new Date().toISOString());
 
   const current = useRef<Point[]>([]);
@@ -195,7 +197,7 @@ export function WorkOrderSignatureScreen() {
     let alive = true;
     (async () => {
       try {
-        const [{ workOrder, requesterDocument }, plan] = await Promise.all([
+        const [{ workOrder, requesterDocument, serviceStock }, plan] = await Promise.all([
           getWorkOrder(token, route.params.id),
           getEquipmentInstallationPlan(token, route.params.id).catch(() => null),
         ]);
@@ -205,7 +207,16 @@ export function WorkOrderSignatureScreen() {
         // colhendo a assinatura (não o responsável salvo na OS — que pode ser quem
         // delegou). O backend também grava o concluinte como responsável.
         setReqName(workOrder.requestedByName || '');
-        isDelivery.current = /ENTREGA|COLETA|TRANSPORTE|RETIRADA/.test((workOrder.serviceType || '').toUpperCase());
+        const materialFlow = serviceStock?.direction === 'out'
+          || (
+            workOrder.materials.length > 0
+            && /ENTREGA|SOLICITA|MATERIAL|INSUMO|SUPRIMENTO|RESMA|TONER/.test(
+              `${workOrder.serviceType || ''} ${workOrder.category || ''}`.toUpperCase(),
+            )
+          );
+        isMaterialDelivery.current = materialFlow;
+        isDelivery.current = materialFlow
+          || /ENTREGA|COLETA|TRANSPORTE|RETIRADA/.test((workOrder.serviceType || '').toUpperCase());
         if (requesterDocument?.document) {
           const dt = (requesterDocument.documentType as DocType | null) || null;
           existingDoc.current = { document: requesterDocument.document, documentType: dt };
@@ -285,8 +296,25 @@ export function WorkOrderSignatureScreen() {
     setStep('resolution');
   }
 
-  // Passo 0: situação + solução adotada.
+  // Passo 0: entrega objetiva para materiais; situação + solução nos demais serviços.
   function advanceFromResolution() {
+    if (isMaterialDelivery.current) {
+      if (materialDelivered === null) {
+        Alert.alert('Confirmação da entrega', 'Informe se os materiais/insumos foram entregues.');
+        return;
+      }
+      if (!materialDelivered) {
+        Alert.alert(
+          'Entrega pendente',
+          'A O.S. permanecerá aberta. Conclua o fluxo somente após a entrega dos materiais/insumos.',
+        );
+        return;
+      }
+      setResolution('resolved');
+      setSolution('MATERIAIS/INSUMOS ENTREGUES');
+      setStep('tech');
+      return;
+    }
     if (!solution.trim()) { Alert.alert('Solução adotada', 'Descreva a solução adotada.'); return; }
     setStep('tech');
   }
@@ -348,13 +376,13 @@ export function WorkOrderSignatureScreen() {
   const isSignStep = step === 'tech' || step === 'requester';
   const title = step === 'location'
     ? (installationPlan?.operation === 'collect' ? 'Confirmar chegada ao estoque' : 'Validar local da instalação')
-    : step === 'resolution' ? 'Situação e solução'
+    : step === 'resolution' ? (isMaterialDelivery.current ? 'Confirmar entrega' : 'Situação e solução')
     : step === 'tech' ? 'Assinatura do técnico'
     : step === 'document' ? 'Documento do solicitante'
     : step === 'requester' ? 'Assinatura do solicitante'
     : 'Revisar e concluir';
   const primaryLabel = step === 'location' ? 'Local confirmado — avançar'
-    : step === 'resolution' ? 'Avançar — assinatura do técnico'
+    : step === 'resolution' ? (isMaterialDelivery.current ? 'Entrega confirmada — assinar' : 'Avançar — assinatura do técnico')
     : step === 'tech' ? 'Avançar'
     : step === 'document' ? 'Avançar — assinatura'
     : step === 'requester' ? 'Avançar — revisão'
@@ -425,20 +453,57 @@ export function WorkOrderSignatureScreen() {
         </View>
       ) : step === 'resolution' ? (
         <View style={{ flex: 1, gap: 12, justifyContent: 'center' }}>
-          <Text style={{ color: MUTED, fontSize: 13, fontWeight: '600' }}>Como a OS foi concluída?</Text>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            {RESOLUTIONS.map(r => (
-              <Pressable key={r.key} onPress={() => setResolution(r.key)}
-                style={{ flex: 1, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: resolution === r.key ? r.color : BORDER, backgroundColor: resolution === r.key ? `${r.color}18` : CARD }}>
-                <Text style={{ color: resolution === r.key ? r.color : MUTED, fontWeight: '800', fontSize: 12.5 }}>{r.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <TextInput
-            value={solution} onChangeText={setSolution} multiline
-            placeholder="Solução adotada / o que foi feito" placeholderTextColor={SUBTLE}
-            style={{ minHeight: 100, borderRadius: 12, padding: 14, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, color: TXT, fontSize: 15, textAlignVertical: 'top' }}
-          />
+          {isMaterialDelivery.current ? (
+            <>
+              <Text style={{ color: MUTED, fontSize: 14, fontWeight: '700', textAlign: 'center', marginBottom: 4 }}>
+                Os materiais/insumos solicitados foram entregues?
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {[
+                  { delivered: true, label: 'Entregue', color: '#059669', icon: 'check-circle' },
+                  { delivered: false, label: 'Não entregue', color: '#DC2626', icon: 'x' },
+                ].map(option => (
+                  <Pressable
+                    key={option.label}
+                    onPress={() => setMaterialDelivered(option.delivered)}
+                    style={{
+                      flex: 1, minHeight: 74, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 7,
+                      borderWidth: 1.5,
+                      borderColor: materialDelivered === option.delivered ? option.color : BORDER,
+                      backgroundColor: materialDelivered === option.delivered ? `${option.color}14` : CARD,
+                    }}
+                  >
+                    <Icon name={option.icon} size={20} color={materialDelivered === option.delivered ? option.color : MUTED} />
+                    <Text style={{ color: materialDelivered === option.delivered ? option.color : MUTED, fontWeight: '800', fontSize: 13.5 }}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              {materialDelivered === false && (
+                <Text style={{ color: '#B91C1C', fontSize: 12.5, lineHeight: 18, textAlign: 'center' }}>
+                  A O.S. continuará aberta e não seguirá para as assinaturas enquanto a entrega estiver pendente.
+                </Text>
+              )}
+            </>
+          ) : (
+            <>
+              <Text style={{ color: MUTED, fontSize: 13, fontWeight: '600' }}>Como a OS foi concluída?</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {RESOLUTIONS.map(r => (
+                  <Pressable key={r.key} onPress={() => setResolution(r.key)}
+                    style={{ flex: 1, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: resolution === r.key ? r.color : BORDER, backgroundColor: resolution === r.key ? `${r.color}18` : CARD }}>
+                    <Text style={{ color: resolution === r.key ? r.color : MUTED, fontWeight: '800', fontSize: 12.5 }}>{r.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <TextInput
+                value={solution} onChangeText={setSolution} multiline
+                placeholder="Solução adotada / o que foi feito" placeholderTextColor={SUBTLE}
+                style={{ minHeight: 100, borderRadius: 12, padding: 14, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, color: TXT, fontSize: 15, textAlignVertical: 'top' }}
+              />
+            </>
+          )}
           <Text style={{ color: SUBTLE, fontSize: 12 }}>Hora final: {fmtNow(finishedAt.current)} (agora)</Text>
         </View>
       ) : step === 'document' ? (
@@ -465,8 +530,12 @@ export function WorkOrderSignatureScreen() {
       ) : step === 'review' ? (
         <View style={{ flex: 1, gap: 8, justifyContent: 'center' }}>
           {[
-            ['Situação', RESOLUTIONS.find(r => r.key === resolution)?.label || '—'],
-            ['Solução', solution.trim() || '—'],
+            ...(isMaterialDelivery.current
+              ? [['Entrega', materialDelivered ? 'Entregue' : 'Não entregue']]
+              : [
+                  ['Situação', RESOLUTIONS.find(r => r.key === resolution)?.label || '—'],
+                  ['Solução', solution.trim() || '—'],
+                ]),
             ['Técnico', `${techName || '—'}${techSig ? '  ✓' : ''}`],
             ['Solicitante', `${reqName || '—'}${reqSig ? '  ✓' : ''}`],
             ['Documento', docForSignature?.value ? `${DOC_TYPES.find(d => d.key === docForSignature.type)?.label || 'Doc'} ${maskDoc(docForSignature.value, docForSignature.type)}` : '—'],

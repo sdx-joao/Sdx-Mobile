@@ -156,7 +156,7 @@ export function buildWorkOrderPrintHtml(
     .join('');
 
   const materials = wo.materials.length
-    ? `<section><h3>Materiais e suprimentos</h3><table><thead><tr><th>Item</th><th style="width:90px;text-align:right">Quantidade</th><th style="width:80px">Unidade</th></tr></thead><tbody>${wo.materials
+    ? `<section><h3>Materiais/Insumos solicitados</h3><table><thead><tr><th>Descrição do material/insumo</th><th style="width:110px;text-align:right">Quantidade solicitada</th><th style="width:80px">Unidade</th></tr></thead><tbody>${wo.materials
         .map(m => `<tr><td>${valueOrNA(m.description)}</td><td style="text-align:right">${valueOrNA(m.quantity)}</td><td>${valueOrNA(m.unit)}</td></tr>`)
         .join('')}</tbody></table></section>`
     : '';
