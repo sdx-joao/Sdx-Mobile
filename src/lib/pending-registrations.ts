@@ -44,6 +44,8 @@ export type PendingRegistration = {
   copies: number;
   validated: number[]; // índices de cópia já validados
   form: PendingForm;
+  /** Etapa do formulário em que o operador parou (0..3). */
+  draftStep?: number;
   savedAt: number;
 };
 

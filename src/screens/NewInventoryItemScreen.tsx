@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, AppState, Image, Pressable, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
@@ -17,7 +17,7 @@ import { Icon } from '../components/Icon';
 import { T } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
 import { getOptions, getSpecSuggestions, mergeSpecsFillEmpty, type SelectOption, type SpecTwin } from '../api/mobile';
-import { listPending, type PendingForm } from '../lib/pending-registrations';
+import { listPending, savePending, type PendingForm } from '../lib/pending-registrations';
 import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
 import { cropPhotoSquare } from '../lib/photo-crop';
@@ -84,6 +84,9 @@ export function NewInventoryItemScreen() {
   const [step, setStep] = useState<Step>(0);
   const [error, setError] = useState<string | null>(null);
   const [resumeValidated, setResumeValidated] = useState<number[] | null>(null);
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
+  const [restoredMachineId, setRestoredMachineId] = useState<string | null>(null);
 
   // Campos
   const [primaryType, setPrimaryType] = useState('EQUIPAMENTO');
@@ -147,11 +150,13 @@ export function NewInventoryItemScreen() {
   const camRef = useRef<CameraView | null>(null);
 
   useEffect(() => {
-    if (!resumeLabelCode) return;
+    const draftCode = resumeLabelCode || labelCode;
+    if (!draftCode) { setDraftHydrated(true); return; }
     let active = true;
     listPending().then((list) => {
-      const d = list.find((p) => p.labelCode === resumeLabelCode);
-      if (!d || !active) return;
+      const d = list.find((p) => p.labelCode === draftCode);
+      if (!active) return;
+      if (!d) { setDraftHydrated(true); return; }
       const f = d.form;
       setPrimaryType(f.primaryType || 'EQUIPAMENTO'); setName(f.name); setCategory(f.category || '');
       setSku(f.sku || ''); setAssetTag(f.assetTag || ''); setUnitName(f.unitName); setRoom(f.room);
@@ -161,9 +166,60 @@ export function NewInventoryItemScreen() {
       setSpecs(f.technicalSpecs || []); setNotes(f.notes || '');
       setMainPhotoUri(f.mainPhotoUri || null); setAttachmentUris(f.attachmentUris || []);
       setResumeValidated(d.validated);
+      setRestoredMachineId(f.machineId || null);
+      setStep(Math.max(0, Math.min(3, Number(d.draftStep) || 0)) as Step);
+      setDraftSavedAt(d.savedAt);
+      setDraftHydrated(true);
     });
     return () => { active = false; };
-  }, [resumeLabelCode]);
+  }, [labelCode, resumeLabelCode]);
+
+  const buildDraftForm = useCallback((): PendingForm => ({
+    primaryType, name, itemType: isEquip ? 'equipment' : 'consumable', category,
+    unitName, room, sku, assetTag, serialNumber, brand, model, equipmentStatus,
+    lifecycleStatus: isEquip
+      ? (equipmentStatus.trim().toUpperCase() === 'NAO FUNCIONANDO'
+        ? 'maintenance'
+        : equipmentStatus.trim().toUpperCase() === 'EM ESTOQUE' && room.trim().toUpperCase() === 'CEDOC/ESTOQUE'
+          ? 'in_stock'
+          : 'in_use')
+      : undefined,
+    operatingSystem, unit,
+    minQty: Number(minQty) || 0, maxQty: Number(maxQty) || 0, initialQty: Number(initialQty) || 0,
+    technicalSpecs: specs, notes, mainPhotoUri, attachmentUris,
+    machineId: linkedMachine?.id || restoredMachineId || undefined,
+  }), [
+    primaryType, name, isEquip, category, unitName, room, sku, assetTag, serialNumber,
+    brand, model, equipmentStatus, operatingSystem, unit, minQty, maxQty, initialQty,
+    specs, notes, mainPhotoUri, attachmentUris, linkedMachine?.id, restoredMachineId,
+  ]);
+
+  const saveDraftNow = useCallback(async () => {
+    const code = labelCode || resumeLabelCode;
+    if (!draftHydrated || !code) return;
+    const validated = resumeValidated ?? (firstCopy >= 1 && firstCopy <= copies ? [firstCopy] : []);
+    await savePending({ labelCode: code, copies, validated, form: buildDraftForm(), draftStep: step, savedAt: Date.now() });
+    setDraftSavedAt(Date.now());
+  }, [labelCode, resumeLabelCode, draftHydrated, resumeValidated, firstCopy, copies, buildDraftForm, step]);
+
+  // Autosave com debounce: cada campo vira rascunho sem escrever no disco a
+  // cada tecla. Ao minimizar/alternar de app, salva imediatamente.
+  useEffect(() => {
+    if (!draftHydrated) return;
+    const timer = setTimeout(() => { void saveDraftNow(); }, 700);
+    return () => clearTimeout(timer);
+  }, [draftHydrated, saveDraftNow]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') void saveDraftNow();
+    });
+    return () => subscription.remove();
+  }, [saveDraftNow]);
+
+  useEffect(() => nav.addListener('beforeRemove', () => {
+    void saveDraftNow();
+  }), [nav, saveDraftNow]);
 
   // Tirar → mostra a PRÉVIA (a câmera sai na hora). Guarda só ao confirmar.
   const capturePhoto = async () => {
@@ -244,25 +300,7 @@ export function NewInventoryItemScreen() {
   const goToValidation = () => {
     const code = labelCode || resumeLabelCode;
     if (!code) { setError('Cadastro só pode iniciar pela leitura de uma etiqueta.'); return; }
-    const form: PendingForm = {
-      primaryType, name, itemType: isEquip ? 'equipment' : 'consumable', category,
-      unitName, room, sku, assetTag, serialNumber, brand, model, equipmentStatus,
-      // CEDOC/ESTOQUE é setor, não unidade. Só o controle explícito de estoque
-      // coloca o equipamento no pool disponível para entrega.
-      lifecycleStatus: isEquip
-        ? (equipmentStatus.trim().toUpperCase() === 'NAO FUNCIONANDO'
-          ? 'maintenance'
-          : equipmentStatus.trim().toUpperCase() === 'EM ESTOQUE' && room.trim().toUpperCase() === 'CEDOC/ESTOQUE'
-            ? 'in_stock'
-            : 'in_use')
-        : undefined,
-      operatingSystem,
-      unit, minQty: Number(minQty) || 0, maxQty: Number(maxQty) || 0, initialQty: Number(initialQty) || 0,
-      technicalSpecs: specs, notes,
-      mainPhotoUri, attachmentUris,
-      // Promove a máquina a patrimônio na MESMA transação do item (§5.7).
-      machineId: linkedMachine?.id,
-    };
+    const form = buildDraftForm();
     const validated = resumeValidated ?? (firstCopy >= 1 && firstCopy <= copies ? [firstCopy] : []);
     nav.replace('InventoryCopyValidation', { labelCode: code, copies, validated, form });
   };
@@ -332,6 +370,12 @@ export function NewInventoryItemScreen() {
 
   return (
     <DetailScaffold onBack={() => (step === 0 ? nav.goBack() : setStep((step - 1) as Step))} eyebrow="Novo equipamento" title={STEPS[step]} compact>
+      {draftSavedAt && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+          <Icon name="check-circle" size={14} color={T.teal} />
+          <Text style={{ fontSize: 11.5, color: T.muted }}>Rascunho salvo automaticamente</Text>
+        </View>
+      )}
       {!!labelCode && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, backgroundColor: `${T.primary}12`, borderRadius: 12, padding: 11 }}>
           <Icon name="qr" size={15} color={T.primary} />
@@ -353,15 +397,17 @@ export function NewInventoryItemScreen() {
           nome, marca, modelo, série, categoria e unidade. Escondido na aba
           seguinte, o técnico digitava tudo à mão e só depois descobria que a
           máquina teria preenchido. É o complemento do cadastro — vem primeiro. */}
-      {step === 0 && isEquip && (linkedMachine ? (
+      {step === 0 && isEquip && ((linkedMachine || restoredMachineId) ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#22C55E14', borderWidth: 1, borderColor: '#22C55E55', borderRadius: 11, padding: 12, marginBottom: 12 }}>
           <Icon name="check-circle" size={18} color="#22C55E" />
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 13, fontWeight: '700', color: T.text }}>
-              Máquina vinculada{linkedMachine.hostname ? ` · ${linkedMachine.hostname}` : ''}
+              Máquina vinculada{linkedMachine?.hostname ? ` · ${linkedMachine.hostname}` : ''}
             </Text>
             <Text style={{ fontSize: 11, color: T.muted }}>
-              {[linkedMachine.brand, linkedMachine.model].filter(Boolean).join(' ') || 'dados preenchidos'}
+              {linkedMachine
+                ? [linkedMachine.brand, linkedMachine.model].filter(Boolean).join(' ') || 'dados preenchidos'
+                : 'Vínculo Nuntius restaurado com o rascunho'}
             </Text>
             {/* O Nuntius entrega o que a máquina sabe de si; o resto só
                 existe no mundo físico e ninguém além do técnico ali na
@@ -373,7 +419,7 @@ export function NewInventoryItemScreen() {
               </Text>
             )}
           </View>
-          <Pressable onPress={() => setLinkedMachine(null)} hitSlop={8}>
+          <Pressable onPress={() => { setLinkedMachine(null); setRestoredMachineId(null); }} hitSlop={8}>
             <Icon name="x" size={16} color={T.muted} />
           </Pressable>
         </View>
@@ -600,6 +646,7 @@ export function NewInventoryItemScreen() {
         onClose={() => setLinkingMachine(false)}
         onLinked={(m) => {
           setLinkedMachine(m);
+          setRestoredMachineId(m.id);
           // Só preenche o que está VAZIO — o que o técnico já digitou olhando o
           // equipamento tem precedência sobre o que a máquina informa.
           if (m.biosSerial && !serialNumber.trim()) setSerialNumber(m.biosSerial);

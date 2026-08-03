@@ -38,14 +38,16 @@ export function PendingRegistrationsScreen() {
       ) : (
         <View style={{ gap: 10 }}>
           <Text style={{ fontSize: 12.5, color: T.muted, marginBottom: 2 }}>
-            Cadastros aguardando a validação de todas as cópias da etiqueta. Reimprima a cópia que falta no Electron e retome aqui.
+            Rascunhos salvos automaticamente e cadastros aguardando validação. Toque em Retomar para continuar de onde parou.
           </Text>
           {items.map((p) => (
             <View key={p.labelCode} style={{ borderWidth: 1, borderColor: T.border, borderRadius: 14, backgroundColor: T.surface, padding: 14 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <Icon name="qr" size={15} color={T.primary} />
                 <Text style={{ fontSize: 13.5, fontWeight: '800', color: T.primary }}>{p.labelCode}</Text>
-                <Text style={{ marginLeft: 'auto', fontSize: 11.5, color: T.faint }}>{p.validated.length}/{p.copies} cópias</Text>
+                <Text style={{ marginLeft: 'auto', fontSize: 11.5, color: T.faint }}>
+                  {p.draftStep !== undefined ? `Etapa ${p.draftStep + 1}/4 · ` : ''}{p.validated.length}/{p.copies} cópias
+                </Text>
               </View>
               <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{p.form.name || 'Sem nome'}</Text>
               <Text style={{ fontSize: 12.5, color: T.muted, marginTop: 2 }}>{p.form.unitName} · {p.form.room}</Text>

@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   ChipRow,
@@ -35,6 +35,7 @@ import {
 } from '../api/mobile';
 import type { InventoryItem } from '../data/mock';
 import type { RootStackParamList } from '../navigation/types';
+import { listPending } from '../lib/pending-registrations';
 
 const TYPE_LABEL: Record<InventoryItem['primaryType'], string> = {
   EQUIPAMENTO: 'Equipamentos',
@@ -229,6 +230,12 @@ function PrinterSupplyGroupCard({
 
 export function StockScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [pendingCount, setPendingCount] = useState(0);
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    listPending().then(items => { if (active) setPendingCount(items.length); });
+    return () => { active = false; };
+  }, []));
   const { token, user } = useAuth();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
@@ -340,6 +347,9 @@ export function StockScreen() {
     <ModuleScreen
       title="Estoque"
       subtitle={`${stock.length} itens · ${fmtQty(totalUnits)} unidades disponíveis`}
+      onNew={() => nav.navigate('Scan')}
+      newLabel="Cadastrar item"
+      secondaryAction={pendingCount > 0 ? { label: `Rascunhos (${pendingCount})`, icon: 'clock', onPress: () => nav.navigate('PendingRegistrations') } : undefined}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={T.primary} colors={[T.primary]} />}
     >
       <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 2, paddingBottom: 12 }}>
