@@ -20,7 +20,7 @@ import { getOptions, getSpecSuggestions, mergeSpecsFillEmpty, type SelectOption,
 import { listPending, savePending, type PendingForm } from '../lib/pending-registrations';
 import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
-import { cropPhotoSquare } from '../lib/photo-crop';
+import { PhotoCropper } from '../components/PhotoCropper';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 const PRIMARY_TYPES = ['EQUIPAMENTO', 'PERIFERICO', 'FERRAMENTA', 'MATERIAL', 'SUPRIMENTO'];
@@ -137,7 +137,7 @@ export function NewInventoryItemScreen() {
   const [capturing, setCapturing] = useState<null | 'main' | 'attachment'>(null);
   // Foto tirada/escolhida aguardando confirmação antes de guardar.
   const [preview, setPreview] = useState<null | { uri: string; role: 'main' | 'attachment'; cropped?: boolean }>(null);
-  const [croppingPhoto, setCroppingPhoto] = useState(false);
+  const [cropMode, setCropMode] = useState(false);
 
   /** Blocos que a máquina não tem como preencher sozinha. */
   const pendingBlocks = [
@@ -260,19 +260,6 @@ export function NewInventoryItemScreen() {
     }
   };
 
-  const cropPreview = async () => {
-    if (!preview || croppingPhoto) return;
-    setCroppingPhoto(true);
-    try {
-      const uri = await cropPhotoSquare(preview.uri);
-      setPreview({ ...preview, uri, cropped: true });
-    } catch {
-      setError('Não foi possível cortar a foto.');
-    } finally {
-      setCroppingPhoto(false);
-    }
-  };
-
   const addSpec = () => {
     if (!specKey.trim() || !specValue.trim()) return;
     setSpecs((prev) => [...prev, { key: specKey.trim(), value: specValue.trim() }]);
@@ -339,6 +326,9 @@ export function NewInventoryItemScreen() {
 
   // Confirmação da foto antes de guardar.
   if (preview) {
+    if (cropMode) {
+      return <PhotoCropper uri={preview.uri} onCancel={() => setCropMode(false)} onDone={(uri) => { setPreview({ ...preview, uri, cropped: true }); setCropMode(false); }} />;
+    }
     return (
       <View style={{ flex: 1, backgroundColor: '#0A0E18' }}>
         <Image source={{ uri: preview.uri }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} resizeMode="contain" />
@@ -346,10 +336,10 @@ export function NewInventoryItemScreen() {
           <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>Confirmar foto</Text>
         </View>
         <View style={{ position: 'absolute', bottom: insets.bottom + 30, left: 20, right: 20, gap: 10 }}>
-          <Pressable onPress={() => void cropPreview()} disabled={croppingPhoto || preview.cropped}
-            style={{ height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,.14)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: preview.cropped ? 0.55 : 1 }}>
-            {croppingPhoto ? <ActivityIndicator size="small" color="#fff" /> : <Icon name="scan" size={16} color="#fff" />}
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>{preview.cropped ? 'Foto cortada em quadrado' : 'Cortar foto'}</Text>
+          <Pressable onPress={() => setCropMode(true)}
+            style={{ height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,.14)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}>
+            <Icon name="scan" size={16} color="#fff" />
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>{preview.cropped ? 'Ajustar recorte novamente' : 'Selecionar área e recortar'}</Text>
           </Pressable>
           <View style={{ flexDirection: 'row', gap: 12 }}>
           <Pressable onPress={() => { const r = preview.role; setPreview(null); setCapturing(r); }}

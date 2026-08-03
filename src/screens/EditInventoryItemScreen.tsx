@@ -20,7 +20,7 @@ import {
 } from '../api/mobile';
 import { showToast } from '../lib/toast';
 import type { RootStackParamList } from '../navigation/types';
-import { cropPhotoSquare } from '../lib/photo-crop';
+import { PhotoCropper } from '../components/PhotoCropper';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -107,7 +107,7 @@ export function EditInventoryItemScreen() {
   const [shooting, setShooting] = useState<null | PhotoTarget>(null);
   // Foto capturada/escolhida aguardando confirmação antes de enviar.
   const [preview, setPreview] = useState<null | ({ uri: string; cropped?: boolean } & PhotoTarget)>(null);
-  const [croppingPhoto, setCroppingPhoto] = useState(false);
+  const [cropMode, setCropMode] = useState(false);
   const [uploading, setUploading] = useState(false);
   const cameraRef = useRef<CameraView>(null);
 
@@ -228,19 +228,6 @@ export function EditInventoryItemScreen() {
     }
   };
 
-  const cropPreview = async () => {
-    if (!preview || uploading || croppingPhoto) return;
-    setCroppingPhoto(true);
-    try {
-      const uri = await cropPhotoSquare(preview.uri);
-      setPreview({ ...preview, uri, cropped: true });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Não foi possível cortar a foto.');
-    } finally {
-      setCroppingPhoto(false);
-    }
-  };
-
   // Remover uma foto (principal ou anexa por índice).
   const removePhoto = async (target: { role: 'main' } | { index: number }) => {
     if (uploading) return;
@@ -349,6 +336,9 @@ export function EditInventoryItemScreen() {
 
   // Confirmação da foto (câmera ou galeria) antes de enviar.
   if (preview) {
+    if (cropMode) {
+      return <PhotoCropper uri={preview.uri} onCancel={() => setCropMode(false)} onDone={(uri) => { setPreview({ ...preview, uri, cropped: true }); setCropMode(false); }} />;
+    }
     return (
       <View style={{ flex: 1, backgroundColor: '#0A0E18' }}>
         <Image source={{ uri: preview.uri }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} resizeMode="contain" />
@@ -361,10 +351,10 @@ export function EditInventoryItemScreen() {
         </View>
         <View style={{ flex: 1 }} />
         <View style={{ paddingBottom: 40, paddingHorizontal: 20, gap: 10 }}>
-          <Pressable onPress={() => void cropPreview()} disabled={uploading || croppingPhoto || preview.cropped}
-            style={{ height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,.14)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: preview.cropped ? 0.55 : 1 }}>
-            {croppingPhoto ? <ActivityIndicator size="small" color="#fff" /> : <Icon name="scan" size={16} color="#fff" />}
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>{preview.cropped ? 'Foto cortada em quadrado' : 'Cortar foto'}</Text>
+          <Pressable onPress={() => setCropMode(true)} disabled={uploading}
+            style={{ height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,.14)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: uploading ? 0.55 : 1 }}>
+            <Icon name="scan" size={16} color="#fff" />
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>{preview.cropped ? 'Ajustar recorte novamente' : 'Selecionar área e recortar'}</Text>
           </Pressable>
           <View style={{ flexDirection: 'row', gap: 12 }}>
           <Pressable onPress={() => { if (!uploading) { const t = { role: preview.role, index: preview.index }; setPreview(null); setShooting(t); } }} disabled={uploading}
