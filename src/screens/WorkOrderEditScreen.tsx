@@ -594,34 +594,50 @@ export function WorkOrderEditScreen() {
         </View>
       </SectionCard>
 
-      <SectionCard title="Equipamentos envolvidos">
-        <InvolvedEquipmentBlock
-          token={token}
-          value={involvedEquipment}
-          onChange={setInvolvedEquipment}
-          highlight={serviceIsEquip || isGenericEquipmentFlow}
-          retireDefault={retireDefault}
-          sourcePolicy={equipmentFlow?.sourcePolicy}
-          destinationUnit={unitName}
-          destinationRoom={department}
-          title={equipmentFlow?.operation === 'install_from_stock' ? 'Equipamento a instalar'
-            : equipmentFlow?.operation === 'deliver_from_stock' ? 'Equipamento a entregar'
-            : equipmentFlow?.operation === 'collect_to_stock' ? 'Equipamento a coletar'
-              : equipmentFlow?.operation === 'move_between_locations' ? 'Equipamento a mudar de local'
-                : equipmentFlow?.operation === 'exchange_between_locations' ? 'Equipamentos a trocar'
-                : 'Equipamento envolvido'}
-          description={isGenericEquipmentFlow
-            ? 'Estoque primeiro, com busca global e leitura do QR da etiqueta.'
-            : undefined}
-          allowFreeText={!isGenericEquipmentFlow}
-          externalDelivery={equipmentFlow?.operation === 'deliver_from_stock'}
-          reasonOptions={(optionsByKind.get(
-            equipmentFlow?.operation === 'deliver_from_stock'
-              ? 'work_order_retirement_reason'
-              : 'work_order_movement_reason',
-          ) ?? []).map(o => ({ value: o.value, label: o.label || o.value }))}
-        />
-      </SectionCard>
+      {isExchangeFlow ? (
+        <SectionCard title="Troca de equipamentos">
+          <Text style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>
+            Selecione o equipamento de cada local. Os destinos serão cruzados automaticamente ao salvar.
+          </Text>
+          <WorkOrderEquipmentEditor
+            actions={equipmentActions}
+            onChange={setEquipmentActions}
+            unitName={unitName}
+            department={department}
+            token={token}
+            exchangeMode
+            reasonOptions={(optionsByKind.get('work_order_movement_reason') ?? []).map(o => ({ value: o.value, label: o.label || o.value }))}
+          />
+        </SectionCard>
+      ) : (
+        <SectionCard title="Equipamentos envolvidos">
+          <InvolvedEquipmentBlock
+            token={token}
+            value={involvedEquipment}
+            onChange={setInvolvedEquipment}
+            highlight={serviceIsEquip || isGenericEquipmentFlow}
+            retireDefault={retireDefault}
+            sourcePolicy={equipmentFlow?.sourcePolicy}
+            destinationUnit={unitName}
+            destinationRoom={department}
+            title={equipmentFlow?.operation === 'install_from_stock' ? 'Equipamento a instalar'
+              : equipmentFlow?.operation === 'deliver_from_stock' ? 'Equipamento a entregar'
+              : equipmentFlow?.operation === 'collect_to_stock' ? 'Equipamento a coletar'
+                : equipmentFlow?.operation === 'move_between_locations' ? 'Equipamento a mudar de local'
+                  : 'Equipamento envolvido'}
+            description={isGenericEquipmentFlow
+              ? 'Estoque primeiro, com busca global e leitura do QR da etiqueta.'
+              : undefined}
+            allowFreeText={!isGenericEquipmentFlow}
+            externalDelivery={equipmentFlow?.operation === 'deliver_from_stock'}
+            reasonOptions={(optionsByKind.get(
+              equipmentFlow?.operation === 'deliver_from_stock'
+                ? 'work_order_retirement_reason'
+                : 'work_order_movement_reason',
+            ) ?? []).map(o => ({ value: o.value, label: o.label || o.value }))}
+          />
+        </SectionCard>
+      )}
 
       {stockLink && !isGenericEquipmentFlow && (
         <SectionCard title="Materiais de estoque">
@@ -634,7 +650,7 @@ export function WorkOrderEditScreen() {
         </SectionCard>
       )}
 
-      <SectionCard title={`Ações de equipamento (${equipmentActions.length})`}>
+      {!isExchangeFlow && <SectionCard title={`Ações de equipamento (${equipmentActions.length})`}>
         <Text style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>
           Instalar, mover ou trocar máquina — escaneie a etiqueta de patrimônio. Aplica na conclusão da OS.
         </Text>
@@ -647,7 +663,7 @@ export function WorkOrderEditScreen() {
           exchangeMode={isExchangeFlow}
           reasonOptions={(optionsByKind.get('work_order_movement_reason') ?? []).map(o => ({ value: o.value, label: o.label || o.value }))}
         />
-      </SectionCard>
+      </SectionCard>}
 
       {!locked && canUploadPhotos && (
         <SectionCard title="Fotos">

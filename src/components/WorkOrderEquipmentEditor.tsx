@@ -196,7 +196,9 @@ export function WorkOrderEquipmentEditor({
             style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderWidth: 1, borderColor: T.border, borderRadius: 10, paddingVertical: 9 }}
           >
             <Icon name={kind === 'swap' ? 'shuffle' : kind === 'move' ? 'chevron-right' : 'plus'} size={14} color={T.primary} />
-            <Text style={{ fontSize: 12.5, fontWeight: '700', color: T.primary }}>{ACTION_LABEL[kind]}</Text>
+            <Text style={{ fontSize: 12.5, fontWeight: '700', color: T.primary }}>
+              {exchangeMode ? 'Adicionar par de troca' : ACTION_LABEL[kind]}
+            </Text>
           </Pressable>
           );
         })}
@@ -217,9 +219,11 @@ export function WorkOrderEquipmentEditor({
 
           <View style={{ gap: 5 }}>
             <Text style={{ fontSize: 10.5, color: T.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-              {action.action === 'swap' ? 'Máquina nova (entra)' : 'Máquina'}
+              {action.action === 'swap'
+                ? exchangeMode ? 'Equipamento do local A' : 'Máquina nova (entra)'
+                : 'Máquina'}
             </Text>
-            <SlotRow item={action.incoming} label={action.action === 'swap' ? 'a nova' : 'a máquina'} onScan={() => setScanFor({ index, slot: 'incoming' })} onClear={() => update(index, { incoming: null })} />
+            <SlotRow item={action.incoming} label={action.action === 'swap' ? (exchangeMode ? 'do local A' : 'a nova') : 'a máquina'} onScan={() => setScanFor({ index, slot: 'incoming' })} onClear={() => update(index, { incoming: null })} />
             <Text style={{ fontSize: 10.5, color: T.faint }}>
               Destino: {exchangeMode && action.outgoing
                 ? [action.outgoing.unitName, action.outgoing.room].filter(Boolean).join(' · ')
@@ -229,8 +233,10 @@ export function WorkOrderEquipmentEditor({
 
           {action.action === 'swap' && (
             <View style={{ gap: 5 }}>
-              <Text style={{ fontSize: 10.5, color: T.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>Máquina antiga (sai)</Text>
-              <SlotRow item={action.outgoing} label="a antiga" onScan={() => setScanFor({ index, slot: 'outgoing' })} onClear={() => update(index, { outgoing: null })} />
+              <Text style={{ fontSize: 10.5, color: T.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                {exchangeMode ? 'Equipamento do local B' : 'Máquina antiga (sai)'}
+              </Text>
+              <SlotRow item={action.outgoing} label={exchangeMode ? 'do local B' : 'a antiga'} onScan={() => setScanFor({ index, slot: 'outgoing' })} onClear={() => update(index, { outgoing: null })} />
               {exchangeMode && action.incoming && (
                 <Text style={{ fontSize: 10.5, color: T.faint }}>
                   Destino: {[action.incoming.unitName, action.incoming.room].filter(Boolean).join(' · ') || 'Origem da primeira máquina'}
@@ -278,7 +284,9 @@ export function WorkOrderEquipmentEditor({
               <Icon name="x" size={19} color="#fff" />
             </Pressable>
             <Text style={{ color: '#fff', fontSize: 14.5, fontWeight: '700' }}>
-              Escanear {scanFor?.slot === 'outgoing' ? 'a antiga' : 'a máquina'}
+              Escanear {exchangeMode
+                ? scanFor?.slot === 'outgoing' ? 'equipamento do local B' : 'equipamento do local A'
+                : scanFor?.slot === 'outgoing' ? 'a antiga' : 'a máquina'}
             </Text>
             <View style={{ width: 38 }} />
           </View>
