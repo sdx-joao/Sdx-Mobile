@@ -379,13 +379,13 @@ export function WorkOrderEditScreen() {
       for (const action of equipmentActions) {
         const incomingPlace = `${normalize(action.incoming?.unitName)}|${normalize(action.incoming?.room)}`;
         const outgoingPlace = `${normalize(action.outgoing?.unitName)}|${normalize(action.outgoing?.room)}`;
-        if (incomingPlace === outgoingPlace) {
-          setFormError('Os equipamentos da troca precisam estar em locais diferentes.');
+        const requested = `${normalize(unitName)}|${normalize(department)}`;
+        if (outgoingPlace !== requested) {
+          setFormError('O equipamento a retirar não pertence ao local solicitado na O.S.');
           return;
         }
-        const requested = `${normalize(unitName)}|${normalize(department)}`;
-        if (incomingPlace !== requested && outgoingPlace !== requested) {
-          setFormError('Um dos lados da troca deve corresponder ao local solicitado na O.S.');
+        if (incomingPlace === requested) {
+          setFormError('O equipamento substituto já está no local solicitado na O.S.');
           return;
         }
       }
@@ -597,7 +597,7 @@ export function WorkOrderEditScreen() {
       {isExchangeFlow ? (
         <SectionCard title="Troca de equipamentos">
           <Text style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>
-            Selecione o equipamento de cada local. Os destinos serão cruzados automaticamente ao salvar.
+            Escolha primeiro o equipamento deste local e depois o substituto. A nova máquina ocupará o local da O.S.
           </Text>
           <WorkOrderEquipmentEditor
             actions={equipmentActions}

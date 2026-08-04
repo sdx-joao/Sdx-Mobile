@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { Icon } from './Icon';
 import { T } from '../theme/theme';
-import { getInventoryItem, resolveInventoryLabel, type WorkOrderEquipmentActionInput } from '../api/mobile';
+import { getInventory, getInventoryItem, resolveInventoryLabel, type WorkOrderEquipmentActionInput } from '../api/mobile';
 import { parseLabelScan, isLabelCode } from '../lib/label-scan';
 
 export type EquipSlot = {
@@ -64,15 +64,15 @@ export function buildEquipmentActionsPayload(
         outgoingItemId: a.outgoing?.id ?? null,
         reason: a.reason || null,
         reasonNotes: a.reasonNotes || null,
-        // Na troca, cada equipamento vai para o local de origem do outro.
-        // Fora dela, o destino continua sendo o setor solicitado na O.S.
-        toUnit: exchangeMode && a.outgoing ? a.outgoing.unitName || null : unitName || null,
-        toRoom: exchangeMode && a.outgoing ? a.outgoing.room || null : department || null,
+        // Troca = substituição direta: a nova ocupa o local da O.S.; a antiga
+        // segue para manutenção/CEDOC/baixa. Não há mais destinos cruzados.
+        toUnit: unitName || null,
+        toRoom: department || null,
         toStatus: 'FUNCIONANDO',
-        outgoingDestination: a.action === 'swap' ? (exchangeMode ? 'setor' : a.outgoingDestination) : null,
-        outgoingToUnit: a.action === 'swap' && exchangeMode ? a.incoming?.unitName || null : null,
-        outgoingToRoom: a.action === 'swap' ? (exchangeMode ? a.incoming?.room || null : outRoom) : null,
-        outgoingToStatus: a.action === 'swap' ? (exchangeMode ? null : outStatus) : null,
+        outgoingDestination: a.action === 'swap' ? a.outgoingDestination : null,
+        outgoingToUnit: null,
+        outgoingToRoom: a.action === 'swap' ? outRoom : null,
+        outgoingToStatus: a.action === 'swap' ? outStatus : null,
       };
     });
 }
@@ -92,7 +92,7 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
   );
 }
 
-function SlotRow({ item, label, onScan, onClear }: { item: EquipSlot | null; label: string; onScan: () => void; onClear: () => void }) {
+function SlotRow({ item, label, onScan, onSearch, onClear }: { item: EquipSlot | null; label: string; onScan: () => void; onSearch: () => void; onClear: () => void }) {
   if (item) {
     return (
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: `${T.primary}0E`, borderWidth: 1, borderColor: `${T.primary}44`, borderRadius: 11, padding: 10 }}>
@@ -107,15 +107,14 @@ function SlotRow({ item, label, onScan, onClear }: { item: EquipSlot | null; lab
       </View>
     );
   }
-  return (
-    <Pressable
-      onPress={onScan}
-      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderStyle: 'dashed', borderColor: T.border, borderRadius: 11, paddingVertical: 12 }}
-    >
-      <Icon name="qr" size={16} color={T.primary} />
-      <Text style={{ fontSize: 13, fontWeight: '700', color: T.primary }}>Escanear {label}</Text>
+  return <View style={{ flexDirection: 'row', gap: 8 }}>
+    <Pressable onPress={onScan} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderWidth: 1, borderColor: T.primary, borderRadius: 11, paddingVertical: 11 }}>
+      <Icon name="qr" size={16} color={T.primary} /><Text style={{ fontSize: 12.5, fontWeight: '700', color: T.primary }}>Ler QR</Text>
     </Pressable>
-  );
+    <Pressable onPress={onSearch} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderWidth: 1, borderColor: T.border, borderRadius: 11, paddingVertical: 11 }}>
+      <Icon name="search" size={16} color={T.primary} /><Text style={{ fontSize: 12.5, fontWeight: '700', color: T.primary }}>Procurar</Text>
+    </Pressable>
+  </View>;
 }
 
 export function WorkOrderEquipmentEditor({
@@ -138,6 +137,10 @@ export function WorkOrderEquipmentEditor({
   const [scanFor, setScanFor] = useState<{ index: number; slot: 'incoming' | 'outgoing' } | null>(null);
   const [resolving, setResolving] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [pickerFor, setPickerFor] = useState<{ index: number; slot: 'incoming' | 'outgoing' } | null>(null);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<EquipSlot[]>([]);
+  const [searching, setSearching] = useState(false);
   const busy = useRef(false);
 
   useEffect(() => {
@@ -181,8 +184,27 @@ export function WorkOrderEquipmentEditor({
     }
   };
 
-  const addAction = (action: EquipActionKind) => onChange([...actionsRef.current, newEquipAction(action)]);
+  const addAction = (action: EquipActionKind) => {
+    if (exchangeMode && actionsRef.current.length) return;
+    onChange([...actionsRef.current, newEquipAction(action)]);
+  };
   const removeAction = (index: number) => onChange(actionsRef.current.filter((_, i) => i !== index));
+
+  useEffect(() => {
+    if (!pickerFor) return;
+    let active = true;
+    setSearching(true);
+    const timer = setTimeout(() => {
+      void getInventory(token, query.trim() ? { q: query.trim() } : {}).then(items => {
+        if (!active) return;
+        setResults(items.filter(item => item.itemType === 'equipment').slice(0, 30).map(item => ({
+          id: item.id, name: item.name, assetTag: item.assetTag,
+          unitName: item.unitName ?? null, room: item.room ?? null,
+        })));
+      }).catch(() => active && setResults([])).finally(() => active && setSearching(false));
+    }, query.trim() ? 300 : 0);
+    return () => { active = false; clearTimeout(timer); };
+  }, [pickerFor, query, token]);
 
   return (
     <View style={{ gap: 12 }}>
@@ -197,7 +219,7 @@ export function WorkOrderEquipmentEditor({
           >
             <Icon name={kind === 'swap' ? 'shuffle' : kind === 'move' ? 'chevron-right' : 'plus'} size={14} color={T.primary} />
             <Text style={{ fontSize: 12.5, fontWeight: '700', color: T.primary }}>
-              {exchangeMode ? 'Adicionar par de troca' : ACTION_LABEL[kind]}
+              {exchangeMode ? 'Configurar troca' : ACTION_LABEL[kind]}
             </Text>
           </Pressable>
           );
@@ -217,29 +239,33 @@ export function WorkOrderEquipmentEditor({
             <Pressable onPress={() => removeAction(index)} hitSlop={8}><Icon name="trash" size={15} color={T.danger} /></Pressable>
           </View>
 
+          {exchangeMode && action.action === 'swap' && <View style={{ gap: 5 }}>
+            <Text style={{ fontSize: 10.5, color: T.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>1. Equipamento a retirar</Text>
+            <SlotRow item={action.outgoing} label="o equipamento atual" onScan={() => setScanFor({ index, slot: 'outgoing' })} onSearch={() => { setQuery(''); setPickerFor({ index, slot: 'outgoing' }); }} onClear={() => update(index, { outgoing: null })} />
+            {!!action.outgoing && <Text style={{ fontSize: 10.5, color: T.faint }}>Local atual: {[action.outgoing.unitName, action.outgoing.room].filter(Boolean).join(' · ') || 'não informado'}</Text>}
+          </View>}
+
           <View style={{ gap: 5 }}>
             <Text style={{ fontSize: 10.5, color: T.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>
               {action.action === 'swap'
-                ? exchangeMode ? 'Equipamento do local A' : 'Máquina nova (entra)'
+                ? exchangeMode ? '2. Equipamento substituto' : 'Máquina nova (entra)'
                 : 'Máquina'}
             </Text>
-            <SlotRow item={action.incoming} label={action.action === 'swap' ? (exchangeMode ? 'do local A' : 'a nova') : 'a máquina'} onScan={() => setScanFor({ index, slot: 'incoming' })} onClear={() => update(index, { incoming: null })} />
+            <SlotRow item={action.incoming} label="o substituto" onScan={() => setScanFor({ index, slot: 'incoming' })} onSearch={() => { setQuery(''); setPickerFor({ index, slot: 'incoming' }); }} onClear={() => update(index, { incoming: null })} />
             <Text style={{ fontSize: 10.5, color: T.faint }}>
-              Destino: {exchangeMode && action.outgoing
-                ? [action.outgoing.unitName, action.outgoing.room].filter(Boolean).join(' · ')
-                : [unitName, department].filter(Boolean).join(' · ') || 'Setor da OS'}
+              Destino: {[unitName, department].filter(Boolean).join(' · ') || 'Local da O.S.'}
             </Text>
           </View>
 
-          {action.action === 'swap' && (
+          {action.action === 'swap' && !exchangeMode && (
             <View style={{ gap: 5 }}>
               <Text style={{ fontSize: 10.5, color: T.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                {exchangeMode ? 'Equipamento do local B' : 'Máquina antiga (sai)'}
+                {exchangeMode ? '1. Equipamento a retirar' : 'Máquina antiga (sai)'}
               </Text>
-              <SlotRow item={action.outgoing} label={exchangeMode ? 'do local B' : 'a antiga'} onScan={() => setScanFor({ index, slot: 'outgoing' })} onClear={() => update(index, { outgoing: null })} />
-              {exchangeMode && action.incoming && (
+              <SlotRow item={action.outgoing} label="o equipamento atual" onScan={() => setScanFor({ index, slot: 'outgoing' })} onSearch={() => { setQuery(''); setPickerFor({ index, slot: 'outgoing' }); }} onClear={() => update(index, { outgoing: null })} />
+              {exchangeMode && action.outgoing && (
                 <Text style={{ fontSize: 10.5, color: T.faint }}>
-                  Destino: {[action.incoming.unitName, action.incoming.room].filter(Boolean).join(' · ') || 'Origem da primeira máquina'}
+                  Local atual: {[action.outgoing.unitName, action.outgoing.room].filter(Boolean).join(' · ') || 'não informado'}
                 </Text>
               )}
             </View>
@@ -255,7 +281,7 @@ export function WorkOrderEquipmentEditor({
             </ScrollView>
           </View>
 
-          {action.action === 'swap' && !exchangeMode && (
+          {action.action === 'swap' && (
             <View style={{ gap: 6 }}>
               <Text style={{ fontSize: 10.5, color: T.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>Antiga vai para</Text>
               <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -267,6 +293,24 @@ export function WorkOrderEquipmentEditor({
           )}
         </View>
       ))}
+
+      <Modal visible={!!pickerFor} transparent animationType="slide" onRequestClose={() => setPickerFor(null)}>
+        <Pressable onPress={() => setPickerFor(null)} style={{ flex: 1, backgroundColor: 'rgba(15,23,42,.45)', justifyContent: 'flex-end' }}>
+          <Pressable onPress={() => {}} style={{ maxHeight: 560, backgroundColor: T.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16 }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: T.text, marginBottom: 10 }}>Procurar equipamento</Text>
+            <View style={{ height: 44, borderRadius: 11, borderWidth: 1, borderColor: T.border, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Icon name="search" size={16} color={T.muted} /><TextInput autoFocus value={query} onChangeText={setQuery} placeholder="Etiqueta, nome, série ou patrimônio" placeholderTextColor={T.faint} style={{ flex: 1, color: T.text }} />
+              {searching && <ActivityIndicator size="small" color={T.primary} />}
+            </View>
+            <ScrollView style={{ marginTop: 8 }} keyboardShouldPersistTaps="handled">
+              {results.map(item => <Pressable key={item.id} onPress={() => { if (pickerFor) update(pickerFor.index, { [pickerFor.slot]: item } as Partial<EquipActionDraft>); setPickerFor(null); }} style={{ paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: T.border }}>
+                <Text style={{ fontSize: 13.5, fontWeight: '700', color: T.text }}>{item.name}{item.assetTag ? ` · ${item.assetTag}` : ''}</Text>
+                <Text style={{ fontSize: 11, color: T.muted }}>{[item.unitName, item.room].filter(Boolean).join(' / ') || 'Sem local'}</Text>
+              </Pressable>)}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <Modal visible={!!scanFor} animationType="slide" onRequestClose={() => setScanFor(null)}>
         <View style={{ flex: 1, backgroundColor: '#0A0E18' }}>
@@ -285,7 +329,7 @@ export function WorkOrderEquipmentEditor({
             </Pressable>
             <Text style={{ color: '#fff', fontSize: 14.5, fontWeight: '700' }}>
               Escanear {exchangeMode
-                ? scanFor?.slot === 'outgoing' ? 'equipamento do local B' : 'equipamento do local A'
+                ? scanFor?.slot === 'outgoing' ? 'equipamento a retirar' : 'equipamento substituto'
                 : scanFor?.slot === 'outgoing' ? 'a antiga' : 'a máquina'}
             </Text>
             <View style={{ width: 38 }} />

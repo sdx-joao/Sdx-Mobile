@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -23,6 +23,7 @@ import {
   type WorkOrderRequester,
 } from '../api/mobile';
 import { InvolvedEquipmentBlock } from '../components/InvolvedEquipmentBlock';
+import { WorkOrderEquipmentEditor, buildEquipmentActionsPayload, newEquipAction, type EquipActionDraft } from '../components/WorkOrderEquipmentEditor';
 import { StockMaterialsBlock, buildStockMaterialsPayload } from '../components/StockMaterialsBlock';
 import { useResource } from '../api/use-resource';
 import type { WorkOrderPriority } from '../data/mock';
@@ -131,6 +132,7 @@ export function NewWorkOrderScreen() {
   const [saving, setSaving] = useState(false);
   const [involvedEquipment, setInvolvedEquipment] = useState<InvolvedEquipmentInput[]>([]);
   const [stockMaterials, setStockMaterials] = useState<StockMaterialInput[]>([]);
+  const [equipmentActions, setEquipmentActions] = useState<EquipActionDraft[]>([]);
   const accent = T.primary;
   // Vínculo de estoque ativo do serviço escolhido (entrega/coleta).
   const stockLink = useMemo(
@@ -151,6 +153,7 @@ export function NewWorkOrderScreen() {
     [data?.equip?.links, serviceType],
   );
   const isGenericEquipmentFlow = !!equipmentFlow && equipmentFlow.operation !== 'retire_involved';
+  const isExchangeFlow = equipmentFlow?.operation === 'exchange_between_locations';
   const equipmentDestination = equipmentFlow?.operation === 'collect_to_stock'
     ? 'estoque'
     : equipmentFlow?.operation === 'install_from_stock' || equipmentFlow?.operation === 'deliver_from_stock' || equipmentFlow?.operation === 'move_between_locations'
@@ -164,8 +167,13 @@ export function NewWorkOrderScreen() {
       ? 'Equipamento a coletar'
       : equipmentFlow?.operation === 'move_between_locations'
         ? 'Equipamento a mudar de local'
-        : 'Equipamentos envolvidos';
+        : equipmentFlow?.operation === 'exchange_between_locations'
+          ? 'Troca de equipamentos'
+          : 'Equipamentos envolvidos';
   const needsEquipmentDestination = isGenericEquipmentFlow && equipmentDestination === 'setor';
+  // Solicitações de materiais/suprimentos são entregas internas: precisam
+  // registrar quem solicitou e o setor real do catálogo, não CEDOC/ESTOQUE.
+  const isMaterialSupplyFlow = !!stockLink && !isGenericEquipmentFlow;
   const optionsByKind = useMemo(() => {
     const grouped = new Map<SelectOptionKind, SelectOption[]>();
     for (const option of data?.options ?? []) {
@@ -175,6 +183,11 @@ export function NewWorkOrderScreen() {
     }
     return grouped;
   }, [data?.options]);
+
+  useEffect(() => {
+    if (isExchangeFlow && equipmentActions.length === 0) setEquipmentActions([newEquipAction('swap')]);
+    if (!isExchangeFlow && equipmentActions.length) setEquipmentActions([]);
+  }, [isExchangeFlow]);
 
   // Cascata: tipos da área (categoria). backend_value = áreas CSV; vazio = todas.
   const serviceTypeOptions = useMemo(() => {
@@ -224,22 +237,54 @@ export function NewWorkOrderScreen() {
 
   async function submit() {
     const stockMaterialsPayload = buildStockMaterialsPayload(stockMaterials, stockLink);
+    const catalogHas = (kind: SelectOptionKind, value: string) => {
+      const normalized = normalizeForSearch(value);
+      return !!normalized && (optionsByKind.get(kind) ?? []).some(option =>
+        normalizeForSearch(option.value) === normalized || normalizeForSearch(option.label) === normalized
+      );
+    };
+    const requesterIsCataloged = (data?.requesters ?? []).some(requester =>
+      normalizeForSearch(requester.name) === normalizeForSearch(requestedByName)
+    );
     const missing = [
       ['Tipo de serviço', serviceType],
       ['Categoria', category],
       [logistics?.unitLabel || 'Unidade', logistics?.unitFixed ? LOGISTICS_UNIT_DEFAULT : unitName],
-      [logistics?.external || 'Solicitante', requestedByName],
+      [isMaterialSupplyFlow ? 'Solicitante do catálogo' : logistics?.external || 'Solicitante',
+        isMaterialSupplyFlow ? (requesterIsCataloged ? 'ok' : '') : requestedByName],
       ...(logistics && !isGenericEquipmentFlow ? [['Material de estoque', stockMaterialsPayload.length ? 'ok' : '']] : []),
-      ...(isGenericEquipmentFlow ? [['Equipamento', involvedEquipment.some(item => !!item.itemId) ? 'ok' : '']] : []),
+      ...(isGenericEquipmentFlow && !isExchangeFlow ? [['Equipamento', involvedEquipment.some(item => !!item.itemId) ? 'ok' : '']] : []),
       ...(equipmentFlow?.operation === 'deliver_from_stock'
         ? [['Motivo da baixa', involvedEquipment.every(item => !item.itemId || !!item.retire?.reason) ? 'ok' : '']]
         : []),
       ...(needsEquipmentDestination ? [['Setor de destino', department]] : []),
+      ...(isMaterialSupplyFlow
+        ? [['Setor solicitante do catálogo', catalogHas('work_order_department', department) ? 'ok' : '']]
+        : []),
       ...(!logistics ? [['Setor', department], ['Descrição', technicianRequest]] : []),
     ].filter(([, value]) => !String(value).trim()).map(([label]) => label);
     if (missing.length) {
       setError(`Preencha: ${missing.join(', ')}.`);
       return;
+    }
+    if (isExchangeFlow) {
+      const action = equipmentActions[0];
+      if (equipmentActions.length !== 1 || !action?.incoming || !action.outgoing || !action.reason || !action.outgoingDestination) {
+        setError('Leia ou procure o equipamento a retirar, escolha o substituto e informe o motivo e o destino do retirado.');
+        return;
+      }
+      const norm = (value?: string | null) => normalizeForSearch(value || '');
+      const requested = `${norm(unitName)}|${norm(department)}`;
+      const outgoing = `${norm(action.outgoing.unitName)}|${norm(action.outgoing.room)}`;
+      const incoming = `${norm(action.incoming.unitName)}|${norm(action.incoming.room)}`;
+      if (outgoing !== requested) {
+        setError(`${action.outgoing.name} pertence a ${[action.outgoing.unitName, action.outgoing.room].filter(Boolean).join(' / ') || 'outro local'} e não pode ser retirado desta O.S.`);
+        return;
+      }
+      if (incoming === requested) {
+        setError('O equipamento substituto já está no local da O.S. Escolha outro equipamento.');
+        return;
+      }
     }
     setError(null);
     setSaving(true);
@@ -248,7 +293,7 @@ export function NewWorkOrderScreen() {
         serviceType,
         category,
         unitName: logistics?.unitFixed ? LOGISTICS_UNIT_DEFAULT : unitName,
-        department: logistics ? LOGISTICS_DEPARTMENT_DEFAULT : department,
+        department: isMaterialSupplyFlow ? department : logistics ? LOGISTICS_DEPARTMENT_DEFAULT : department,
         requestedByName,
         requesterContact,
         technicalTeam: logistics ? '' : technicalTeam,
@@ -257,9 +302,12 @@ export function NewWorkOrderScreen() {
         priority,
         involvedEquipment: logistics && !isGenericEquipmentFlow ? [] : involvedEquipment,
         stockMaterials: isGenericEquipmentFlow ? [] : stockMaterialsPayload,
+        equipmentActions: isExchangeFlow
+          ? buildEquipmentActionsPayload(equipmentActions, unitName, department, true)
+          : [],
       });
       showToast(`${result.code} aberta.`);
-      nav.replace('WorkOrderDetail', { id: result.id });
+      nav.replace(isExchangeFlow ? 'WorkOrderSignature' : 'WorkOrderDetail', { id: result.id });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível abrir a OS.');
     } finally {
@@ -276,9 +324,17 @@ export function NewWorkOrderScreen() {
           {!logistics?.unitFixed && (
             <SuggestedInput label={logistics?.unitLabel || 'Unidade'} required value={unitName} onChangeText={setUnitName} placeholder="Unidade" options={optionsByKind.get('work_order_unit') ?? []} />
           )}
-          {(!logistics || needsEquipmentDestination) && (
+          {(!logistics || needsEquipmentDestination || isMaterialSupplyFlow) && (
             <>
-              <SuggestedInput label={needsEquipmentDestination ? 'Setor de destino' : 'Setor'} required value={department} onChangeText={logistics ? setDepartment : selectDepartment} placeholder="Setor" options={optionsByKind.get('work_order_department') ?? []} />
+              <SuggestedInput
+                label={needsEquipmentDestination ? 'Setor de destino' : isMaterialSupplyFlow ? 'Setor solicitante' : 'Setor'}
+                required
+                value={department}
+                onChangeText={logistics ? setDepartment : selectDepartment}
+                placeholder="Selecione no catálogo"
+                options={optionsByKind.get('work_order_department') ?? []}
+                allowCreate={!isMaterialSupplyFlow}
+              />
               {!logistics && <SuggestedInput label="Equipe técnica" value={technicalTeam} onChangeText={setTechnicalTeam} placeholder="Ex.: TI INTERNO" options={optionsByKind.get('work_order_technical_team') ?? []} />}
             </>
           )}
@@ -293,7 +349,22 @@ export function NewWorkOrderScreen() {
         </View>
       </SectionCard>
 
-      {(!logistics || isGenericEquipmentFlow) && (
+      {isExchangeFlow ? (
+        <SectionCard title="Troca de equipamentos">
+          <Text style={{ fontSize: 12.5, color: T.muted, marginBottom: 10 }}>
+            Primeiro escolha o equipamento deste local; depois selecione o substituto por QR ou busca. A confirmação segue direto para as assinaturas.
+          </Text>
+          <WorkOrderEquipmentEditor
+            actions={equipmentActions}
+            onChange={setEquipmentActions}
+            unitName={unitName}
+            department={department}
+            token={token}
+            exchangeMode
+            reasonOptions={(optionsByKind.get('work_order_movement_reason') ?? []).map(o => ({ value: o.value, label: o.label || o.value }))}
+          />
+        </SectionCard>
+      ) : (!logistics || isGenericEquipmentFlow) && (
         <SectionCard title={equipmentFlowTitle}>
           <InvolvedEquipmentBlock
             token={token}
@@ -350,16 +421,17 @@ export function NewWorkOrderScreen() {
         </View>
       </SectionCard>}
 
-      <SectionCard title={logistics ? 'De quem → para quem' : 'Solicitante'}>
+      <SectionCard title={logistics && !isMaterialSupplyFlow ? 'De quem → para quem' : 'Solicitante'}>
         <View style={{ gap: 14 }}>
           <RequesterPicker
             value={requestedByName}
             department={department}
             requesters={data?.requesters ?? []}
             onPick={pickRequester}
-            label={logistics?.external}
-            placeholder={logistics?.external}
-            showDepartment={!logistics}
+            label={isMaterialSupplyFlow ? 'Nome do solicitante' : logistics?.external}
+            placeholder={isMaterialSupplyFlow ? 'Selecione no catálogo' : logistics?.external}
+            showDepartment={!logistics || isMaterialSupplyFlow}
+            allowCreate={!isMaterialSupplyFlow}
           />
           <View><FieldLabel>Contato</FieldLabel><Input value={requesterContact} onChangeText={setRequesterContact} placeholder="(85) 9 0000-0000" /></View>
           {!logistics && <View><FieldLabel required>Descrição</FieldLabel><Input value={technicianRequest} onChangeText={setTechnicianRequest} placeholder="Descreva o problema ou a solicitação" multiline /></View>}

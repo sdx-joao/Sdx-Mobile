@@ -281,7 +281,7 @@ export async function getWorkOrderAttachments(token: string | null, id: string):
 
 // ─── Estoque de suprimentos movimentado por serviço (entrega/coleta) ───────────
 
-/** Vínculo de um tipo de serviço com o estoque. Ver docs/WORK_ORDER_STOCK_LINK.md. */
+/** Vínculo de um tipo de serviço com o estoque. Ver docs/modules/work-orders/WORK_ORDER_STOCK_LINK.md. */
 export type StockServiceLink = {
   serviceType: string;
   direction: 'out' | 'in';
@@ -335,6 +335,8 @@ export type CreateWorkOrderInput = {
   involvedEquipment?: InvolvedEquipmentInput[];
   /** Materiais de estoque (entrega/coleta) — direção vem do vínculo do serviço. */
   stockMaterials?: StockMaterialInput[];
+  /** Movimentações planejadas; são efetivadas somente após as assinaturas. */
+  equipmentActions?: WorkOrderEquipmentActionInput[];
 };
 
 /** Ação de equipamento enviada pela OS (mesma forma do web). */
@@ -637,7 +639,7 @@ export function resolveInventoryLabel(token: string | null, code: string) {
 
 /* ---------------------------------------------------------------------------
  * SDX Nuntius — máquinas que se cadastram sozinhas
- * Desenho: docs/INVENTORY_AGENT_AND_REMOTE.md (repo ScandexGed), §5.12.
+ * Desenho: docs/modules/inventory/INVENTORY_AGENT_AND_REMOTE.md (repo ScandexGed), §5.12.
  * ------------------------------------------------------------------------- */
 
 export type MachineDevice = {
