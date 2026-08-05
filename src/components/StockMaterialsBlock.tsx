@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from './Icon';
 import { T } from '../theme/theme';
 import type { StockConsumable, StockMaterialInput, StockServiceLink } from '../api/mobile';
@@ -8,11 +9,55 @@ import type { StockConsumable, StockMaterialInput, StockServiceLink } from '../a
 const upper = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim().replace(/\s+/g, ' ');
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+function tonerColor(name: string) {
+  const value = upper(name);
+  if (/AMARELO|YELLOW/.test(value)) return '#F5C400';
+  if (/CIANO|CYAN/.test(value)) return '#00A6C7';
+  if (/MAGENTA/.test(value)) return '#D81B60';
+  if (/PRETO|BLACK/.test(value)) return '#16181D';
+  return '#94A3B8';
+}
+
+/** Nome longo em marquee lento; nomes curtos permanecem imóveis. */
+function MarqueeName({ children }: { children: string }) {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [textWidth, setTextWidth] = useState(0);
+  const overflow = Math.max(0, textWidth - containerWidth);
+
+  useEffect(() => {
+    translateX.stopAnimation();
+    translateX.setValue(0);
+    if (overflow < 4) return;
+    const animation = Animated.loop(Animated.sequence([
+      Animated.delay(1400),
+      Animated.timing(translateX, {
+        toValue: -overflow,
+        duration: Math.max(4500, Math.round((overflow / 24) * 1000)),
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+      Animated.delay(1800),
+      Animated.timing(translateX, { toValue: 0, duration: 650, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.delay(900),
+    ]));
+    animation.start();
+    return () => animation.stop();
+  }, [overflow, translateX]);
+
+  return (
+    <View onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)} style={{ flex: 1, overflow: 'hidden', height: 21, justifyContent: 'center' }}>
+      <Text onLayout={(event) => setTextWidth(event.nativeEvent.layout.width)} style={{ position: 'absolute', opacity: 0, fontWeight: '600', fontSize: 14 }}>{children}</Text>
+      <Animated.Text numberOfLines={1} style={{ color: T.text, fontWeight: '600', fontSize: 14, flexShrink: 0, transform: [{ translateX }] }}>{children}</Animated.Text>
+    </View>
+  );
+}
+
 /**
  * Bloco "Materiais de estoque" da OS (app) — só aparece quando o serviço tem
  * vínculo de estoque. A direção (entrega=saída / coleta=entrada) vem do serviço;
  * com item fixo só pede a quantidade, senão o técnico escolhe o consumível.
- * Ver docs/WORK_ORDER_STOCK_LINK.md (repo do servidor).
+ * Ver docs/modules/work-orders/WORK_ORDER_STOCK_LINK.md (repo do servidor).
  */
 export function StockMaterialsBlock({
   link, consumables, value, onChange,
@@ -24,6 +69,7 @@ export function StockMaterialsBlock({
 }) {
   const [pickerFor, setPickerFor] = useState<number | null>(null);
   const [query, setQuery] = useState('');
+  const insets = useSafeAreaInsets();
 
   const isOut = link?.direction === 'out';
   const fixed = !!link?.itemId;
@@ -31,7 +77,7 @@ export function StockMaterialsBlock({
 
   // Garante ao menos uma linha quando há vínculo.
   const rows = useMemo<StockMaterialInput[]>(
-    () => (value.length ? value : [{ itemId: link?.itemId ?? '', qty: 1 }]),
+    () => (value.length ? value : [{ itemId: link?.itemId ?? '', qty: 0 }]),
     [value, link?.itemId],
   );
 
@@ -40,7 +86,7 @@ export function StockMaterialsBlock({
   const update = (index: number, patch: Partial<StockMaterialInput>) =>
     onChange(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
   const remove = (index: number) => onChange(rows.filter((_, i) => i !== index));
-  const add = () => onChange([...rows, { itemId: link.itemId ?? '', qty: 1 }]);
+  const add = () => onChange([...rows, { itemId: link.itemId ?? '', qty: 0 }]);
 
   const consumableOf = (id: string) => consumables.find((c) => c.id === id);
   const filtered = useMemo(() => {
@@ -95,11 +141,12 @@ export function StockMaterialsBlock({
             </View>
             <View style={{ width: 92 }}>
               <TextInput
-                value={String(row.qty)}
+                value={row.qty > 0 ? String(row.qty) : ''}
                 onChangeText={(t) => update(index, { qty: Math.max(0, Number(t.replace(',', '.')) || 0) })}
                 keyboardType="decimal-pad"
-                placeholder="Qtd."
+                placeholder="Qtd. *"
                 placeholderTextColor={T.faint}
+                accessibilityLabel="Quantidade solicitada obrigatória"
                 style={{ borderWidth: 1, borderColor: T.border, borderRadius: 10, backgroundColor: T.bg, color: T.text, paddingHorizontal: 10, paddingVertical: 10, textAlign: 'right' }}
               />
             </View>
@@ -122,7 +169,7 @@ export function StockMaterialsBlock({
       {/* Seletor de consumível */}
       <Modal visible={pickerFor != null} animationType="slide" transparent onRequestClose={() => setPickerFor(null)}>
         <View style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: T.bg, borderTopLeftRadius: 18, borderTopRightRadius: 18, maxHeight: '75%', padding: 16 }}>
+          <View style={{ backgroundColor: T.bg, borderTopLeftRadius: 18, borderTopRightRadius: 18, maxHeight: '82%', paddingTop: 16, paddingHorizontal: 16, paddingBottom: Math.max(20, insets.bottom + 10) }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <Text style={{ color: T.text, fontWeight: '700', fontSize: 16 }}>Escolher material</Text>
               <Pressable onPress={() => setPickerFor(null)}><Icon name="x" size={22} color={T.muted} /></Pressable>
@@ -134,17 +181,18 @@ export function StockMaterialsBlock({
               placeholderTextColor={T.faint}
               style={{ borderWidth: 1, borderColor: T.border, borderRadius: 10, backgroundColor: T.surface, color: T.text, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10 }}
             />
-            <ScrollView keyboardShouldPersistTaps="handled">
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: Math.max(12, insets.bottom) }}>
               {filtered.map((c) => {
                 const avail = round2(c.currentQty - c.reservedQty);
                 return (
                   <Pressable
                     key={c.id}
                     onPress={() => { if (pickerFor != null) update(pickerFor, { itemId: c.id }); setPickerFor(null); }}
-                    style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: T.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                    style={{ minHeight: 48, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: T.border, flexDirection: 'row', alignItems: 'center' }}
                   >
-                    <Text style={{ color: T.text, fontWeight: '600', flex: 1 }} numberOfLines={1}>{upper(c.name)}</Text>
-                    <Text style={{ color: avail < 0 ? T.danger : T.muted, fontSize: 12, marginLeft: 8 }}>{avail} {c.unit} disp.</Text>
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: tonerColor(c.name), borderWidth: 1, borderColor: '#0002', marginRight: 9 }} />
+                    <MarqueeName>{upper(c.name)}</MarqueeName>
+                    <Text style={{ color: avail < 0 ? T.danger : T.muted, fontSize: 12, marginLeft: 10, flexShrink: 0 }}>{avail} {c.unit} disp.</Text>
                   </Pressable>
                 );
               })}
