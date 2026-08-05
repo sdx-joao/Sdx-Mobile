@@ -39,9 +39,11 @@ const STATUS_CHIP: Record<EquipmentLifecycleStatus, { label: string; color: stri
 function isCedocStock(item: EquipmentPickerItem, includeMaintenance = false) {
   const unit = upper(item.unitName || '');
   const location = upper([item.room, item.currentLocation].filter(Boolean).join(' '));
-  return (item.lifecycleStatus === 'in_stock' || (includeMaintenance && item.lifecycleStatus === 'maintenance'))
-    && unit === 'HOSPITAL DO OLHO'
+  const locatedAtStock = unit === 'HOSPITAL DO OLHO'
     && (location.includes('CEDOC') || location.includes('ESTOQUE'));
+  return locatedAtStock
+    && item.lifecycleStatus !== 'retired'
+    && (includeMaintenance || item.lifecycleStatus !== 'maintenance');
 }
 
 function absolutePhotoUrl(path?: string | null) {
