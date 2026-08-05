@@ -34,6 +34,7 @@ export function SuggestedInput({
   placeholder,
   options,
   required,
+  allowCreate = true,
 }: {
   label: string;
   value: string;
@@ -41,6 +42,7 @@ export function SuggestedInput({
   placeholder: string;
   options: SelectOption[];
   required?: boolean;
+  allowCreate?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -54,7 +56,7 @@ export function SuggestedInput({
 
   const trimmed = query.trim();
   const exactExists = trimmed.length > 0 && options.some(o => norm(o.value) === norm(trimmed) || norm(o.label) === norm(trimmed));
-  const canAdd = trimmed.length > 0 && !exactExists;
+  const canAdd = allowCreate && trimmed.length > 0 && !exactExists;
 
   const choose = (next: string) => {
     onChangeText(next);
@@ -89,7 +91,7 @@ export function SuggestedInput({
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Buscar ou escrever novo..."
+                  placeholder={allowCreate ? 'Buscar ou escrever novo...' : 'Buscar no catálogo...'}
                   placeholderTextColor={T.faint}
                   autoFocus
                   style={SHEET_INPUT}

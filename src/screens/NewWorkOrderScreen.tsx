@@ -373,11 +373,16 @@ export function NewWorkOrderScreen() {
             highlight={serviceIsEquip || isGenericEquipmentFlow}
             retireDefault={equipmentDestination}
             sourcePolicy={equipmentFlow?.sourcePolicy}
+            operation={equipmentFlow?.operation ?? null}
             destinationUnit={unitName}
             destinationRoom={department}
             title={equipmentFlowTitle}
             description={isGenericEquipmentFlow
-              ? 'Escolha um equipamento cadastrado. Itens disponíveis no estoque aparecem primeiro; você também pode buscar ou ler o QR.'
+              ? equipmentFlow?.operation === 'install_from_stock'
+                ? 'Leia o QR ou procure o equipamento. Ele precisa estar Funcionando no CEDOC/Estoque; o destino será o local desta O.S.'
+                : equipmentFlow?.operation === 'collect_to_stock'
+                  ? 'Leia o QR ou procure o equipamento deste local. Ao concluir, ele seguirá para o CEDOC/Estoque.'
+                  : 'Escolha um equipamento cadastrado. Itens disponíveis no estoque aparecem primeiro; você também pode buscar ou ler o QR.'
               : undefined}
             allowFreeText={!isGenericEquipmentFlow}
             externalDelivery={equipmentFlow?.operation === 'deliver_from_stock'}

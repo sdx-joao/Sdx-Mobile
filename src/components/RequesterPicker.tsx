@@ -40,6 +40,7 @@ export function RequesterPicker({
   label = 'Solicitante',
   placeholder = 'Quem solicitou',
   showDepartment = true,
+  allowCreate = true,
 }: {
   value: string;
   department: string;
@@ -48,6 +49,7 @@ export function RequesterPicker({
   label?: string;
   placeholder?: string;
   showDepartment?: boolean;
+  allowCreate?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -96,7 +98,7 @@ export function RequesterPicker({
 
   const trimmed = query.trim();
   const exactExists = trimmed.length > 0 && requesters.some(r => normalizeForSearch(r.name) === normalizeForSearch(trimmed));
-  const canAdd = trimmed.length > 0 && !exactExists;
+  const canAdd = allowCreate && trimmed.length > 0 && !exactExists;
 
   const reset = () => {
     setQuery('');
@@ -203,7 +205,7 @@ export function RequesterPicker({
                     <TextInput
                       value={query}
                       onChangeText={setQuery}
-                      placeholder="Buscar ou escrever novo nome..."
+                      placeholder={allowCreate ? 'Buscar ou escrever novo nome...' : 'Buscar no catálogo de solicitantes...'}
                       placeholderTextColor={T.faint}
                       autoFocus
                       style={SHEET_INPUT}

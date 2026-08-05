@@ -618,6 +618,7 @@ export function WorkOrderEditScreen() {
             highlight={serviceIsEquip || isGenericEquipmentFlow}
             retireDefault={retireDefault}
             sourcePolicy={equipmentFlow?.sourcePolicy}
+            operation={equipmentFlow?.operation ?? null}
             destinationUnit={unitName}
             destinationRoom={department}
             title={equipmentFlow?.operation === 'install_from_stock' ? 'Equipamento a instalar'
@@ -626,7 +627,11 @@ export function WorkOrderEditScreen() {
                 : equipmentFlow?.operation === 'move_between_locations' ? 'Equipamento a mudar de local'
                   : 'Equipamento envolvido'}
             description={isGenericEquipmentFlow
-              ? 'Estoque primeiro, com busca global e leitura do QR da etiqueta.'
+              ? equipmentFlow?.operation === 'install_from_stock'
+                ? 'Leia o QR ou procure um equipamento Funcionando no CEDOC/Estoque. O destino é o local desta O.S.'
+                : equipmentFlow?.operation === 'collect_to_stock'
+                  ? 'Leia o QR ou procure o equipamento deste local. O destino é fixo: CEDOC/Estoque.'
+                  : 'Estoque primeiro, com busca global e leitura do QR da etiqueta.'
               : undefined}
             allowFreeText={!isGenericEquipmentFlow}
             externalDelivery={equipmentFlow?.operation === 'deliver_from_stock'}

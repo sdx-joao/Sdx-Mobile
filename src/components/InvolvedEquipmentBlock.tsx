@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { Icon } from './Icon';
 import { T } from '../theme/theme';
@@ -53,13 +53,13 @@ function absolutePhotoUrl(path?: string | null) {
  * Bloco "Equipamentos envolvidos" da OS (app) — lista opcional 0..N de quem deu
  * problema. Cada entrada vem do inventário (busca por nome/etiqueta/patrimônio)
  * ou por texto livre quando o equipamento ainda não está cadastrado. Ver
- * docs/WORK_ORDER_EQUIPMENT_AND_TAXONOMY.md (repo do servidor).
+ * docs/modules/work-orders/WORK_ORDER_EQUIPMENT_AND_TAXONOMY.md (repo do servidor).
  */
 export function InvolvedEquipmentBlock({
   token, value, onChange, highlight, retireDefault, sourcePolicy = 'current',
   destinationUnit, destinationRoom, title = 'Equipamento envolvido',
   description = 'Opcional. Aponte o(s) equipamento(s) que deram problema — do inventário ou por descrição.',
-  allowFreeText = true, externalDelivery = false, reasonOptions = [],
+  allowFreeText = true, externalDelivery = false, reasonOptions = [], operation = null,
 }: {
   token: string | null;
   value: InvolvedEquipmentInput[];
@@ -75,6 +75,7 @@ export function InvolvedEquipmentBlock({
   allowFreeText?: boolean;
   externalDelivery?: boolean;
   reasonOptions?: Array<{ value: string; label: string }>;
+  operation?: 'retire_involved' | 'install_from_stock' | 'deliver_from_stock' | 'collect_to_stock' | 'move_between_locations' | 'exchange_between_locations' | null;
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<EquipmentPickerItem[]>([]);
@@ -134,7 +135,29 @@ export function InvolvedEquipmentBlock({
     reason: null,
     reasonNotes: null,
   } : null;
+  const validateItem = (it: EquipmentPickerItem) => {
+    if (operation === 'install_from_stock' && !isCedocStock(it)) {
+      Alert.alert('Equipamento fora do estoque', `${it.name} está em ${[it.unitName, it.room || it.currentLocation].filter(Boolean).join(' / ') || 'local não identificado'}. Na instalação, escolha um equipamento Funcionando do CEDOC/Estoque.`);
+      return false;
+    }
+    if (operation === 'install_from_stock' && upper(it.equipmentStatus || '').includes('NAO FUNCIONANDO')) {
+      Alert.alert('Equipamento indisponível', 'Na instalação, o equipamento precisa estar Funcionando no CEDOC/Estoque.');
+      return false;
+    }
+    if (operation === 'collect_to_stock') {
+      const expectedUnit = upper(destinationUnit || '');
+      const expectedRoom = upper(destinationRoom || '');
+      const actualUnit = upper(it.unitName || '');
+      const actualPlace = upper([it.room, it.currentLocation].filter(Boolean).join(' '));
+      if (actualUnit !== expectedUnit || !actualPlace.includes(expectedRoom)) {
+        Alert.alert('Equipamento de outro local', `${it.name} está em ${[it.unitName, it.room || it.currentLocation].filter(Boolean).join(' / ') || 'local não identificado'}. A retirada só aceita equipamento pertencente ao local da O.S.`);
+        return false;
+      }
+    }
+    return true;
+  };
   const addItem = (it: EquipmentPickerItem) => {
+    if (!validateItem(it)) return;
     if (!has(it.id)) onChange([...value, {
       itemId: it.id, itemName: it.name, itemAssetTag: it.assetTag,
       itemSerialNumber: it.serialNumber, itemUnitName: it.unitName, itemRoom: it.room, itemCurrentLocation: it.currentLocation,
@@ -174,7 +197,16 @@ export function InvolvedEquipmentBlock({
       // 1) Tenta o pool de etiquetas ETQ (resolveInventoryLabel normaliza a URL).
       const r = await resolveInventoryLabel(token, String(data || ''));
       if (r.itemId) {
-        if (!has(r.itemId)) onChange([...value, { itemId: r.itemId, labelCode: r.code, itemName: r.code, problemNote: null, retire: retireOf() }]);
+        const items = await getInventory(token, { q: r.code });
+        const resolved = items.find(item => item.id === r.itemId);
+        if (resolved) addItem({
+          id: resolved.id, name: resolved.name, assetTag: resolved.assetTag ?? null,
+          serialNumber: resolved.serialNumber ?? null, unitName: resolved.unitName ?? null,
+          room: resolved.room ?? null, currentLocation: resolved.currentLocation ?? null,
+          lifecycleStatus: upper(resolved.equipmentStatus || '').includes('NAO FUNCIONANDO') ? 'maintenance' : resolved.lifecycleStatus,
+          equipmentStatus: resolved.equipmentStatus, mainPhotoUrl: resolved.mainPhotoUrl,
+        });
+        else Alert.alert('Equipamento não encontrado', 'A etiqueta foi reconhecida, mas o equipamento não está disponível no inventário.');
         return;
       }
       // 2) Fallback: item cadastrado pelo próprio código (label_code HOJCB-…,
@@ -208,6 +240,8 @@ export function InvolvedEquipmentBlock({
       id: chosen.id, name: chosen.name, assetTag: chosen.assetTag ?? null,
       serialNumber: chosen.serialNumber ?? null, unitName: chosen.unitName ?? null,
       room: chosen.room ?? null, currentLocation: chosen.currentLocation ?? null,
+      lifecycleStatus: upper(chosen.equipmentStatus || '').includes('NAO FUNCIONANDO') ? 'maintenance' : chosen.lifecycleStatus,
+      equipmentStatus: chosen.equipmentStatus, mainPhotoUrl: chosen.mainPhotoUrl,
     };
   };
   const removeAt = (i: number) => onChange(value.filter((_, idx) => idx !== i));
@@ -229,20 +263,20 @@ export function InvolvedEquipmentBlock({
                 {(e.itemAssetTag || e.labelCode) ? `  ·  ${e.itemAssetTag || e.labelCode}` : ''}
               </Text>
               <Text style={{ fontSize: 10.5, color: T.faint }} numberOfLines={1}>
-                {[e.itemSerialNumber ? `SÉRIE ${e.itemSerialNumber}` : null, localOf(e) ? `LOCAL ${localOf(e)}` : null]
+                {[e.itemSerialNumber ? `SÉRIE ${e.itemSerialNumber}` : null, localOf(e) ? `${operation === 'install_from_stock' ? 'ORIGEM' : 'LOCAL'} ${localOf(e)}` : null]
                   .filter(Boolean).join('  ·  ') || (e.itemId ? 'do inventário' : 'sem cadastro')}
               </Text>
             </View>
             <Pressable onPress={() => removeAt(i)} hitSlop={8}><Icon name="x" size={16} color={T.danger} /></Pressable>
           </View>
-          <TextInput
+          {operation !== 'install_from_stock' && operation !== 'collect_to_stock' && <TextInput
             value={e.problemNote ?? ''}
             onChangeText={(v) => setProblem(i, v)}
             placeholder={externalDelivery ? 'Observação da baixa (opcional)' : 'Qual o problema? (opcional)'}
             placeholderTextColor={T.faint}
             style={{ height: 38, borderRadius: 9, borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, paddingHorizontal: 12, fontSize: 13, color: T.text }}
-          />
-          {retireDefault && e.itemId && (
+          />}
+          {retireDefault && e.itemId && operation !== 'install_from_stock' && operation !== 'collect_to_stock' && (
             <View style={{ gap: 6, borderTopWidth: 1, borderTopColor: T.border, paddingTop: 8 }}>
               <Text style={{ fontSize: 11, fontWeight: '700', color: T.muted }}>
                 {externalDelivery ? 'Motivo da baixa *' : 'Retirar este equipamento?'}
