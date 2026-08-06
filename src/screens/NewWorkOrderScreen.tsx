@@ -109,7 +109,7 @@ export function NewWorkOrderScreen() {
     const [options, requesters, stock, equip] = await Promise.all([
       getOptions(token, WORK_ORDER_OPTION_KINDS),
       getWorkOrderRequesters(token),
-      fetchServiceStock(token).catch(() => ({ links: [], consumables: [] })),
+      fetchServiceStock(token).catch(() => ({ links: [], consumables: [], peripherals: [] })),
       fetchServiceEquipment(token).catch(() => ({ links: [] })),
     ]);
     return { options, requesters, stock, equip };
@@ -139,9 +139,10 @@ export function NewWorkOrderScreen() {
     () => (data?.stock?.links ?? []).find((l) => l.serviceType === serviceType && l.isActive !== false) ?? null,
     [data?.stock?.links, serviceType],
   );
+  const isPeripheralExchange = /TROCA.*PERIFERICO/.test(normalizeForSearch(serviceType));
   const logistics = useMemo(
-    () => stockLink ? { ...logisticsLabels(stockLink.direction), direction: stockLink.direction } : null,
-    [stockLink],
+    () => stockLink && !isPeripheralExchange ? { ...logisticsLabels(stockLink.direction), direction: stockLink.direction } : null,
+    [stockLink, isPeripheralExchange],
   );
   // Destino padrão de retirada do equipamento envolvido (se o serviço tem vínculo).
   const retireDefault = useMemo(
@@ -173,7 +174,7 @@ export function NewWorkOrderScreen() {
   const needsEquipmentDestination = isGenericEquipmentFlow && equipmentDestination === 'setor';
   // Solicitações de materiais/suprimentos são entregas internas: precisam
   // registrar quem solicitou e o setor real do catálogo, não CEDOC/ESTOQUE.
-  const isMaterialSupplyFlow = !!stockLink && !isGenericEquipmentFlow;
+  const isMaterialSupplyFlow = !!stockLink && !isGenericEquipmentFlow && !isPeripheralExchange;
   const optionsByKind = useMemo(() => {
     const grouped = new Map<SelectOptionKind, SelectOption[]>();
     for (const option of data?.options ?? []) {
@@ -396,12 +397,14 @@ export function NewWorkOrderScreen() {
       )}
 
       {stockLink && !isGenericEquipmentFlow && (
-        <SectionCard title="Materiais de estoque">
+        <SectionCard title={isPeripheralExchange ? 'Movimentar periféricos' : 'Materiais de estoque'}>
           <StockMaterialsBlock
             link={stockLink}
-            consumables={data?.stock?.consumables ?? []}
+            consumables={isPeripheralExchange ? (data?.stock?.peripherals ?? []) : (data?.stock?.consumables ?? [])}
             value={stockMaterials}
             onChange={setStockMaterials}
+            title={isPeripheralExchange ? 'Baixa de periférico do estoque' : undefined}
+            itemNoun={isPeripheralExchange ? 'periférico' : undefined}
           />
         </SectionCard>
       )}

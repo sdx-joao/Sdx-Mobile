@@ -160,7 +160,7 @@ export function WorkOrderEditScreen() {
       getWorkOrder(token, route.params.id),
       getOptions(token, OPTION_KINDS),
       getWorkOrderRequesters(token),
-      fetchServiceStock(token).catch(() => ({ links: [], consumables: [] })),
+      fetchServiceStock(token).catch(() => ({ links: [], consumables: [], peripherals: [] })),
       fetchServiceEquipment(token).catch(() => ({ links: [] })),
     ]);
     return { detail, options, requesters, stock, equip };
@@ -236,6 +236,7 @@ export function WorkOrderEditScreen() {
       ?? (serviceType === order?.serviceType ? data?.detail.serviceStock ?? null : null),
     [data?.stock?.links, data?.detail.serviceStock, serviceType, order?.serviceType],
   );
+  const isPeripheralExchange = /TROCA.*PERIFERICO/.test(serviceType.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase());
   const equipmentFlow = useMemo(
     () => (data?.equip?.links ?? []).find((l) => l.serviceType === serviceType && l.isActive && l.allowRetire) ?? null,
     [data?.equip?.links, serviceType],
@@ -645,12 +646,14 @@ export function WorkOrderEditScreen() {
       )}
 
       {stockLink && !isGenericEquipmentFlow && (
-        <SectionCard title="Materiais de estoque">
+        <SectionCard title={isPeripheralExchange ? 'Movimentar periféricos' : 'Materiais de estoque'}>
           <StockMaterialsBlock
             link={stockLink}
-            consumables={data?.stock?.consumables ?? []}
+            consumables={isPeripheralExchange ? (data?.stock?.peripherals ?? []) : (data?.stock?.consumables ?? [])}
             value={stockMaterials}
             onChange={setStockMaterials}
+            title={isPeripheralExchange ? 'Baixa de periférico do estoque' : undefined}
+            itemNoun={isPeripheralExchange ? 'periférico' : undefined}
           />
         </SectionCard>
       )}

@@ -60,12 +60,14 @@ function MarqueeName({ children }: { children: string }) {
  * Ver docs/modules/work-orders/WORK_ORDER_STOCK_LINK.md (repo do servidor).
  */
 export function StockMaterialsBlock({
-  link, consumables, value, onChange,
+  link, consumables, value, onChange, title = 'Materiais de estoque', itemNoun = 'material',
 }: {
   link: StockServiceLink | null | undefined;
   consumables: StockConsumable[];
   value: StockMaterialInput[];
   onChange: (next: StockMaterialInput[]) => void;
+  title?: string;
+  itemNoun?: string;
 }) {
   const [pickerFor, setPickerFor] = useState<number | null>(null);
   const [query, setQuery] = useState('');
@@ -99,7 +101,7 @@ export function StockMaterialsBlock({
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Icon name={isOut ? 'arrow-up-circle' : 'arrow-down-circle'} size={18} color={accent} />
-          <Text style={{ color: T.text, fontWeight: '700', fontSize: 14 }}>Materiais de estoque</Text>
+          <Text style={{ color: T.text, fontWeight: '700', fontSize: 14 }}>{title}</Text>
         </View>
         <View style={{ backgroundColor: accent + '22', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
           <Text style={{ color: accent, fontSize: 11, fontWeight: '700' }}>{isOut ? 'SAÍDA (ENTREGA)' : 'ENTRADA (COLETA)'}</Text>
@@ -128,7 +130,7 @@ export function StockMaterialsBlock({
                   style={{ borderWidth: 1, borderColor: T.border, borderRadius: 10, backgroundColor: T.bg, paddingHorizontal: 10, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
                 >
                   <Text style={{ color: row.itemId ? T.text : T.faint, fontWeight: row.itemId ? '600' : '400' }} numberOfLines={1}>
-                    {row.itemId ? upper(consumableOf(row.itemId)?.name || 'Item') : 'Escolher material'}
+                    {row.itemId ? upper(consumableOf(row.itemId)?.name || 'Item') : `Escolher ${itemNoun}`}
                   </Text>
                   <Icon name="chevron-down" size={16} color={T.muted} />
                 </Pressable>
@@ -162,7 +164,7 @@ export function StockMaterialsBlock({
       {!fixed && (
         <Pressable onPress={add} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 4 }}>
           <Icon name="plus" size={16} color={T.primary} />
-          <Text style={{ color: T.primary, fontWeight: '600' }}>Adicionar material</Text>
+          <Text style={{ color: T.primary, fontWeight: '600' }}>Adicionar {itemNoun}</Text>
         </Pressable>
       )}
 
@@ -171,13 +173,13 @@ export function StockMaterialsBlock({
         <View style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: T.bg, borderTopLeftRadius: 18, borderTopRightRadius: 18, maxHeight: '82%', paddingTop: 16, paddingHorizontal: 16, paddingBottom: Math.max(20, insets.bottom + 10) }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <Text style={{ color: T.text, fontWeight: '700', fontSize: 16 }}>Escolher material</Text>
+              <Text style={{ color: T.text, fontWeight: '700', fontSize: 16 }}>Escolher {itemNoun}</Text>
               <Pressable onPress={() => setPickerFor(null)}><Icon name="x" size={22} color={T.muted} /></Pressable>
             </View>
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Buscar consumível…"
+              placeholder={`Buscar ${itemNoun}…`}
               placeholderTextColor={T.faint}
               style={{ borderWidth: 1, borderColor: T.border, borderRadius: 10, backgroundColor: T.surface, color: T.text, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10 }}
             />
@@ -197,7 +199,7 @@ export function StockMaterialsBlock({
                 );
               })}
               {!filtered.length && (
-                <Text style={{ color: T.faint, textAlign: 'center', paddingVertical: 20 }}>Nenhum consumível encontrado.</Text>
+                <Text style={{ color: T.faint, textAlign: 'center', paddingVertical: 20 }}>Nenhum {itemNoun} encontrado.</Text>
               )}
             </ScrollView>
           </View>

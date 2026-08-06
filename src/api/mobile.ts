@@ -314,7 +314,7 @@ export type StockMaterialRow = {
 
 /** Vínculos serviço↔estoque + consumíveis, para montar a seção na OS. */
 export function fetchServiceStock(token: string | null) {
-  return apiFetch<{ links: StockServiceLink[]; consumables: StockConsumable[] }>(
+  return apiFetch<{ links: StockServiceLink[]; consumables: StockConsumable[]; peripherals: StockConsumable[] }>(
     '/api/mobile/work-orders/service-stock',
     { token },
   );
