@@ -25,6 +25,8 @@ export function InventoryCopyValidationScreen() {
   const [validated, setValidated] = useState<number[]>(initial ?? []);
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
+  const [scannerEnabled, setScannerEnabled] = useState(true);
+  const [cameraEpoch, setCameraEpoch] = useState(0);
   const lastScan = useRef(0);
 
   const remaining = useMemo(
@@ -53,6 +55,7 @@ export function InventoryCopyValidationScreen() {
       if (scan.copy === 1 && legacySlot) {
         setValidated((prev) => [...prev, legacySlot].sort((a, b) => a - b));
         setFlash(`Cópia física validada como #${legacySlot} (etiqueta legada).`);
+        setScannerEnabled(false);
         return;
       }
       setFlash(`Cópia ${scan.copy} já validada.`);
@@ -60,6 +63,16 @@ export function InventoryCopyValidationScreen() {
     }
     setValidated((prev) => [...prev, scan.copy].sort((a, b) => a - b));
     setFlash(null);
+    setScannerEnabled(false);
+  };
+
+  const readNextCopy = () => {
+    lastScan.current = 0;
+    setFlash(null);
+    // Remonta a câmera para limpar o cache do detector nativo. Isso é
+    // necessário nas cópias legadas, cujos QRs têm conteúdo idêntico.
+    setCameraEpoch((value) => value + 1);
+    setScannerEnabled(true);
   };
 
   const finish = async () => {
@@ -94,8 +107,9 @@ export function InventoryCopyValidationScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0E18' }}>
-      {permission?.granted && !complete && (
+      {permission?.granted && !complete && scannerEnabled && (
         <CameraView
+          key={cameraEpoch}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           facing="back"
           barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
@@ -129,6 +143,12 @@ export function InventoryCopyValidationScreen() {
               Escaneie cada cópia da etiqueta colada no equipamento. Faltam: {remaining.map((c) => `#${c}`).join(', ')}.
             </Text>
             {!!flash && <Text style={{ color: '#FCD34D', fontSize: 12.5, textAlign: 'center' }}>{flash}</Text>}
+            {!scannerEnabled && remaining.length > 0 && (
+              <Pressable onPress={readNextCopy} style={{ paddingVertical: 11, paddingHorizontal: 20, borderRadius: 12, backgroundColor: T.primary, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Icon name="qr" size={17} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '800' }}>Ler próxima cópia</Text>
+              </Pressable>
+            )}
             {permission && !permission.granted && (
               <Pressable onPress={requestPermission} style={{ paddingVertical: 10, paddingHorizontal: 18, borderRadius: 12, backgroundColor: T.primary }}>
                 <Text style={{ color: '#fff', fontWeight: '700' }}>Permitir câmera</Text>
