@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -66,14 +66,18 @@ export function InventoryCopyValidationScreen() {
     setScannerEnabled(false);
   };
 
-  const readNextCopy = () => {
-    lastScan.current = 0;
-    setFlash(null);
-    // Remonta a câmera para limpar o cache do detector nativo. Isso é
-    // necessário nas cópias legadas, cujos QRs têm conteúdo idêntico.
-    setCameraEpoch((value) => value + 1);
-    setScannerEnabled(true);
-  };
+  // Rearma automaticamente entre cópias. A pausa curta dá tempo de afastar a
+  // etiqueta já lida e a remontagem limpa o cache nativo dos QRs legados iguais.
+  useEffect(() => {
+    if (scannerEnabled || complete) return;
+    const timer = setTimeout(() => {
+      lastScan.current = 0;
+      setFlash(null);
+      setCameraEpoch((value) => value + 1);
+      setScannerEnabled(true);
+    }, 850);
+    return () => clearTimeout(timer);
+  }, [scannerEnabled, complete]);
 
   const finish = async () => {
     if (!complete || saving) return;
@@ -144,10 +148,7 @@ export function InventoryCopyValidationScreen() {
             </Text>
             {!!flash && <Text style={{ color: '#FCD34D', fontSize: 12.5, textAlign: 'center' }}>{flash}</Text>}
             {!scannerEnabled && remaining.length > 0 && (
-              <Pressable onPress={readNextCopy} style={{ paddingVertical: 11, paddingHorizontal: 20, borderRadius: 12, backgroundColor: T.primary, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Icon name="qr" size={17} color="#fff" />
-                <Text style={{ color: '#fff', fontWeight: '800' }}>Ler próxima cópia</Text>
-              </Pressable>
+              <Text style={{ color: '#93C5FD', fontSize: 12.5, fontWeight: '700' }}>Preparando a próxima leitura…</Text>
             )}
             {permission && !permission.granted && (
               <Pressable onPress={requestPermission} style={{ paddingVertical: 10, paddingHorizontal: 18, borderRadius: 12, backgroundColor: T.primary }}>
