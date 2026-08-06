@@ -46,6 +46,15 @@ export function InventoryCopyValidationScreen() {
       return;
     }
     if (validated.includes(scan.copy)) {
+      // Compatibilidade com etiquetas emitidas antes da numeração acumulada:
+      // disparos separados de uma cópia geravam sempre o mesmo QR c=1. Nesses
+      // lotes, cada nova leitura física preenche a próxima posição pendente.
+      const legacySlot = remaining[0];
+      if (scan.copy === 1 && legacySlot) {
+        setValidated((prev) => [...prev, legacySlot].sort((a, b) => a - b));
+        setFlash(`Cópia física validada como #${legacySlot} (etiqueta legada).`);
+        return;
+      }
       setFlash(`Cópia ${scan.copy} já validada.`);
       return;
     }
