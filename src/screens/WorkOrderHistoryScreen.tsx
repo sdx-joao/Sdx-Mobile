@@ -60,7 +60,7 @@ export function WorkOrderHistoryScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor="#fff" colors={[T.primary]} />}
     >
       <View style={{ marginBottom: 12 }}>
-        <SearchField value={q} onChange={setQ} placeholder="Buscar por código, setor, técnico…" />
+        <SearchField value={q} onChange={setQ} placeholder="Buscar por código, solicitante, setor…" />
       </View>
       <View style={{ marginHorizontal: -16 }}>
         <ChipRow chips={chips} active={filter} onPick={setFilter} accent={T.primary} />

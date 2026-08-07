@@ -117,7 +117,8 @@ export function WOCard({
       )}
       <View style={{ gap: 5 }}>
         <MetaRow icon="building">{wo.department} · {wo.unitName.replace('Hospital do Olho — ', 'HO ')}</MetaRow>
-        <MetaRow icon="user">{wo.responsibleTechnicianName || 'Não atribuída'}</MetaRow>
+        <MetaRow icon="user">Solicitante: {wo.requestedByName || 'Não informado'}</MetaRow>
+        <MetaRow icon="user">Técnico: {wo.responsibleTechnicianName || 'Não atribuído'}</MetaRow>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 11, paddingTop: 10, borderTopWidth: 1, borderTopColor: T.surfaceMuted }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

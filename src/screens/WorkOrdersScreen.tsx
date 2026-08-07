@@ -80,7 +80,7 @@ export function WorkOrdersScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={T.primary} colors={[T.primary]} />}
     >
       <View style={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12 }}>
-        <SearchField value={q} onChange={setQ} placeholder="Buscar por código, setor, técnico…" />
+        <SearchField value={q} onChange={setQ} placeholder="Buscar por código, solicitante, setor…" />
       </View>
       <ChipRow chips={chips} active={filter} onPick={setFilter} accent={T.primary} />
       <View style={{ padding: 16, paddingBottom: 24 }}>
