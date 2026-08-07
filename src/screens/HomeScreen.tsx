@@ -70,6 +70,7 @@ export function HomeScreen() {
 
   const goOrders = (filter?: string) => nav.navigate('Tabs', { screen: 'Orders', params: typeof filter === 'string' ? { filter } : undefined });
   const goInventory = () => nav.navigate('Tabs', { screen: 'Inventory' });
+  const goInventoryAlerts = () => nav.navigate('Tabs', { screen: 'Stock', params: { filter: 'alerts' } });
   const openWO = (wo: WorkOrder) => nav.navigate('WorkOrderDetail', { id: wo.id });
   const openItem = (it: InventoryItem) => nav.navigate('InventoryDetail', { id: it.id });
 
@@ -114,12 +115,12 @@ export function HomeScreen() {
         <SectionTitle>Módulos</SectionTitle>
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 22 }}>
           <ModuleTile icon="clipboard" label="Ordens de Serviço" sub={`${summary.workOrders.activeNow} ativas`} accent={accent} onPress={() => goOrders()} />
-          <ModuleTile icon="package" label="Inventário" sub={`${summary.inventory.lowStock} alertas`} accent={accent} onPress={goInventory} />
+          <ModuleTile icon="package" label="Inventário" sub={`${summary.inventory.lowStock} alertas`} accent={accent} onPress={goInventoryAlerts} />
         </View>
 
         {lowItems.length > 0 && (
           <>
-            <SectionTitle action={<TextLink onPress={goInventory}>Ver tudo</TextLink>}>Estoque em alerta</SectionTitle>
+            <SectionTitle action={<TextLink onPress={goInventoryAlerts}>Ver tudo</TextLink>}>Estoque em alerta</SectionTitle>
             <View style={{ backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 14, paddingHorizontal: 14, marginBottom: 22 }}>
               {lowItems.map((it, i) => {
                 const tone = stockStatusOf(it);

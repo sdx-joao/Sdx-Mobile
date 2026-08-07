@@ -10,8 +10,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import {
   ChipRow,
   EmptyState,
@@ -34,7 +35,7 @@ import {
   type StockMovement,
 } from '../api/mobile';
 import type { InventoryItem } from '../data/mock';
-import type { RootStackParamList } from '../navigation/types';
+import type { RootStackParamList, TabParamList } from '../navigation/types';
 import { listPending } from '../lib/pending-registrations';
 
 const TYPE_LABEL: Record<InventoryItem['primaryType'], string> = {
@@ -63,6 +64,12 @@ const PRINTER_SUPPLY_CATEGORIES = new Set(['TONER', 'CILINDRO', 'FUSOR']);
 
 function isStockItem(item: InventoryItem) {
   return item.itemType !== 'equipment' || item.lifecycleStatus === 'in_stock';
+}
+
+// Deve espelhar exatamente o contador da Home/API de resumo. Reservas não
+// alteram este alerta: ele compara o saldo físico cadastrado com o mínimo.
+function isInventoryAlert(item: InventoryItem) {
+  return item.itemType !== 'equipment' && item.minQty > 0 && item.currentQty < item.minQty;
 }
 
 function fmtQty(value: number) {
@@ -230,6 +237,7 @@ function PrinterSupplyGroupCard({
 
 export function StockScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<TabParamList, 'Stock'>>();
   const [pendingCount, setPendingCount] = useState(0);
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -253,6 +261,11 @@ export function StockScreen() {
     || user?.username?.trim().toUpperCase() === 'RGASPAR'
     || user?.name?.trim().toUpperCase() === 'ROCHELLE GASPAR FAVILLA';
 
+  // O atalho da Home sempre reabre esta tela diretamente no recorte útil.
+  useFocusEffect(useCallback(() => {
+    if (route.params?.filter === 'alerts') setFilter('alerts');
+  }, [route.params?.filter]));
+
   const loader = useCallback(async () => {
     const [items, movements] = await Promise.all([
       getInventory(token),
@@ -263,16 +276,21 @@ export function StockScreen() {
   const { data, loading, refreshing, error, reload } = useResource(loader, { reloadOnFocus: true });
   const stock = useMemo(() => (data?.items ?? []).filter(isStockItem), [data?.items]);
   const counts = useMemo(() => {
-    const result: Record<string, number> = { all: stock.length };
+    const result: Record<string, number> = {
+      all: stock.length,
+      alerts: stock.filter(isInventoryAlert).length,
+    };
     stock.forEach(item => { result[item.primaryType] = (result[item.primaryType] || 0) + 1; });
     return result;
   }, [stock]);
   const chips: Chip[] = [
     { key: 'all', label: 'Todos', count: counts.all },
+    { key: 'alerts', label: 'Alertas', count: counts.alerts },
     ...Object.entries(TYPE_LABEL).map(([key, label]) => ({ key, label, count: counts[key] })).filter(chip => chip.count),
   ];
   const list = useMemo(() => stock.filter(item => {
-    if (filter !== 'all' && item.primaryType !== filter) return false;
+    if (filter === 'alerts' && !isInventoryAlert(item)) return false;
+    if (filter !== 'all' && filter !== 'alerts' && item.primaryType !== filter) return false;
     const text = `${item.name} ${item.category || ''} ${item.sku || ''} ${item.brand || ''} ${item.locationLabel || ''}`.toLowerCase();
     return !q || text.includes(q.toLowerCase());
   }), [stock, filter, q]);
@@ -289,10 +307,7 @@ export function StockScreen() {
   }, [list]);
   const regularList = useMemo(() => list.filter(item => !PRINTER_SUPPLY_CATEGORIES.has(item.category?.toUpperCase() || '')), [list]);
   const totalUnits = stock.reduce((sum, item) => sum + Math.max(0, item.currentQty - (item.reservedQty || 0)), 0);
-  const lowCount = stock.filter(item => {
-    const available = item.currentQty - (item.reservedQty || 0);
-    return available <= 0 || (item.minQty > 0 && available <= item.minQty);
-  }).length;
+  const lowCount = stock.filter(isInventoryAlert).length;
 
   const openMovement = (item: InventoryItem) => {
     setSelected(item);
@@ -366,9 +381,18 @@ export function StockScreen() {
         <SearchField value={q} onChange={setQ} placeholder="Buscar item, categoria ou local…" />
       </View>
       <ChipRow chips={chips} active={filter} onPick={setFilter} accent={T.primary} />
+      {filter === 'alerts' && (
+        <View style={{ marginHorizontal: 16, marginTop: 12, padding: 13, borderRadius: 13, backgroundColor: '#FFF7ED', borderWidth: 1, borderColor: '#FDBA7466', flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+          <Icon name="alert" size={18} color="#B45309" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#92400E', fontSize: 13, fontWeight: '800' }}>Itens abaixo do estoque mínimo</Text>
+            <Text style={{ color: '#B45309', fontSize: 11.5, lineHeight: 16, marginTop: 2 }}>Abra um item para consultar os detalhes ou use “Movimentar” para registrar reposição, saída ou ajuste.</Text>
+          </View>
+        </View>
+      )}
       <View style={{ padding: 16, paddingBottom: 4 }}>
         {loading ? <LoadingState /> : error ? <EmptyState icon="alert" text={error} /> : list.length === 0
-          ? <EmptyState icon="archive" text="Nenhum item disponível neste grupo." />
+          ? <EmptyState icon={filter === 'alerts' ? 'check' : 'archive'} text={filter === 'alerts' ? 'Nenhum item está abaixo do estoque mínimo.' : 'Nenhum item disponível neste grupo.'} />
           : <>
             {printerSupplyGroups.map(([key, group]) => <PrinterSupplyGroupCard key={key} category={group.category} model={group.model} items={group.items} canMove={canMove || canAdjust} onOpen={current => nav.navigate('InventoryDetail', { id: current.id })} onMove={openMovement} />)}
             {regularList.map(item => <StockCard key={item.id} item={item} canMove={canMove || canAdjust} onOpen={current => nav.navigate('InventoryDetail', { id: current.id })} onMove={openMovement} />)}
