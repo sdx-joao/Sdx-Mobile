@@ -84,11 +84,11 @@ function Root() {
 
   // Canais + deep-link ao tocar a notificação (uma vez).
   useEffect(() => {
-    void setupNotificationChannels();
+    void setupNotificationChannels().catch(() => undefined);
     // App aberto a partir de uma notificação (estado morto).
     Notifications.getLastNotificationResponseAsync().then((res) => {
       if (res) openFromNotification(res.notification.request.content.data);
-    });
+    }).catch(() => undefined);
     const sub = Notifications.addNotificationResponseReceivedListener((res) => {
       openFromNotification(res.notification.request.content.data);
     });

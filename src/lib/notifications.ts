@@ -1,8 +1,14 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
+import * as SecureStore from 'expo-secure-store';
 
 const PROJECT_ID = '62ce89bc-bb9b-42f7-9770-8f44d79fae09';
+const PUSH_TOKEN_CACHE_KEY = 'sdx.notifications.expo_token';
+const PUSH_TOKEN_SAVED_AT_KEY = 'sdx.notifications.expo_token_saved_at';
+const PUSH_TOKEN_ATTEMPT_AT_KEY = 'sdx.notifications.expo_token_attempt_at';
+const TOKEN_REFRESH_MS = 30 * 24 * 60 * 60 * 1000;
+const FAILED_ATTEMPT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 // Mostra o banner + som mesmo com o app aberto (foreground).
 Notifications.setNotificationHandler({
@@ -49,6 +55,25 @@ export async function setupNotificationChannels(): Promise<void> {
 /** Pede permissão e retorna o Expo push token do aparelho (ou null). */
 export async function registerForPushToken(): Promise<string | null> {
   try {
+    // O token do Expo/FCM é da instalação, não da sessão. Consultá-lo a cada
+    // reconstrução do processo força uma conexão nativa com Google Play
+    // Services e, em alguns aparelhos, abre um diálogo fatal ao voltar do
+    // segundo plano. Reutilizamos o token seguro e só renovamos periodicamente.
+    const [cached, savedAtText, attemptedAtText] = await Promise.all([
+      SecureStore.getItemAsync(PUSH_TOKEN_CACHE_KEY),
+      SecureStore.getItemAsync(PUSH_TOKEN_SAVED_AT_KEY),
+      SecureStore.getItemAsync(PUSH_TOKEN_ATTEMPT_AT_KEY),
+    ]);
+    const now = Date.now();
+    const savedAt = Number(savedAtText || 0);
+    if (cached && savedAt > 0 && now - savedAt < TOKEN_REFRESH_MS) return cached;
+
+    const attemptedAt = Number(attemptedAtText || 0);
+    if (!cached && attemptedAt > 0 && now - attemptedAt < FAILED_ATTEMPT_COOLDOWN_MS) return null;
+
+    // Marca ANTES da chamada nativa: se o Play Services falhar ou matar a
+    // Activity, a próxima retomada não entra num ciclo de novas tentativas.
+    await SecureStore.setItemAsync(PUSH_TOKEN_ATTEMPT_AT_KEY, String(now));
     const existing = await Notifications.getPermissionsAsync();
     let status = existing.status;
     if (status !== 'granted') {
@@ -59,7 +84,14 @@ export async function registerForPushToken(): Promise<string | null> {
     const projectId =
       (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId || PROJECT_ID;
     const token = await Notifications.getExpoPushTokenAsync({ projectId });
-    return token.data || null;
+    const value = token.data || null;
+    if (value) {
+      await Promise.all([
+        SecureStore.setItemAsync(PUSH_TOKEN_CACHE_KEY, value),
+        SecureStore.setItemAsync(PUSH_TOKEN_SAVED_AT_KEY, String(Date.now())),
+      ]);
+    }
+    return value;
   } catch {
     return null;
   }
