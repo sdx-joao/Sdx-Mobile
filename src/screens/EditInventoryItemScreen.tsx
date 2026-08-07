@@ -273,7 +273,7 @@ export function EditInventoryItemScreen() {
             // setor; a unidade canônica continua sendo HOSPITAL DO OLHO.
             lifecycleStatus: (equipmentStatus.trim().toUpperCase() === 'NAO FUNCIONANDO'
               ? 'maintenance'
-              : equipmentStatus.trim().toUpperCase() === 'EM ESTOQUE' && room.trim().toUpperCase() === 'CEDOC/ESTOQUE'
+              : room.trim().toUpperCase() === 'CEDOC/ESTOQUE'
                 ? 'in_stock'
                 : 'in_use') as 'in_use' | 'in_stock' | 'maintenance',
             operatingSystem: operatingSystem.trim() || null,
@@ -493,13 +493,11 @@ export function EditInventoryItemScreen() {
       <SectionCard title="Local">
         <View style={{ gap: 11 }}>
           {(() => {
-            const inCedocStock = equipmentStatus.trim().toUpperCase() === 'EM ESTOQUE'
-              && room.trim().toUpperCase() === 'CEDOC/ESTOQUE';
+            const inCedocStock = room.trim().toUpperCase() === 'CEDOC/ESTOQUE';
             return (
               <Pressable
                 onPress={() => {
-                  if (inCedocStock) { setUnitName(''); setRoom(''); setEquipmentStatus('FUNCIONANDO'); }
-                  else { setUnitName('HOSPITAL DO OLHO'); setRoom('CEDOC/ESTOQUE'); setEquipmentStatus('EM ESTOQUE'); }
+                  if (!inCedocStock) { setUnitName('HOSPITAL DO OLHO'); setRoom('CEDOC/ESTOQUE'); }
                 }}
                 style={{
                   flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10,
