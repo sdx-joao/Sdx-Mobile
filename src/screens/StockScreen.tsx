@@ -100,12 +100,13 @@ function StockCard({
     <Pressable
       onPress={() => onOpen(item)}
       style={{
-        // Tint suave por tipo — diferencia equipamento/suprimento/material de relance.
-        backgroundColor: `${typeColor.color}0A`,
+        // Alerta precisa saltar aos olhos durante a reposição; itens regulares
+        // continuam usando somente o tint suave da categoria.
+        backgroundColor: low ? '#FFF1E6' : `${typeColor.color}0A`,
         borderWidth: 1,
-        borderColor: low ? '#F59E0B55' : `${typeColor.color}33`,
-        borderLeftWidth: 4,
-        borderLeftColor: typeColor.color,
+        borderColor: low ? '#F97316AA' : `${typeColor.color}33`,
+        borderLeftWidth: low ? 6 : 4,
+        borderLeftColor: low ? '#EA580C' : typeColor.color,
         borderRadius: 14,
         padding: 14,
         marginBottom: 10,
@@ -133,6 +134,11 @@ function StockCard({
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={{ color: low ? '#B45309' : T.text, fontSize: 20, fontWeight: '900' }}>{fmtQty(available)}</Text>
           <Text style={{ color: T.faint, fontSize: 10.5 }}>{item.unit} disponível</Text>
+          {low && (
+            <View style={{ marginTop: 5, borderRadius: 999, backgroundColor: '#EA580C', paddingHorizontal: 8, paddingVertical: 3 }}>
+              <Text style={{ color: '#FFF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.3 }}>REPOR</Text>
+            </View>
+          )}
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: T.surfaceMuted }}>
