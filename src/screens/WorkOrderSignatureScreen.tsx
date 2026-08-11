@@ -24,6 +24,7 @@ import {
 import { IS_TEST_BUILD } from '../api/client';
 import { showToast } from '../lib/toast';
 import type { RootStackParamList } from '../navigation/types';
+import { getPrintWorkOrdersEnabled } from '../auth/token-store';
 
 type Point = { x: number; y: number };
 
@@ -347,11 +348,13 @@ export function WorkOrderSignatureScreen() {
     setSaving(true);
     try {
       const finalStatus = isDelivery.current ? 'delivered' : 'completed';
-      await updateWorkOrderStatus(token, route.params.id, finalStatus, {
+      const printWorkOrder = await getPrintWorkOrdersEnabled();
+      const result = await updateWorkOrderStatus(token, route.params.id, finalStatus, {
         signatureDataUrl: reqSig,
         signerName: reqName.trim(),
         resolutionStatus: resolution,
         resolutionNotes: solution.trim(),
+        printWorkOrder,
         finishedAt: finishedAt.current,
         ...(techSig ? { techSignatureDataUrl: techSig, techSignerName: techName.trim() } : {}),
         ...(!existingDoc.current && docType && docValue.trim()
@@ -363,7 +366,9 @@ export function WorkOrderSignatureScreen() {
         try { await shareWorkOrderPdf(token, route.params.id); }
         catch (pdfErr) { showToast('OS salva, mas não foi possível gerar o PDF.'); console.warn('Falha ao gerar/compartilhar PDF da OS:', pdfErr); }
       } else {
-        showToast(`${code || 'OS'} concluída — impressão solicitada.`);
+        showToast(result.printRequested
+          ? `${code || 'OS'} concluída — impressão solicitada.`
+          : `${code || 'OS'} concluída sem impressão.`);
       }
       nav.popToTop();
     } catch (e) {

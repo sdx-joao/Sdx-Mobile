@@ -11,6 +11,7 @@ import { useAuth } from '../auth/auth-context';
 import { biometricLabel, isBiometricAvailable } from '../auth/biometrics';
 import { getNotifications } from '../api/mobile';
 import type { RootStackParamList } from '../navigation/types';
+import { getPrintWorkOrdersEnabled, setPrintWorkOrdersPref } from '../auth/token-store';
 
 export function ProfileScreen() {
   const { user, token, signOut, biometricEnabled, setBiometric } = useAuth();
@@ -19,6 +20,8 @@ export function ProfileScreen() {
   const [bioAvailable, setBioAvailable] = useState(false);
   const [bioLabel, setBioLabel] = useState('biometria');
   const [bioBusy, setBioBusy] = useState(false);
+  const [printWorkOrders, setPrintWorkOrders] = useState(false);
+  const [printBusy, setPrintBusy] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -30,6 +33,30 @@ export function ProfileScreen() {
     })();
     return () => { active = false; };
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setPrintBusy(true);
+      getPrintWorkOrdersEnabled()
+        .then((enabled) => { if (active) setPrintWorkOrders(enabled); })
+        .finally(() => { if (active) setPrintBusy(false); });
+      return () => { active = false; };
+    }, []),
+  );
+
+  const togglePrintWorkOrders = async (value: boolean) => {
+    if (printBusy) return;
+    setPrintBusy(true);
+    try {
+      await setPrintWorkOrdersPref(value);
+      setPrintWorkOrders(value);
+    } catch {
+      Alert.alert('Não foi possível salvar', 'Tente alterar a preferência novamente.');
+    } finally {
+      setPrintBusy(false);
+    }
+  };
 
   const toggleBiometric = async (value: boolean) => {
     if (bioBusy) return;
@@ -108,6 +135,21 @@ export function ProfileScreen() {
             />
           </View>
         )}
+
+        <View style={{ backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 14, padding: 15, flexDirection: 'row', alignItems: 'center', gap: 13, marginBottom: 18 }}>
+          <Icon name="printer" size={19} color={T.muted} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ fontSize: 14, color: T.text, fontWeight: '600' }}>Imprimir OS ao concluir</Text>
+            <Text style={{ fontSize: 11.5, color: T.faint, marginTop: 2 }}>Quando ativado, solicita a impressão da ordem finalizada.</Text>
+          </View>
+          <Switch
+            value={printWorkOrders}
+            onValueChange={togglePrintWorkOrders}
+            disabled={printBusy}
+            trackColor={{ true: T.primary, false: '#CBD5E1' }}
+            thumbColor="#fff"
+          />
+        </View>
 
         <Pressable
           onPress={signOut}

@@ -5,6 +5,17 @@ const REFRESH_KEY = 'sdx.auth.refresh'; // refresh token (rotativo, 30 dias)
 const REGISTERED_KEY = 'sdx.auth.registered'; // trava do auto-cadastro de teste (1 por aparelho)
 const REGISTERED_USER_KEY = 'sdx.auth.registered_username';
 const BIOMETRIC_KEY = 'sdx.auth.biometric'; // '1' = desbloqueio por biometria ligado
+const PRINT_WORK_ORDERS_KEY = 'sdx.profile.print_work_orders'; // default OFF
+
+/** Preferência local de solicitar impressão ao concluir uma OS. */
+export async function getPrintWorkOrdersEnabled(): Promise<boolean> {
+  return (await SecureStore.getItemAsync(PRINT_WORK_ORDERS_KEY)) === '1';
+}
+
+export async function setPrintWorkOrdersPref(enabled: boolean): Promise<void> {
+  if (enabled) await SecureStore.setItemAsync(PRINT_WORK_ORDERS_KEY, '1');
+  else await SecureStore.deleteItemAsync(PRINT_WORK_ORDERS_KEY);
+}
 
 /** Preferência de desbloqueio por biometria (por aparelho). */
 export async function getBiometricEnabled(): Promise<boolean> {
