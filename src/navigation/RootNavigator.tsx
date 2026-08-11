@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -32,19 +33,25 @@ const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function Tabs() {
+  const [activeTab, setActiveTab] = useState<keyof TabParamList>('Home');
+
   // O FAB fica NESTA camada: acompanha todas as abas mas some quando o técnico
   // entra num modal fullscreen (Scan, novo cadastro) — não faria sentido ler QR
   // por cima da própria câmera do cadastro.
   return (
     <View style={{ flex: 1 }}>
-      <Tab.Navigator screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
+      <Tab.Navigator
+        screenOptions={{ headerShown: false }}
+        screenListeners={({ route }) => ({ focus: () => setActiveTab(route.name) })}
+        tabBar={(props) => <TabBar {...props} />}
+      >
         <Tab.Screen name="Home" component={HomeScreen} />
         <Tab.Screen name="Orders" component={WorkOrdersScreen} />
         <Tab.Screen name="Inventory" component={InventoryScreen} />
         <Tab.Screen name="Stock" component={StockScreen} />
         <Tab.Screen name="Profile" component={ProfileScreen} />
       </Tab.Navigator>
-      <NuntiusUnlockFab />
+      {activeTab !== 'Profile' ? <NuntiusUnlockFab /> : null}
     </View>
   );
 }
