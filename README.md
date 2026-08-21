@@ -90,12 +90,12 @@ Servus-SDX/
 │   └── screens/         # telas (OS, Inventario, Scan, cadastro, validacao)
 ├── app.json             # config Expo (intent filters, plugins, updates)
 ├── codemagic.yaml       # build/OTA
-└── docs/CHANGELOG.md
+└── docs/README.md       # índice da documentação
 ```
 
 ## Documentacao
 
-- Changelog: [`docs/CHANGELOG.md`](docs/CHANGELOG.md).
+- Changelog: [`docs/reference/CHANGELOG.md`](docs/reference/CHANGELOG.md).
 - Contexto do ecossistema e regras de negocio: `CLAUDE.md` do repositorio do
   backend (Scandex).
 

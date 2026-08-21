@@ -1,19 +1,11 @@
-# Documentacao do SDX Mobile
+# DOCUMENTAÇÃO DO SERVUS
 
-Este diretorio guarda a documentacao operacional do app. Materiais visuais e
-prototipos ficam em `../design/`.
+A documentação do aplicativo móvel está organizada por finalidade:
 
-## Leitura rapida
+- [`operations/OTA.md`](operations/OTA.md) — publicação de atualizações OTA.
+- [`reference/CHANGELOG.md`](reference/CHANGELOG.md) — histórico de versões.
+- [`planning/IMPLEMENTATION_PLAN.md`](planning/IMPLEMENTATION_PLAN.md) — plano técnico ainda mantido como referência.
+- [`archive/README.md`](archive/README.md) — documentos encerrados ou substituídos.
 
-- `IMPLEMENTATION_PLAN.md` - plano base de evolucao do app mobile.
-- `../design/prontuarios-mobile-brief.md` - brief do modulo de Prontuarios.
-- `../design/scandexplus-mobile-design-system/` - referencia visual exportada.
-
-## Estado atual
-
-- Android e prioridade de distribuicao.
-- O build `test` usa `https://app-test.scandexplus.com.br`.
-- `EXPO_PUBLIC_APP_ENV=test` habilita identificacao visual de teste,
-  auto-cadastro controlado por aparelho e fotos temporarias de teste.
-- O backend central continua sendo o ScandexGed; regras de negocio devem ficar
-  nas APIs, nao duplicadas no app.
+As regras compartilhadas de inventário e ordens de serviço ficam no repositório
+ScandexGed, que é a fonte central do backend.

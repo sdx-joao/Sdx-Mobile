@@ -58,7 +58,7 @@ O app deve consumir o SDX-Pro como backend central, sem duplicar regra de negoci
 
 Feature cross-repo (app + SDX-Pro). Backend em producao + migration aplicada.
 App aguardando build `servus-prod`. Roteiro de teste em
-`docs/TESTES_v10_delegacao_historico.md`.
+`docs/archive/test-plans/TESTES_v10_delegacao_historico.md`.
 
 - [x] Historico de OS no app (botao + tela `WorkOrderHistoryScreen`, `includeHidden`).
 - [x] Delegacao como conceito separado do tecnico responsavel

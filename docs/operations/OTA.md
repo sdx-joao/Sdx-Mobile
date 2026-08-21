@@ -25,4 +25,4 @@ Sem mensagem, o script gera uma com data/hora.
   antes de publicar OTA para o novo runtime.
 - O env vem de `eas.json` (`build.<perfil>.env`) — mantenha lá, não no `.env`.
 
-Detalhes do script: [`scripts/ota.mjs`](../scripts/ota.mjs).
+Detalhes do script: [`scripts/ota.mjs`](../../scripts/ota.mjs).
