@@ -220,8 +220,8 @@ export function NewWorkOrderScreen() {
 
   const pickRequester = (requester: WorkOrderRequester) => {
     setRequestedByName(requester.name);
-    if (!logistics && requester.department) setDepartment(requester.department);
-    if (requester.phone) setRequesterContact(requester.phone);
+    if (!logistics) setDepartment(requester.department || '');
+    setRequesterContact(requester.phone || '');
   };
 
   const selectDepartment = (value: string) => {

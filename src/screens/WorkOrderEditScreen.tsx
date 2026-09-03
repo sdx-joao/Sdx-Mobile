@@ -345,8 +345,8 @@ export function WorkOrderEditScreen() {
   const canEditStatus = !locked;
   const pickRequester = (requester: WorkOrderRequester) => {
     setRequestedByName(requester.name);
-    if (requester.department) setDepartment(requester.department);
-    if (requester.phone) setRequesterContact(requester.phone);
+    setDepartment(requester.department || '');
+    setRequesterContact(requester.phone || '');
   };
 
   // Editar = só CORRIGIR dados da OS. Status andam sozinhos e a CONCLUSÃO (situação,
