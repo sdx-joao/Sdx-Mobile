@@ -54,6 +54,8 @@ console.log('──────────────────────�
 // comando em string com a mensagem entre aspas — senão o shell re-divide a
 // mensagem em várias palavras (eas: "Unexpected arguments").
 const safeMsg = message.replace(/"/g, '\\"');
-const cmd = `npx eas update --branch ${branch} --message "${safeMsg}"`;
+// O Servus é distribuído como app Android. Restringir a plataforma evita o EAS
+// tentar exportar Web (react-native-web não faz parte deste projeto).
+const cmd = `npx eas update --platform android --branch ${branch} --message "${safeMsg}"`;
 const res = spawnSync(cmd, { stdio: 'inherit', env, shell: true });
 process.exit(res.status ?? 1);
