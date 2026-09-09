@@ -6,6 +6,7 @@ import { FieldLabel } from './ui';
 import { T } from '../theme/theme';
 import { showToast } from '../lib/toast';
 import { useKeyboardHeight } from './use-keyboard-height';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { WorkOrderRequester } from '../api/mobile';
 
 // Só dígitos (com + inicial opcional) — normaliza o número vindo da agenda.
@@ -59,6 +60,7 @@ export function RequesterPicker({
   const [newDept, setNewDept] = useState('');
   const [importing, setImporting] = useState(false);
   const keyboardHeight = useKeyboardHeight();
+  const insets = useSafeAreaInsets();
 
   // Importa o telefone (e o nome, se vazio) de um contato da agenda do celular.
   const importFromContacts = async () => {
@@ -151,7 +153,7 @@ export function RequesterPicker({
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
         <Pressable onPress={close} style={{ flex: 1, backgroundColor: 'rgba(15,23,42,.45)', justifyContent: 'flex-end', paddingBottom: keyboardHeight }}>
-            <Pressable onPress={() => {}} style={{ backgroundColor: T.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: 480, paddingTop: 10 }}>
+            <Pressable onPress={() => {}} style={{ backgroundColor: T.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: 480 + insets.bottom, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12) }}>
               <View style={{ alignItems: 'center', paddingBottom: 8 }}>
                 <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: T.border }} />
               </View>
