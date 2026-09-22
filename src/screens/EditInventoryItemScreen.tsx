@@ -21,6 +21,7 @@ import {
 import { showToast } from '../lib/toast';
 import type { RootStackParamList } from '../navigation/types';
 import { PhotoCropper } from '../components/PhotoCropper';
+import { AuthenticatedImage } from '../components/AuthenticatedImage';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -379,10 +380,7 @@ export function EditInventoryItemScreen() {
         <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
           <View style={{ width: 84, height: 84, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}>
             {mainPhotoUrl ? (
-              <Image
-                source={{ uri: `${API_BASE_URL}${mainPhotoUrl}`, headers: token ? { Authorization: `Bearer ${token}` } : undefined }}
-                style={{ width: '100%', height: '100%' }} resizeMode="cover"
-              />
+              <AuthenticatedImage uri={`${API_BASE_URL}${mainPhotoUrl}`} token={token} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
             ) : (
               <Icon name="camera" size={22} color={T.faint} />
             )}
@@ -413,7 +411,7 @@ export function EditInventoryItemScreen() {
               {attachments.map((a, i) => (
                 <View key={i} style={{ width: 96, gap: 5 }}>
                   <View style={{ width: 96, height: 96, borderRadius: 11, overflow: 'hidden', borderWidth: 1, borderColor: T.border, backgroundColor: T.surfaceMuted }}>
-                    <Image source={{ uri: `${API_BASE_URL}${a.url}`, headers: token ? { Authorization: `Bearer ${token}` } : undefined }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    <AuthenticatedImage uri={`${API_BASE_URL}${a.url}`} token={token} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 2 }}>
                     <Pressable onPress={() => setShooting({ role: 'attachment', index: i })} hitSlop={6} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>

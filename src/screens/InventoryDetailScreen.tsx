@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Dimensions, Image, Modal, NativeScrollEvent, NativeSyntheticEvent, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Dimensions, Modal, NativeScrollEvent, NativeSyntheticEvent, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon } from '../components/Icon';
@@ -12,8 +12,8 @@ import { getInventoryItem } from '../api/mobile';
 import { API_BASE_URL } from '../api/client';
 import { useResource } from '../api/use-resource';
 import type { RootStackParamList } from '../navigation/types';
+import { AuthenticatedImage } from '../components/AuthenticatedImage';
 
-type ImgHeaders = Record<string, string> | undefined;
 type DetailTab = 'details' | 'history';
 type PhotoEntry = { uri: string; name: string; createdAt?: string; role?: string };
 
@@ -60,7 +60,7 @@ function itemLocationLabel(item: InventoryItem): string {
 }
 
 /** Carrossel de fotos (principal + anexos) com indicadores e viewer em tela cheia. */
-function PhotoCarousel({ photos, headers, width }: { photos: PhotoEntry[]; headers: ImgHeaders; width: number }) {
+function PhotoCarousel({ photos, token, width }: { photos: PhotoEntry[]; token?: string | null; width: number }) {
   const [active, setActive] = useState(0);
   const [viewer, setViewer] = useState(false);
 
@@ -84,7 +84,7 @@ function PhotoCarousel({ photos, headers, width }: { photos: PhotoEntry[]; heade
         <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={onScroll} scrollEventThrottle={16}>
           {photos.map((photo, i) => (
             <Pressable key={`${photo.uri}-${i}`} onPress={() => setViewer(true)} style={{ width, height: 200 }}>
-              <Image source={{ uri: photo.uri, headers }} resizeMode="cover" style={{ width, height: 200 }} />
+              <AuthenticatedImage uri={photo.uri} token={token} resizeMode="cover" style={{ width, height: 200 }} />
             </Pressable>
           ))}
         </ScrollView>
@@ -111,7 +111,7 @@ function PhotoCarousel({ photos, headers, width }: { photos: PhotoEntry[]; heade
           <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentOffset={{ x: active * Dimensions.get('window').width, y: 0 }}>
             {photos.map((photo, i) => (
               <View key={`${photo.uri}-viewer-${i}`} style={{ width: Dimensions.get('window').width, height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                <Image source={{ uri: photo.uri, headers }} resizeMode="contain" style={{ width: '100%', height: '80%' }} />
+                <AuthenticatedImage uri={photo.uri} token={token} resizeMode="contain" style={{ width: '100%', height: '80%' }} />
               </View>
             ))}
           </ScrollView>
@@ -226,7 +226,6 @@ export function InventoryDetailScreen() {
   const isEquip = item.itemType === 'equipment';
   const moves = data?.movements ?? [];
   const pct = item.maxQty ? Math.min(100, (item.currentQty / item.maxQty) * 100) : 100;
-  const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
   const carouselWidth = Dimensions.get('window').width - 32;
   const historyCount = moves.length + (item.createdAt ? 1 : 0) + (item.updatedAt && item.updatedAt !== item.createdAt ? 1 : 0);
 
@@ -250,7 +249,7 @@ export function InventoryDetailScreen() {
         </View>
       }
     >
-      <PhotoCarousel photos={photos} headers={authHeaders} width={carouselWidth} />
+      <PhotoCarousel photos={photos} token={token} width={carouselWidth} />
       <LocationHighlight item={item} />
 
       {/* Completar o cadastro depois, em campo — o técnico nem sempre tem tudo
