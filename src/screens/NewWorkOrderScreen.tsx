@@ -11,6 +11,7 @@ import { T, WO_PRIORITY } from '../theme/theme';
 import { useAuth } from '../auth/auth-context';
 import {
   createWorkOrder,
+  createWorkOrderRequester,
   fetchServiceStock,
   fetchServiceEquipment,
   getInventory,
@@ -126,6 +127,7 @@ export function NewWorkOrderScreen() {
   const [responsibleTechnicianName, setResponsibleTechnicianName] = useState('');
   const [requestedByName, setRequestedByName] = useState('');
   const [requesterContact, setRequesterContact] = useState('');
+  const [selectedRequesterId, setSelectedRequesterId] = useState<string | null>(null);
   const [technicianRequest, setTechnicianRequest] = useState('');
   const [priority, setPriority] = useState<WorkOrderPriority>('normal');
   const [error, setError] = useState<string | null>(null);
@@ -219,6 +221,7 @@ export function NewWorkOrderScreen() {
   };
 
   const pickRequester = (requester: WorkOrderRequester) => {
+    setSelectedRequesterId(requester.id);
     setRequestedByName(requester.name);
     if (!logistics) setDepartment(requester.department || '');
     setRequesterContact(requester.phone || '');
@@ -228,9 +231,11 @@ export function NewWorkOrderScreen() {
     setDepartment(value);
     const requester = findRequesterForDepartment(value, data?.requesters ?? []);
     if (requester) {
+      setSelectedRequesterId(requester.id);
       setRequestedByName(requester.name);
       setRequesterContact(requester.phone || '');
     } else {
+      setSelectedRequesterId(null);
       setRequestedByName('');
       setRequesterContact('');
     }
@@ -244,7 +249,7 @@ export function NewWorkOrderScreen() {
         normalizeForSearch(option.value) === normalized || normalizeForSearch(option.label) === normalized
       );
     };
-    const requesterIsCataloged = (data?.requesters ?? []).some(requester =>
+    const requesterIsCataloged = Boolean(selectedRequesterId?.startsWith('catalog:')) || (data?.requesters ?? []).some(requester =>
       normalizeForSearch(requester.name) === normalizeForSearch(requestedByName)
     );
     const missing = [
@@ -436,6 +441,7 @@ export function NewWorkOrderScreen() {
             department={department}
             requesters={data?.requesters ?? []}
             onPick={pickRequester}
+            onCreate={(input) => createWorkOrderRequester(token, input)}
             label={isMaterialSupplyFlow ? 'Nome do solicitante' : logistics?.external}
             placeholder={isMaterialSupplyFlow ? 'Selecione no catálogo' : logistics?.external}
             showDepartment={!logistics || isMaterialSupplyFlow}

@@ -459,6 +459,18 @@ export async function getWorkOrderRequesters(token: string | null): Promise<Work
   return res.requesters ?? [];
 }
 
+export async function createWorkOrderRequester(
+  token: string | null,
+  input: { name: string; department?: string | null; phone?: string | null },
+): Promise<WorkOrderRequester> {
+  const res = await apiFetch<{ requester: WorkOrderRequester }>('/api/mobile/work-orders/requesters', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(input),
+  });
+  return res.requester;
+}
+
 // Busca todos os itens (filtro por primaryType é feito client-side, pois o
 // backend só distingue consumable|equipment).
 export async function getInventory(

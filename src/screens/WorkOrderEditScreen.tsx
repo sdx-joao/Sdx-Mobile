@@ -10,6 +10,7 @@ import { WorkOrderEquipmentEditor, buildEquipmentActionsPayload, type EquipActio
 import { T, WO_PRIORITY, WO_RESOLUTION, WO_STATUS } from '../theme/theme';
 import {
   fetchServiceStock,
+  createWorkOrderRequester,
   fetchServiceEquipment,
   getInventory,
   getOptions,
@@ -502,6 +503,7 @@ export function WorkOrderEditScreen() {
             department={department}
             requesters={data?.requesters ?? []}
             onPick={pickRequester}
+            onCreate={(input) => createWorkOrderRequester(token, input)}
           />
           <View><FieldLabel>Contato</FieldLabel><Input value={requesterContact} onChangeText={setRequesterContact} placeholder="Contato" /></View>
           <View><FieldLabel required>Solicitação</FieldLabel><Input value={technicianRequest} onChangeText={setTechnicianRequest} placeholder="Descrição da solicitação" multiline /></View>
