@@ -267,7 +267,10 @@ export function WorkOrderEditScreen() {
     setCategory(order.category || '');
     setUnitName(order.unitName || '');
     setDepartment(order.department || '');
-    setTechnicalTeam(order.technicalTeam || '');
+    setTechnicalTeam(
+      order.technicalTeam
+      || (order.source === 'external' && String(order.externalReference || '').startsWith('nuntius-alert:') ? 'TI INTERNO' : ''),
+    );
     setResponsibleTechnicianName(order.responsibleTechnicianName || '');
     setRequestedByName(order.requestedByName || '');
     setRequesterContact(order.requesterContact || '');
@@ -360,6 +363,7 @@ export function WorkOrderEditScreen() {
       ['Setor', department],
       ['Solicitante', requestedByName],
       ['Solicitação', technicianRequest],
+      ...(resolutionStatus === 'resolved' ? [['Solução adotada', resolutionNotes]] : []),
       ...(isGenericEquipmentFlow ? [['Equipamento', involvedEquipment.some(item => !!item.itemId) ? 'ok' : '']] : []),
       ...(equipmentFlow?.operation === 'deliver_from_stock'
         ? [['Motivo da baixa', involvedEquipment.every(item => !item.itemId || !!item.retire?.reason) ? 'ok' : '']]
@@ -407,6 +411,11 @@ export function WorkOrderEditScreen() {
         technicianRequest,
         attendanceNotes: attendanceNotesRequired ? attendanceNotes : '',
         attendanceNotesRequired,
+        resolutionStatus,
+        resolutionNotes: resolutionNotes.trim() || null,
+        ...(resolutionStatus === 'resolved'
+          ? { finishedAt: fromDateTimeInput(finishedAtText) || new Date().toISOString() }
+          : {}),
         priority,
         materials: materials
           .filter(item => item.description.trim())
@@ -524,10 +533,48 @@ export function WorkOrderEditScreen() {
           ) : (
             <Text style={{ color: T.muted, fontSize: 12.5 }}>Sem observação registrada para esta OS.</Text>
           )}
+          <View style={{ gap: 8 }}>
+            <FieldLabel>Situação da O.S.</FieldLabel>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {(Object.entries(WO_RESOLUTION) as Array<[WorkOrderResolution, (typeof WO_RESOLUTION)[string]]>).map(([key, meta]) => {
+                const active = resolutionStatus === key;
+                return (
+                  <Pressable
+                    key={key}
+                    onPress={() => setResolutionStatus(active ? null : key)}
+                    style={{
+                      flex: 1,
+                      minHeight: 46,
+                      borderRadius: 11,
+                      borderWidth: 1.5,
+                      borderColor: active ? meta.color : T.border,
+                      backgroundColor: active ? meta.soft : T.surface,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingHorizontal: 5,
+                    }}
+                  >
+                    <Text style={{ color: active ? meta.color : T.muted, fontSize: 11.5, fontWeight: '800', textAlign: 'center' }}>
+                      {meta.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+          <View>
+            <FieldLabel required={resolutionStatus === 'resolved'}>Solução adotada</FieldLabel>
+            <Input
+              value={resolutionNotes}
+              onChangeText={setResolutionNotes}
+              placeholder="Descreva de forma breve o que foi feito"
+              multiline
+            />
+          </View>
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: `${T.primary}0A`, borderRadius: 11, padding: 11 }}>
             <Icon name="info" size={15} color={T.primary} />
             <Text style={{ flex: 1, fontSize: 12, color: T.textSoft, lineHeight: 17 }}>
-              Solução adotada, hora final e assinaturas são preenchidas ao tocar em
+              A situação e a solução podem ser preparadas aqui. A hora final e as assinaturas são confirmadas ao tocar em
               <Text style={{ fontWeight: '800', color: T.primary }}> Concluir OS</Text> no detalhe.
             </Text>
           </View>

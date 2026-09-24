@@ -36,6 +36,7 @@ export type WorkOrder = {
   status: WorkOrderStatus;
   priority: WorkOrderPriority;
   source: WorkOrderSource;
+  externalReference?: string | null;
   expectedCompletionAt: string | null;
   finishedAt?: string | null;
   escalationCount: number;
