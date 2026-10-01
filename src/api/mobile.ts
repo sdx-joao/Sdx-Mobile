@@ -466,7 +466,7 @@ export async function createWorkOrderRequester(
   const res = await apiFetch<{ requester: WorkOrderRequester }>('/api/mobile/work-orders/requesters', {
     method: 'POST',
     token,
-    body: JSON.stringify(input),
+    body: input,
   });
   return res.requester;
 }

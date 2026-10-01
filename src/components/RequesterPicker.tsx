@@ -38,21 +38,21 @@ export function RequesterPicker({
   department,
   requesters,
   onPick,
+  onCreate,
   label = 'Solicitante',
   placeholder = 'Quem solicitou',
   showDepartment = true,
   allowCreate = true,
-  onCreate,
 }: {
   value: string;
   department: string;
   requesters: WorkOrderRequester[];
   onPick: (requester: WorkOrderRequester) => void;
+  onCreate?: (input: { name: string; department: string | null; phone: string | null }) => Promise<WorkOrderRequester>;
   label?: string;
   placeholder?: string;
   showDepartment?: boolean;
   allowCreate?: boolean;
-  onCreate?: (input: { name: string; department: string | null; phone: string | null }) => Promise<WorkOrderRequester>;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -61,7 +61,8 @@ export function RequesterPicker({
   const [newPhone, setNewPhone] = useState('');
   const [newDept, setNewDept] = useState('');
   const [importing, setImporting] = useState(false);
-  const [savingNew, setSavingNew] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const keyboardHeight = useKeyboardHeight();
   const insets = useSafeAreaInsets();
 
@@ -111,6 +112,7 @@ export function RequesterPicker({
     setNewName('');
     setNewPhone('');
     setNewDept('');
+    setSaveError(null);
   };
 
   const close = () => { setOpen(false); reset(); };
@@ -129,23 +131,24 @@ export function RequesterPicker({
 
   const confirmNew = async () => {
     const name = newName.trim();
-    if (!name || savingNew) return;
-    const input = { name, department: newDept.trim() || null, phone: newPhone.trim() || null };
-    setSavingNew(true);
+    if (!name || saving) return;
+    const input = {
+      name,
+      department: newDept.trim() || null,
+      phone: newPhone.trim() || null,
+    };
+    setSaveError(null);
+    setSaving(true);
     try {
-      const requester = onCreate ? await onCreate(input) : {
-        id: `new-${Date.now()}`,
-        source: 'catalog' as const,
-        ...input,
-        linkedUserId: null,
-      };
+      const requester = onCreate
+        ? await onCreate(input)
+        : { id: `new-${Date.now()}`, source: 'catalog' as const, ...input, linkedUserId: null };
       onPick(requester);
       close();
-      showToast('Solicitante cadastrado e selecionado.');
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Não foi possível cadastrar o solicitante.');
+      setSaveError(error instanceof Error ? error.message : 'Não foi possível cadastrar o solicitante.');
     } finally {
-      setSavingNew(false);
+      setSaving(false);
     }
   };
 
@@ -202,12 +205,13 @@ export function RequesterPicker({
                         <TextInput value={newDept} onChangeText={setNewDept} placeholder="Setor" placeholderTextColor={T.faint} style={SHEET_INPUT} />
                       </View>
                     )}
+                    {!!saveError && <Text style={{ color: T.danger, fontSize: 12.5 }}>{saveError}</Text>}
                     <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
-                      <Pressable onPress={() => setAdding(false)} style={{ flex: 1, height: 46, borderRadius: 12, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center' }}>
+                      <Pressable onPress={() => setAdding(false)} disabled={saving} style={{ flex: 1, height: 46, borderRadius: 12, borderWidth: 1, borderColor: T.border, backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center', opacity: saving ? 0.5 : 1 }}>
                         <Text style={{ fontSize: 14, fontWeight: '600', color: T.text }}>Voltar</Text>
                       </Pressable>
-                      <Pressable onPress={() => void confirmNew()} disabled={!newName.trim() || savingNew} style={{ flex: 1, height: 46, borderRadius: 12, backgroundColor: T.primary, alignItems: 'center', justifyContent: 'center', opacity: newName.trim() && !savingNew ? 1 : 0.5 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>{savingNew ? 'Salvando…' : 'Cadastrar e usar'}</Text>
+                      <Pressable onPress={confirmNew} disabled={!newName.trim() || saving} style={{ flex: 1, height: 46, borderRadius: 12, backgroundColor: T.primary, alignItems: 'center', justifyContent: 'center', opacity: newName.trim() && !saving ? 1 : 0.5 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>{saving ? 'Cadastrando…' : 'Cadastrar e usar'}</Text>
                       </Pressable>
                     </View>
                   </View>

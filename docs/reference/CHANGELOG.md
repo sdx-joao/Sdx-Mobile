@@ -9,6 +9,22 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## (OTA) — Cadastro rápido de solicitante restaurado na criação da O.S.
+
+- O seletor de solicitante volta a oferecer **Adicionar** também nas solicitações
+  de materiais/suprimentos. **Cadastrar e usar** salva nome, telefone e setor no
+  endpoint mobile antes de selecionar a pessoa na O.S.
+- O registro retornado pelo backend entra imediatamente na lista do seletor,
+  substituindo qualquer item local com o mesmo nome normalizado. Isso permite
+  reencontrá-lo na mesma tela e impede um segundo cadastro duplicado.
+- A validação continua exigindo um setor já catalogado nesse fluxo, mas não
+  bloqueia mais um solicitante novo antes da criação da O.S.
+- Arquivos: `api/mobile.ts`, `components/RequesterPicker.tsx`,
+  `screens/NewWorkOrderScreen.tsx`,
+  `docs/planning/MATERIAL_SUPPLY_REQUEST_FLOW.md`.
+
+---
+
 ## 1.4.0 — Sessão persistente: refresh token 30 dias + digital restaura sessão (build Play)
 
 **Requer build na Play** (Fase 2 do overhaul de controle de sessão — par do

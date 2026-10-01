@@ -116,6 +116,7 @@ export function NewWorkOrderScreen() {
     return { options, requesters, stock, equip };
   }, [token]);
   const { data } = useResource(optionsLoader);
+  const [requesters, setRequesters] = useState<WorkOrderRequester[]>([]);
   const [serviceType, setServiceType] = useState('');
   const [category, setCategory] = useState('');
   // Padrão = nome CANÔNICO do catálogo (antes era 'HO JCB', que não existia no
@@ -127,7 +128,6 @@ export function NewWorkOrderScreen() {
   const [responsibleTechnicianName, setResponsibleTechnicianName] = useState('');
   const [requestedByName, setRequestedByName] = useState('');
   const [requesterContact, setRequesterContact] = useState('');
-  const [selectedRequesterId, setSelectedRequesterId] = useState<string | null>(null);
   const [technicianRequest, setTechnicianRequest] = useState('');
   const [priority, setPriority] = useState<WorkOrderPriority>('normal');
   const [error, setError] = useState<string | null>(null);
@@ -136,6 +136,10 @@ export function NewWorkOrderScreen() {
   const [stockMaterials, setStockMaterials] = useState<StockMaterialInput[]>([]);
   const [equipmentActions, setEquipmentActions] = useState<EquipActionDraft[]>([]);
   const accent = T.primary;
+
+  useEffect(() => {
+    if (data?.requesters) setRequesters(data.requesters);
+  }, [data?.requesters]);
   // Vínculo de estoque ativo do serviço escolhido (entrega/coleta).
   const stockLink = useMemo(
     () => (data?.stock?.links ?? []).find((l) => l.serviceType === serviceType && l.isActive !== false) ?? null,
@@ -221,7 +225,6 @@ export function NewWorkOrderScreen() {
   };
 
   const pickRequester = (requester: WorkOrderRequester) => {
-    setSelectedRequesterId(requester.id);
     setRequestedByName(requester.name);
     if (!logistics) setDepartment(requester.department || '');
     setRequesterContact(requester.phone || '');
@@ -229,16 +232,24 @@ export function NewWorkOrderScreen() {
 
   const selectDepartment = (value: string) => {
     setDepartment(value);
-    const requester = findRequesterForDepartment(value, data?.requesters ?? []);
+    const requester = findRequesterForDepartment(value, requesters);
     if (requester) {
-      setSelectedRequesterId(requester.id);
       setRequestedByName(requester.name);
       setRequesterContact(requester.phone || '');
     } else {
-      setSelectedRequesterId(null);
       setRequestedByName('');
       setRequesterContact('');
     }
+  };
+
+  const registerRequester = async (input: { name: string; department: string | null; phone: string | null }) => {
+    const saved = await createWorkOrderRequester(token, input);
+    const savedName = normalizeForSearch(saved.name);
+    setRequesters(current => [
+      ...current.filter(item => item.id !== saved.id && normalizeForSearch(item.name) !== savedName),
+      saved,
+    ].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')));
+    return saved;
   };
 
   async function submit() {
@@ -249,15 +260,11 @@ export function NewWorkOrderScreen() {
         normalizeForSearch(option.value) === normalized || normalizeForSearch(option.label) === normalized
       );
     };
-    const requesterIsCataloged = Boolean(selectedRequesterId?.startsWith('catalog:')) || (data?.requesters ?? []).some(requester =>
-      normalizeForSearch(requester.name) === normalizeForSearch(requestedByName)
-    );
     const missing = [
       ['Tipo de serviço', serviceType],
       ['Categoria', category],
       [logistics?.unitLabel || 'Unidade', logistics?.unitFixed ? LOGISTICS_UNIT_DEFAULT : unitName],
-      [isMaterialSupplyFlow ? 'Solicitante do catálogo' : logistics?.external || 'Solicitante',
-        isMaterialSupplyFlow ? (requesterIsCataloged ? 'ok' : '') : requestedByName],
+      [logistics?.external || 'Solicitante', requestedByName],
       ...(logistics && !isGenericEquipmentFlow ? [['Material de estoque', stockMaterialsPayload.length ? 'ok' : '']] : []),
       ...(isGenericEquipmentFlow && !isExchangeFlow ? [['Equipamento', involvedEquipment.some(item => !!item.itemId) ? 'ok' : '']] : []),
       ...(equipmentFlow?.operation === 'deliver_from_stock'
@@ -439,13 +446,13 @@ export function NewWorkOrderScreen() {
           <RequesterPicker
             value={requestedByName}
             department={department}
-            requesters={data?.requesters ?? []}
+            requesters={requesters}
             onPick={pickRequester}
-            onCreate={(input) => createWorkOrderRequester(token, input)}
+            onCreate={registerRequester}
             label={isMaterialSupplyFlow ? 'Nome do solicitante' : logistics?.external}
-            placeholder={isMaterialSupplyFlow ? 'Selecione no catálogo' : logistics?.external}
+            placeholder={isMaterialSupplyFlow ? 'Selecione ou cadastre' : logistics?.external}
             showDepartment={!logistics || isMaterialSupplyFlow}
-            allowCreate={!isMaterialSupplyFlow}
+            allowCreate
           />
           <View><FieldLabel>Contato</FieldLabel><Input value={requesterContact} onChangeText={setRequesterContact} placeholder="(85) 9 0000-0000" /></View>
           {!logistics && <View><FieldLabel required>Descrição</FieldLabel><Input value={technicianRequest} onChangeText={setTechnicianRequest} placeholder="Descreva o problema ou a solicitação" multiline /></View>}
