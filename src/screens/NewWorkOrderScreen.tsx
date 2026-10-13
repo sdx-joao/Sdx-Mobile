@@ -116,6 +116,9 @@ export function NewWorkOrderScreen() {
     return { options, requesters, stock, equip };
   }, [token]);
   const { data } = useResource(optionsLoader);
+  const [clientMutationId] = useState(
+    () => `servus-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`,
+  );
   const [requesters, setRequesters] = useState<WorkOrderRequester[]>([]);
   const [serviceType, setServiceType] = useState('');
   const [category, setCategory] = useState('');
@@ -303,6 +306,7 @@ export function NewWorkOrderScreen() {
     setSaving(true);
     try {
       const result = await createWorkOrder(token, {
+        clientMutationId,
         serviceType,
         category,
         unitName: logistics?.unitFixed ? LOGISTICS_UNIT_DEFAULT : unitName,

@@ -9,6 +9,15 @@ Build/publicação é feito pelo desenvolvedor (Codemagic `servus-prod` → Play
 
 ---
 
+## (OTA) — Criação de O.S. sem timeout e sem duplicidade
+
+- Cada tentativa de criação recebe uma chave idempotente estável. Se a rede
+  repetir a requisição, o backend devolve a O.S. já criada.
+- Catálogos e notificações continuam sendo processados pelo backend, mas fora
+  do caminho crítico da resposta ao Servus.
+
+---
+
 ## (OTA) — Cadastro rápido de solicitante restaurado na criação da O.S.
 
 - O seletor de solicitante volta a oferecer **Adicionar** também nas solicitações

@@ -321,6 +321,8 @@ export function fetchServiceStock(token: string | null) {
 }
 
 export type CreateWorkOrderInput = {
+  /** Identifica uma tentativa de criação para que retries não dupliquem a OS. */
+  clientMutationId: string;
   serviceType: string;
   category: string;
   unitName: string;
