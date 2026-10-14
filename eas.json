@@ -30,6 +30,18 @@
       },
       "channel": "production"
     },
+    "production-apk": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SDX_API_URL": "https://app.scandexplus.com.br",
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      },
+      "channel": "production"
+    },
     "test": {
       "android": {
         "buildType": "app-bundle"

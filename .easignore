@@ -1,0 +1,34 @@
+# Dependências e saídas locais
+node_modules/
+.git/
+.expo/
+dist/
+web-build/
+Build Expo/
+*.aab
+*.apk
+
+# Pastas nativas geradas pelo prebuild
+/ios
+/android
+.kotlin/
+
+# Arquivos locais e credenciais que não participam do build
+.env
+.env*.local
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+*-firebase-adminsdk-*.json
+.DS_Store
+*.tsbuildinfo
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Necessário ao Firebase Android. Continua ignorado pelo Git e só é enviado
+# dentro do pacote criptografado do EAS Build.
+!google-services.json
