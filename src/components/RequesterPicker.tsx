@@ -29,9 +29,10 @@ const SHEET_INPUT = {
 
 /**
  * Seletor de Solicitante: tocar abre um modal com busca. Selecionar um
- * solicitante existente preenche nome + setor + telefone. Quando o nome buscado
- * não existe, o botão "+ Adicionar" abre um mini-formulário com os campos
- * conjuntos (nome, telefone e setor sugerido) e devolve tudo de uma vez.
+ * solicitante existente preenche nome + telefone e pode sugerir o setor quando
+ * a O.S. ainda não tem local. Quando o nome buscado não existe, o botão
+ * "+ Adicionar" abre um mini-formulário com os campos conjuntos (nome, telefone
+ * e setor sugerido) e devolve tudo de uma vez.
  */
 export function RequesterPicker({
   value,

@@ -349,7 +349,9 @@ export function WorkOrderEditScreen() {
   const canEditStatus = !locked;
   const pickRequester = (requester: WorkOrderRequester) => {
     setRequestedByName(requester.name);
-    setDepartment(requester.department || '');
+    // Preserva o local já definido na O.S.; o setor do solicitante serve só
+    // como sugestão quando o atendimento ainda não possui setor.
+    setDepartment(current => current.trim() ? current : requester.department || '');
     setRequesterContact(requester.phone || '');
   };
 

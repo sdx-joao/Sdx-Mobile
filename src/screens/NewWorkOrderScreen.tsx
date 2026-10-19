@@ -229,7 +229,12 @@ export function NewWorkOrderScreen() {
 
   const pickRequester = (requester: WorkOrderRequester) => {
     setRequestedByName(requester.name);
-    if (!logistics) setDepartment(requester.department || '');
+    // O setor pertence à O.S., não ao solicitante. O vínculo do solicitante é
+    // apenas uma sugestão quando o local ainda não foi informado; nunca deve
+    // sobrescrever um setor que o usuário já fixou para o atendimento.
+    if (!logistics) {
+      setDepartment(current => current.trim() ? current : requester.department || '');
+    }
     setRequesterContact(requester.phone || '');
   };
 
