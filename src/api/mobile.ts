@@ -1,5 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import { API_BASE_URL, ApiError, IS_TEST_BUILD, apiFetch, notifyUnauthorized } from './client';
+import { API_BASE_URL, ApiError, IS_TEST_BUILD, apiFetch, notifyUnauthorized, withMobileToken } from './client';
+import { runNativeTransfer } from './native-transfer';
 import type { WorkOrder, WorkOrderPriority, WorkOrderStatus, InventoryItem, Movement, TimelineEvent } from '../data/mock';
 import type { MobileUser } from '../auth/types';
 
@@ -791,16 +792,22 @@ export async function uploadInventoryPhoto(
   // index (opcional) numa anexa = SUBSTITUI a foto nessa posição (troca), em vez de acrescentar.
   const parameters: Record<string, string> = { role: input.role };
   if (typeof input.index === 'number') parameters.index = String(input.index);
-  const res = await FileSystem.uploadAsync(`${API_BASE_URL}/api/mobile/inventory/${itemId}/photo`, input.uri, {
-    httpMethod: 'POST',
-    uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-    fieldName: 'file',
-    mimeType: 'image/jpeg',
-    parameters,
-    headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  const res = await withMobileToken(token, async currentToken => {
+    const task = FileSystem.createUploadTask(`${API_BASE_URL}/api/mobile/inventory/${itemId}/photo`, input.uri, {
+      httpMethod: 'POST',
+      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+      fieldName: 'file',
+      mimeType: 'image/jpeg',
+      parameters,
+      headers: { Accept: 'application/json', ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}) },
+    });
+    const response = await runNativeTransfer(task, () => task.uploadAsync());
+    if (!response) throw new Error('Envio da foto cancelado.');
+    return response;
   });
   if (res.status < 200 || res.status >= 300) {
-    throw new Error(`Falha ao enviar foto (${res.status}).`);
+    const body = (() => { try { return JSON.parse(res.body); } catch { return null; } })();
+    throw new Error(body?.message || `Falha ao enviar foto (${res.status}).`);
   }
 }
 

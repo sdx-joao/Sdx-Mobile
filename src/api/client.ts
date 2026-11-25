@@ -1,3 +1,4 @@
+import { runNativeTransfer } from './native-transfer';
 const DEFAULT_API_URL = 'http://10.32.20.220:3000';
 const REQUEST_TIMEOUT_MS = 15000;
 
@@ -116,4 +117,18 @@ export async function apiFetch<T = unknown>(
   }
 
   return payload as T;
+}
+
+/** Native photo transfers need the same silent refresh as JSON requests. */
+export async function withMobileToken<T extends { status: number }>(
+  token: string | null | undefined,
+  request: (currentToken: string | null | undefined) => Promise<T>,
+): Promise<T> {
+  let response = await request(token);
+  if (response.status === 401 && token && refreshHandler) {
+    const renewed = await runNativeTransfer({ cancelAsync: async () => {} }, () => refreshHandler!(), 15000);
+    if (renewed) response = await request(renewed);
+  }
+  if (response.status === 401 && token) notifyUnauthorized();
+  return response;
 }

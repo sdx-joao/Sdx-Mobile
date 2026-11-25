@@ -212,6 +212,7 @@ export function EditInventoryItemScreen() {
   // index numa anexa = troca a foto naquela posição; sem index = anexa nova.
   const confirmPhoto = async () => {
     if (!preview || uploading) return;
+    setError(null);
     setUploading(true);
     try {
       const resized = await ImageManipulator.manipulateAsync(preview.uri, [{ resize: { width: 1600 } }], {
@@ -352,6 +353,7 @@ export function EditInventoryItemScreen() {
         </View>
         <View style={{ flex: 1 }} />
         <View style={{ paddingBottom: 40, paddingHorizontal: 20, gap: 10 }}>
+          {error && <Text accessibilityRole="alert" style={{ color: '#ffb4b4', backgroundColor: '#381b24', padding: 10, borderRadius: 8 }}>{error}</Text>}
           <Pressable onPress={() => setCropMode(true)} disabled={uploading}
             style={{ height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,.14)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: uploading ? 0.55 : 1 }}>
             <Icon name="scan" size={16} color="#fff" />
