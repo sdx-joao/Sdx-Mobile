@@ -23,4 +23,7 @@ Não houve alteração no backend, nos dados dos produtos ou na configuração d
 
 ## Validação e publicação
 
-`tsc --noEmit` e `node scripts/test-inventory-photo-transfer.cjs`: aprovados. Testes cobrem cancelamento por timeout, sucesso, renovação após 401, sessão inválida, rejeição de JSON no cache, download válido e limpeza temporária. Publicação OTA Android production, runtime 1.5.0: em andamento. Não houve teste físico automatizado no telefone do operador.
+`tsc --noEmit` e `node scripts/test-inventory-photo-transfer.cjs`: aprovados. Testes cobrem cancelamento por timeout, sucesso, renovação após 401, sessão inválida, rejeição de JSON no cache, download válido e limpeza temporária. Publicação OTA Android production concluída, runtime 1.5.0. Grupo `872cdf54-07b7-458e-adeb-4ecb0b00eda1`, atualização Android `01a213a3-bf4f-723e-94a6-de2783379444`, commit de código `a456cb3`. Dashboard: https://expo.dev/accounts/sdx-joao/projects/sdx-mobile/updates/872cdf54-07b7-458e-adeb-4ecb0b00eda1. A atualização alcança os binários compatíveis com runtime 1.5.0; não exige alteração nativa. Não houve teste físico automatizado no telefone do operador.
+
+
+Servidor novo: cadastro e ambos os JPEGs do item 286 conferidos; réplica oficial IO=Yes, SQL=Yes, atraso zero.
