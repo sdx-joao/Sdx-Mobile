@@ -19,9 +19,9 @@ export function WorkOrdersScreen() {
   const myId = user?.id ?? null;
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState(route.params?.filter ?? 'all');
-  const loader = useCallback(() => getWorkOrders(token), [token]);
+  const loader = useCallback(() => getWorkOrders(token, { view: 'active' }), [token]);
   const { data, loading, refreshing, error, reload } = useResource(loader, { reloadOnFocus: true });
-  const orders = data ?? [];
+  const orders = (data ?? []).filter(order => ['open', 'in_progress', 'waiting'].includes(order.status));
 
   // Vindo da Home (drill-down): aplica o filtro que a métrica pediu.
   useEffect(() => {
@@ -52,7 +52,6 @@ export function WorkOrdersScreen() {
     { key: 'open', label: 'Abertas', count: counts.open },
     { key: 'in_progress', label: 'Em andamento', count: counts.in_progress },
     { key: 'waiting', label: 'Aguardando', count: counts.waiting },
-    { key: 'completed', label: 'Concluídas', count: counts.completed },
   ];
 
   const list = orders.filter((w) => {

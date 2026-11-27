@@ -56,9 +56,10 @@ async function doFetch(
   rest: Omit<RequestInit, 'body' | 'headers'>,
 ): Promise<Response> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await fetch(url, {
+    const readResponse = async () => {
+    const response = await fetch(url, {
       ...rest,
       signal: controller.signal,
       headers: {
@@ -75,6 +76,12 @@ async function doFetch(
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
+    const text = await response.text();
+    return new Response([204, 205, 304].includes(response.status) ? null : text, { status: response.status, statusText: response.statusText, headers: response.headers });
+    };
+    return await Promise.race([readResponse(), new Promise<Response>((_, reject) => {
+      timeoutId = setTimeout(() => { controller.abort(); reject(new ApiError('Tempo limite ao receber a resposta do servidor Scandex.', 408, 'timeout')); }, REQUEST_TIMEOUT_MS);
+    })]);
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw new ApiError('Tempo limite ao conectar com o servidor Scandex.', 408, 'timeout');

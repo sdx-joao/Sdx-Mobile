@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -23,7 +23,9 @@ export function WorkOrderHistoryScreen() {
   const myId = user?.id ?? null;
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
-  const loader = useCallback(() => getWorkOrders(token, { includeHidden: true }), [token]);
+  const [search, setSearch] = useState('');
+  useEffect(() => { const timer = setTimeout(() => setSearch(q.trim()), 300); return () => clearTimeout(timer); }, [q]);
+  const loader = useCallback(() => getWorkOrders(token, { view: 'history', includeHidden: true, q: search, status: filter, limit: 200 }), [token, search, filter]);
   const { data, loading, refreshing, error, reload } = useResource(loader, { reloadOnFocus: true });
 
   const history = useMemo(() => (data ?? []).filter((w) => FINISHED.has(w.status)), [data]);

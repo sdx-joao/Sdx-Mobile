@@ -203,6 +203,11 @@ export function WorkOrderSignatureScreen() {
           getEquipmentInstallationPlan(token, route.params.id).catch(() => null),
         ]);
         if (!alive) return;
+        if (['completed', 'delivered', 'cancelled'].includes(workOrder.status)) {
+          showToast('Esta OS já foi finalizada. Exibindo o registro salvo.');
+          nav.replace('WorkOrderDetail', { id: route.params.id });
+          return;
+        }
         setCode(workOrder.code || '');
         // O técnico responsável pela conclusão é SEMPRE o dono do celular que está
         // colhendo a assinatura (não o responsável salvo na OS — que pode ser quem
@@ -372,6 +377,16 @@ export function WorkOrderSignatureScreen() {
       }
       nav.popToTop();
     } catch (e) {
+      // The server may have committed before a network timeout. Read before retrying.
+      try {
+        const { workOrder } = await getWorkOrder(token, route.params.id);
+        if (['completed', 'delivered', 'cancelled'].includes(workOrder.status)) {
+          showToast('Esta OS já foi finalizada. Assinaturas e movimentos foram preservados.');
+          await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => undefined);
+          nav.replace('WorkOrderDetail', { id: route.params.id });
+          return;
+        }
+      } catch { /* Keep the original error when the confirmation cannot be read. */ }
       Alert.alert('Erro', e instanceof Error ? e.message : 'Não foi possível concluir a OS.');
     } finally {
       setSaving(false);

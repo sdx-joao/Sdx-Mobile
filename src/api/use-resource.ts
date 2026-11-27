@@ -31,6 +31,7 @@ export function useResource<T>(
   loader: () => Promise<T>,
   options?: { reloadOnFocus?: boolean },
 ): Resource<T> {
+  const requestVersion = useRef(0);
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -38,14 +39,18 @@ export function useResource<T>(
 
   const run = useCallback(
     async (isRefresh: boolean) => {
+      const version = ++requestVersion.current;
       if (isRefresh) setRefreshing(true);
       setError(null);
       try {
         const result = await loader();
+        if (version !== requestVersion.current) return;
         setData(result);
       } catch (e) {
+        if (version !== requestVersion.current) return;
         setError(humanError(e));
       } finally {
+        if (version !== requestVersion.current) return;
         setLoading(false);
         setRefreshing(false);
       }
@@ -55,18 +60,24 @@ export function useResource<T>(
 
   // Atualização silenciosa (sem spinner) — usada no refoco da tela.
   const silentReload = useCallback(async () => {
+    const version = ++requestVersion.current;
     try {
       const result = await loader();
+      if (version !== requestVersion.current) return;
       setData(result);
       setError(null);
+      setLoading(false);
+      setRefreshing(false);
     } catch {
+      if (version === requestVersion.current) { setLoading(false); setRefreshing(false); }
       // mantém os dados atuais em falha transitória
     }
   }, [loader]);
 
   useEffect(() => {
     setLoading(true);
-    run(false);
+    void run(false);
+    return () => { requestVersion.current++; };
   }, [run]);
 
   const reloadOnFocus = options?.reloadOnFocus ?? false;

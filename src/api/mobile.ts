@@ -171,12 +171,14 @@ export function markNotificationsRead(token: string | null, ids?: string[]) {
 
 export async function getWorkOrders(
   token: string | null,
-  opts: { status?: string; q?: string; includeHidden?: boolean } = {},
+  opts: { status?: string; q?: string; includeHidden?: boolean; view?: 'active' | 'history'; limit?: number } = {},
 ): Promise<WorkOrder[]> {
   const params = new URLSearchParams();
   if (opts.status && opts.status !== 'all') params.set('status', opts.status);
   if (opts.q) params.set('q', opts.q);
   if (opts.includeHidden) params.set('includeHidden', '1');
+  if (opts.view) params.set('view', opts.view);
+  if (opts.limit) params.set('limit', String(opts.limit));
   const qs = params.toString();
   const res = await apiFetch<{ orders: WorkOrder[] }>(`/api/mobile/work-orders${qs ? `?${qs}` : ''}`, { token });
   return res.orders ?? [];
